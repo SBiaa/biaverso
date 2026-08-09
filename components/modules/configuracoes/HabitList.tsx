@@ -23,6 +23,7 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
   const [newName, setNewName] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const originalIds = useRef(new Set(initialItems.map((i) => i.id)));
+  const isSaving = useRef(false);
 
   const active = items.filter((i) => i.active);
   const inactive = items.filter((i) => !i.active);
@@ -45,6 +46,8 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
   }
 
   async function handleSave() {
+    if (isSaving.current) return;
+    isSaving.current = true;
     setSaveState("saving");
     try {
       const removedIds = [...originalIds.current].filter(
@@ -84,6 +87,8 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
       setTimeout(() => setSaveState("idle"), 2000);
     } catch {
       setSaveState("error");
+    } finally {
+      isSaving.current = false;
     }
   }
 

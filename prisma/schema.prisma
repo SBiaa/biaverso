@@ -358,6 +358,8 @@ model FixedBillLog {
   id          String     @id @default(cuid())
   month       Int
   year        Int
+  // Data real do vencimento naquele mês (gerada a partir de FixedBill.dueDay).
+  dueDate     DateTime
   status      BillStatus @default(PENDENTE)
   paidAt      DateTime?
   fixedBillId String
@@ -370,6 +372,32 @@ enum BillStatus {
   PAGO
   PENDENTE
   ATRASADO
+}
+
+// Configuração do cartão — registro único (id fixo CREDIT_CARD_ID).
+model CreditCard {
+  id         String   @id
+  name       String   @default("Cartão de crédito")
+  // Dia em que a fatura fecha — usado só para sugerir a fatura de uma compra nova.
+  closingDay Int?
+  dueDay     Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Compra parcelada: agrupa as parcelas espalhadas pelas faturas.
+model CreditCardPurchase {
+  id           String              @id @default(cuid())
+  description  String
+  totalAmount  Float
+  installments Int
+  purchaseDate DateTime
+  category     TransactionCategory
+  notes        String?
+  createdAt    DateTime            @default(now())
+  businessId   String?
+  business     Business?           @relation(fields: [businessId], references: [id])
+  entries      CreditCardEntry[]
 }
 
 model CreditCardEntry {
@@ -385,6 +413,8 @@ model CreditCardEntry {
   createdAt    DateTime            @default(now())
   businessId   String?
   business     Business?           @relation(fields: [businessId], references: [id])
+  purchaseId   String?
+  purchase     CreditCardPurchase? @relation(fields: [purchaseId], references: [id])
 }
 
 model FinancialRecord {
@@ -423,14 +453,15 @@ model Business {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  clients           ClientBusiness[]
-  projects          Project[]
-  tasks             Task[]
-  transactions      Transaction[]
-  creditCardEntries CreditCardEntry[]
-  ideas             Idea[]
-  contentPosts      ContentPost[]
-  productionTasks   ProductionTask[]
+  clients             ClientBusiness[]
+  projects            Project[]
+  tasks               Task[]
+  transactions        Transaction[]
+  creditCardEntries   CreditCardEntry[]
+  creditCardPurchases CreditCardPurchase[]
+  ideas               Idea[]
+  contentPosts        ContentPost[]
+  productionTasks     ProductionTask[]
 }
 
 model Project {

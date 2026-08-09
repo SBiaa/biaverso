@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { resyncFixedBillDueDates } from "@/lib/finance";
 
 export async function PATCH(
   request: Request,
@@ -18,6 +19,8 @@ export async function PATCH(
       notes: notes || null,
     },
   });
+
+  await resyncFixedBillDueDates(id, bill.dueDay);
 
   return NextResponse.json(bill);
 }

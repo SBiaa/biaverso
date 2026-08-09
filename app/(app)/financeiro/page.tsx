@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { CreditCard, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { ensureFixedBillLogsForMonth } from "@/lib/finance";
+import { ensureFixedBillLogsForMonth, getCreditCard } from "@/lib/finance";
+import { invoiceDueDate } from "@/lib/finance-calc";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, BusinessBadge, StatCard } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { TransactionsList } from "@/components/modules/financeiro/TransactionsList";
-import { cn, formatCurrencyBRL, getMonthRange, startOfToday } from "@/lib/utils";
+import {
+  cn,
+  formatCurrencyBRL,
+  formatUtcDateBR,
+  getMonthRange,
+  startOfToday,
+} from "@/lib/utils";
 import { billStatusLabels } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +35,7 @@ async function getFinanceData() {
     contasPendentes,
     lancamentosCartao,
     businesses,
+    card,
   ] = await Promise.all([
     prisma.transaction.aggregate({
       _sum: { amount: true },
@@ -58,7 +66,7 @@ async function getFinanceData() {
     prisma.fixedBillLog.findMany({
       where: { month, year, status: { in: ["PENDENTE", "ATRASADO"] } },
       include: { fixedBill: true },
-      orderBy: { fixedBill: { dueDay: "asc" } },
+      orderBy: { dueDate: "asc" },
     }),
     prisma.creditCardEntry.findMany({
       where: { invoiceMonth: month, invoiceYear: year },
@@ -66,6 +74,7 @@ async function getFinanceData() {
       include: { business: true },
     }),
     prisma.business.findMany({ where: { active: true } }),
+    getCreditCard(),
   ]);
 
   const businessMap = new Map(businesses.map((b) => [b.id, b]));
@@ -88,6 +97,7 @@ async function getFinanceData() {
     contasPendentes,
     lancamentosCartao,
     businesses,
+    faturaVenceEm: card ? invoiceDueDate(month, year, card.dueDay) : null,
   };
 }
 
@@ -199,7 +209,7 @@ export default async function FinanceiroPage() {
                       <div>
                         <p className="text-text-primary">{log.fixedBill.name}</p>
                         <p className="text-xs text-text-secondary">
-                          vence dia {log.fixedBill.dueDay}
+                          vence em {formatUtcDateBR(log.dueDate)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -227,6 +237,12 @@ export default async function FinanceiroPage() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-text-primary">
                   Cartão de crédito do mês
+                  {data.faturaVenceEm && (
+                    <span className="font-normal text-text-secondary">
+                      {" "}
+                      · vence em {formatUtcDateBR(data.faturaVenceEm)}
+                    </span>
+                  )}
                 </h2>
                 <Link
                   href="/financeiro/cartao"

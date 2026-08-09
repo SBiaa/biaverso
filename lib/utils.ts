@@ -40,6 +40,15 @@ export function formatDateLongBR(date: Date) {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
+// Valor para <input type="date"> a partir de uma data gravada em UTC.
+export function toDateInputValue(date: string | Date) {
+  const d = new Date(date);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function parseLocalDateString(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);
@@ -80,6 +89,10 @@ const MONTH_NAMES_BR = [
 
 export function formatMonthYearBR(month: number, year: number) {
   return `${MONTH_NAMES_BR[month - 1]} de ${year}`;
+}
+
+export function monthNameBR(month: number) {
+  return MONTH_NAMES_BR[month - 1];
 }
 
 export function colorFromString(value: string) {

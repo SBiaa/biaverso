@@ -17,7 +17,7 @@ export default async function ContasFixasPage() {
   const logs = await prisma.fixedBillLog.findMany({
     where: { month, year },
     include: { fixedBill: true },
-    orderBy: { fixedBill: { dueDay: "asc" } },
+    orderBy: { dueDate: "asc" },
   });
 
   const items = logs.map((log) => ({
@@ -25,7 +25,7 @@ export default async function ContasFixasPage() {
     fixedBillId: log.fixedBillId,
     name: log.fixedBill.name,
     amount: log.fixedBill.amount,
-    dueDay: log.fixedBill.dueDay,
+    dueDate: log.dueDate.toISOString(),
     type: log.fixedBill.type,
     notes: log.fixedBill.notes,
     status: log.status,
@@ -36,13 +36,7 @@ export default async function ContasFixasPage() {
       <Topbar title="Contas fixas" />
       <main className="flex-1 space-y-4 p-4 md:p-6">
         <FinanceSubNav />
-        {items.length === 0 ? (
-          <p className="text-sm text-text-secondary">
-            Nenhuma conta fixa cadastrada.
-          </p>
-        ) : (
-          <FixedBillList items={items} />
-        )}
+        <FixedBillList items={items} />
       </main>
     </>
   );

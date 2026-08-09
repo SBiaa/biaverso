@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, Pencil, Trash2 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
-import { cn, formatCurrencyBRL } from "@/lib/utils";
+import {
+  cn,
+  formatCurrencyBRL,
+  formatUtcDateBR,
+  toDateInputValue,
+} from "@/lib/utils";
 import { billStatusLabels, fixedBillTypeLabels } from "@/lib/labels";
 
 const typeOptions = Object.keys(fixedBillTypeLabels);
@@ -14,7 +19,7 @@ type BillItem = {
   fixedBillId: string;
   name: string;
   amount: number;
-  dueDay: number;
+  dueDate: string;
   type: string;
   notes: string | null;
   status: "PAGO" | "PENDENTE" | "ATRASADO";
@@ -26,21 +31,28 @@ const statusStyles: Record<string, string> = {
   ATRASADO: "bg-badge-ace-bg text-badge-ace-text",
 };
 
-function EditFixedBillForm({
+function todayInputValue() {
+  const d = new Date();
+  return toDateInputValue(
+    new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())),
+  );
+}
+
+function FixedBillForm({
   item,
   onClose,
 }: {
-  item: BillItem;
+  item?: BillItem;
   onClose: () => void;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    name: item.name,
-    amount: String(item.amount),
-    dueDay: String(item.dueDay),
-    type: item.type,
-    notes: item.notes ?? "",
+    name: item?.name ?? "",
+    amount: item ? String(item.amount) : "",
+    dueDate: item ? toDateInputValue(item.dueDate) : todayInputValue(),
+    type: item?.type ?? typeOptions[0],
+    notes: item?.notes ?? "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -48,19 +60,24 @@ function EditFixedBillForm({
   }
 
   async function handleSubmit() {
-    if (!form.name.trim() || !form.amount || !form.dueDay) return;
+    if (!form.name.trim() || !form.amount || !form.dueDate) return;
     setSaving(true);
-    await fetch(`/api/fixed-bills/${item.fixedBillId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
-        amount: Number(form.amount),
-        dueDay: Number(form.dueDay),
-        type: form.type,
-        notes: form.notes || null,
-      }),
-    });
+    // A conta se repete todo mês, então o que fica guardado é o dia da data escolhida.
+    const dueDay = Number(form.dueDate.split("-")[2]);
+    await fetch(
+      item ? `/api/fixed-bills/${item.fixedBillId}` : "/api/fixed-bills",
+      {
+        method: item ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          amount: Number(form.amount),
+          dueDay,
+          type: form.type,
+          notes: form.notes || null,
+        }),
+      },
+    );
     setSaving(false);
     onClose();
     router.refresh();
@@ -83,15 +100,17 @@ function EditFixedBillForm({
           onChange={(e) => update("amount", e.target.value)}
           className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
-        <input
-          type="number"
-          min={1}
-          max={31}
-          placeholder="Dia de vencimento"
-          value={form.dueDay}
-          onChange={(e) => update("dueDay", e.target.value)}
-          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+        <label className="flex flex-1 flex-col gap-1">
+          <span className="text-xs text-text-secondary">
+            Vencimento (repete todo mês nesse dia)
+          </span>
+          <input
+            type="date"
+            value={form.dueDate}
+            onChange={(e) => update("dueDate", e.target.value)}
+            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
+        </label>
       </div>
       <select
         value={form.type}
@@ -127,19 +146,25 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
   const [items, setItems] = useState(initialItems);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  function toggle(logId: string) {
+  async function toggle(logId: string) {
     const item = items.find((i) => i.logId === logId);
     if (!item) return;
     const nextStatus = item.status === "PAGO" ? "PENDENTE" : "PAGO";
     setItems((prev) =>
       prev.map((i) => (i.logId === logId ? { ...i, status: nextStatus } : i)),
     );
-    fetch(`/api/fixed-bill-logs/${logId}`, {
+    const response = await fetch(`/api/fixed-bill-logs/${logId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: nextStatus }),
     });
+    // Ao desmarcar, o servidor decide entre PENDENTE e ATRASADO.
+    const log = await response.json();
+    setItems((prev) =>
+      prev.map((i) => (i.logId === logId ? { ...i, status: log.status } : i)),
+    );
   }
 
   async function handleDelete(fixedBillId: string) {
@@ -156,10 +181,16 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
 
   return (
     <div className="flex flex-col gap-2">
+      {items.length === 0 && !creating && (
+        <p className="text-sm text-text-secondary">
+          Nenhuma conta fixa cadastrada.
+        </p>
+      )}
+
       {items.map((item) => {
         if (editingId === item.fixedBillId) {
           return (
-            <EditFixedBillForm
+            <FixedBillForm
               key={item.logId}
               item={item}
               onClose={() => setEditingId(null)}
@@ -184,7 +215,8 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
                   {item.name}
                 </p>
                 <p className="text-xs text-text-secondary">
-                  {fixedBillTypeLabels[item.type]} · vence dia {item.dueDay}
+                  {fixedBillTypeLabels[item.type]} · vence em{" "}
+                  {formatUtcDateBR(new Date(item.dueDate))}
                 </p>
               </div>
             </button>
@@ -223,6 +255,18 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
           </Card>
         );
       })}
+
+      {creating ? (
+        <FixedBillForm onClose={() => setCreating(false)} />
+      ) : (
+        <Button
+          variant="secondary"
+          className="self-start"
+          onClick={() => setCreating(true)}
+        >
+          + Nova conta fixa
+        </Button>
+      )}
     </div>
   );
 }

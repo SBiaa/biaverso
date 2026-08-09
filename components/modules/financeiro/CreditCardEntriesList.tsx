@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button, BusinessBadge } from "@/components/ui";
-import { formatCurrencyBRL, formatDateBR } from "@/lib/utils";
+import {
+  formatCurrencyBRL,
+  formatUtcDateBR,
+  toDateInputValue,
+} from "@/lib/utils";
 import { transactionCategoryLabels } from "@/lib/labels";
 
 const categoryOptions = Object.keys(transactionCategoryLabels);
@@ -22,22 +26,15 @@ type CreditCardEntry = {
   category: string;
   businessId: string | null;
   business: Business | null;
+  purchaseId: string | null;
   notes: string | null;
 };
-
-function dateInputValue(date: string | Date) {
-  const d = new Date(date);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 function formFromEntry(entry: CreditCardEntry) {
   return {
     description: entry.description,
     amount: String(entry.amount),
-    purchaseDate: dateInputValue(entry.purchaseDate),
+    purchaseDate: toDateInputValue(entry.purchaseDate),
     invoiceMonth: String(entry.invoiceMonth),
     invoiceYear: String(entry.invoiceYear),
     installment: entry.installment ?? "",
@@ -181,15 +178,21 @@ export function CreditCardEntriesList({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  async function handleDelete(id: string) {
-    if (
-      !confirm(
-        "Tem certeza que quer deletar este lançamento? Esta ação não pode ser desfeita.",
-      )
-    )
-      return;
-    setDeletingId(id);
-    await fetch(`/api/credit-card-entries/${id}`, { method: "DELETE" });
+  async function handleDelete(entry: CreditCardEntry) {
+    // Apagar uma parcela sozinha deixaria a compra sem bater com o total,
+    // então parcela deleta a compra inteira.
+    const message = entry.purchaseId
+      ? `"${entry.description}" é uma compra parcelada. Deletar agora apaga TODAS as parcelas, em todas as faturas. Esta ação não pode ser desfeita.`
+      : "Tem certeza que quer deletar este lançamento? Esta ação não pode ser desfeita.";
+    if (!confirm(message)) return;
+
+    setDeletingId(entry.id);
+    await fetch(
+      entry.purchaseId
+        ? `/api/credit-card-purchases/${entry.purchaseId}`
+        : `/api/credit-card-entries/${entry.id}`,
+      { method: "DELETE" },
+    );
     router.refresh();
   }
 
@@ -226,9 +229,9 @@ export function CreditCardEntriesList({
               <div>
                 <p className="text-text-primary">{entry.description}</p>
                 <p className="text-xs text-text-secondary">
-                  {formatDateBR(new Date(entry.purchaseDate))} ·{" "}
+                  {formatUtcDateBR(new Date(entry.purchaseDate))} ·{" "}
                   {transactionCategoryLabels[entry.category]}
-                  {entry.installment ? ` · ${entry.installment}` : ""}
+                  {entry.installment ? ` · parcela ${entry.installment}` : ""}
                 </p>
               </div>
             </div>
@@ -248,7 +251,7 @@ export function CreditCardEntriesList({
                 <button
                   type="button"
                   title="Deletar"
-                  onClick={() => handleDelete(entry.id)}
+                  onClick={() => handleDelete(entry)}
                   disabled={deletingId === entry.id}
                   className="text-text-secondary hover:text-red-600 disabled:opacity-50"
                 >
