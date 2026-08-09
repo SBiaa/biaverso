@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getOrCreateToday, materializeRoutineTasks } from "@/lib/day";
+import { getOrCreateToday, materializeRoutineTasks, materializeHabits } from "@/lib/day";
 import { formatDateLongBR } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui";
@@ -24,6 +24,7 @@ const mealTypeLabels: Record<string, string> = {
 async function getDay() {
   const created = await getOrCreateToday();
   await materializeRoutineTasks(created);
+  await materializeHabits(created);
 
   return prisma.day.findUniqueOrThrow({
     where: { id: created.id },

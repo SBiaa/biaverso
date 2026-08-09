@@ -278,6 +278,40 @@ export default async function HomePage() {
               {habitsDone}/{habits.length}
             </span>
           </div>
+          {habits.length === 0 ? (
+            <p className="text-sm text-text-secondary">
+              Nenhum hábito cadastrado.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {habits.map((h) => (
+                <li key={h.id} className="flex items-center gap-2 text-sm">
+                  {h.done ? (
+                    <CheckCircle2 size={16} className="text-accent" />
+                  ) : (
+                    <Circle size={16} className="text-text-secondary" />
+                  )}
+                  <span
+                    className={cn(
+                      "text-text-primary",
+                      h.done && "text-text-secondary line-through",
+                    )}
+                  >
+                    {h.habit.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-text-primary">Água</h2>
+            <span className="text-sm text-text-secondary">
+              {waterCount}/8
+            </span>
+          </div>
           <div className="flex items-center gap-1.5">
             {Array.from({ length: 8 }, (_, i) => (
               <Droplets

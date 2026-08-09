@@ -46,6 +46,25 @@ export async function materializeRoutineTasks(day: Day) {
   }
 }
 
+export async function materializeHabits(day: Day) {
+  const [habits, existing] = await Promise.all([
+    prisma.habit.findMany({ where: { active: true } }),
+    prisma.habitLog.findMany({
+      where: { dayId: day.id },
+      select: { habitId: true },
+    }),
+  ]);
+
+  const existingIds = new Set(existing.map((l) => l.habitId));
+  const missing = habits.filter((h) => !existingIds.has(h.id));
+
+  if (missing.length > 0) {
+    await prisma.habitLog.createMany({
+      data: missing.map((h) => ({ habitId: h.id, dayId: day.id })),
+    });
+  }
+}
+
 // Usado quando o usuário confirma a troca de Dia Normal/Faxina: remove as tarefas
 // de rotina já copiadas para o dia (mantendo as avulsas) e copia o template do novo tipo.
 export async function replaceRoutineTasksForDay(day: Day) {
