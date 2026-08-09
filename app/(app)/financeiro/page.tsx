@@ -5,8 +5,9 @@ import { ensureFixedBillLogsForMonth } from "@/lib/finance";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, BusinessBadge, StatCard } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
-import { cn, formatCurrencyBRL, formatDateBR, getMonthRange, startOfToday } from "@/lib/utils";
-import { billStatusLabels, transactionCategoryLabels } from "@/lib/labels";
+import { TransactionsList } from "@/components/modules/financeiro/TransactionsList";
+import { cn, formatCurrencyBRL, getMonthRange, startOfToday } from "@/lib/utils";
+import { billStatusLabels } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,7 @@ async function getFinanceData() {
     ultimasTransacoes,
     contasPendentes,
     lancamentosCartao,
+    businesses,
   };
 }
 
@@ -163,37 +165,10 @@ export default async function FinanceiroPage() {
                   Ver todas
                 </Link>
               </div>
-              {data.ultimasTransacoes.length === 0 ? (
-                <p className="text-sm text-text-secondary">
-                  Nenhuma transação registrada.
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {data.ultimasTransacoes.map((t) => (
-                    <li
-                      key={t.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <div>
-                        <p className="text-text-primary">{t.name}</p>
-                        <p className="text-xs text-text-secondary">
-                          {formatDateBR(t.date)} ·{" "}
-                          {transactionCategoryLabels[t.category]}
-                        </p>
-                      </div>
-                      <span
-                        className={cn(
-                          "font-medium",
-                          t.type === "ENTRADA" ? "text-emerald-600" : "text-red-600",
-                        )}
-                      >
-                        {t.type === "ENTRADA" ? "+" : "-"}
-                        {formatCurrencyBRL(t.amount)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <TransactionsList
+                transactions={data.ultimasTransacoes}
+                businesses={data.businesses}
+              />
             </Card>
           </div>
 

@@ -2,13 +2,16 @@ import { prisma } from "@/lib/prisma";
 import { startOfToday } from "@/lib/utils";
 import type { Day } from "@/app/generated/prisma/client";
 
-export async function getOrCreateToday(): Promise<Day> {
-  const date = startOfToday();
+export async function getOrCreateDay(date: Date): Promise<Day> {
   return prisma.day.upsert({
     where: { date },
     update: {},
     create: { date },
   });
+}
+
+export async function getOrCreateToday(): Promise<Day> {
+  return getOrCreateDay(startOfToday());
 }
 
 function routineTypeFor(day: Day) {

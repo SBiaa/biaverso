@@ -10,10 +10,11 @@ const statusOptions = Object.keys(projectStatusLabels);
 
 type ProjectFormModalProps = {
   businessId: string;
+  clientId?: string;
   onClose: () => void;
 };
 
-export function ProjectFormModal({ businessId, onClose }: ProjectFormModalProps) {
+export function ProjectFormModal({ businessId, clientId, onClose }: ProjectFormModalProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -34,7 +35,7 @@ export function ProjectFormModal({ businessId, onClose }: ProjectFormModalProps)
     await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, businessId }),
+      body: JSON.stringify({ ...form, businessId, clientId }),
     });
     setSaving(false);
     router.refresh();

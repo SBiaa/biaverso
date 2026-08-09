@@ -19,6 +19,17 @@ export function formatDateBR(date: Date) {
   });
 }
 
+// Para datas gravadas como meia-noite UTC (ex.: ContentPost/ProductionTask, criadas a
+// partir de <input type="date">) — formatar em fuso local aqui mostraria o dia anterior.
+export function formatUtcDateBR(date: Date) {
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export function formatDateLongBR(date: Date) {
   const formatted = date.toLocaleDateString("pt-BR", {
     weekday: "long",

@@ -20,6 +20,11 @@ import { GripVertical, Trash2, Plus } from "lucide-react";
 import { Card, Button } from "@/components/ui";
 
 type TemplateItem = { id: string; title: string };
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+function isNewId(id: string) {
+  return id.startsWith("new-");
+}
 
 function SortableRow({
   item,
@@ -68,6 +73,13 @@ function SortableRow({
   );
 }
 
+const SAVE_LABEL: Record<SaveState, string> = {
+  idle: "Salvar",
+  saving: "Salvando...",
+  saved: "Salvo!",
+  error: "Erro ao salvar",
+};
+
 export function RoutineTemplateList({
   type,
   title,
@@ -79,37 +91,23 @@ export function RoutineTemplateList({
 }) {
   const [items, setItems] = useState(initialItems);
   const [newTitle, setNewTitle] = useState("");
-  const timeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const originalIds = useRef(new Set(initialItems.map((i) => i.id)));
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
   function handleEditTitle(id: string, value: string) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, title: value } : i)));
-    if (timeouts.current[id]) clearTimeout(timeouts.current[id]);
-    timeouts.current[id] = setTimeout(() => {
-      fetch(`/api/task-templates/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: value }),
-      });
-    }, 600);
   }
 
-  async function handleDelete(id: string) {
+  function handleDelete(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await fetch(`/api/task-templates/${id}`, { method: "DELETE" });
   }
 
-  async function handleAdd() {
+  function handleAdd() {
     if (!newTitle.trim()) return;
-    const response = await fetch("/api/task-templates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle.trim(), type }),
-    });
-    const created = await response.json();
-    setItems((prev) => [...prev, { id: created.id, title: created.title }]);
+    setItems((prev) => [...prev, { id: `new-${crypto.randomUUID()}`, title: newTitle.trim() }]);
     setNewTitle("");
   }
 
@@ -119,14 +117,53 @@ export function RoutineTemplateList({
     setItems((prev) => {
       const oldIndex = prev.findIndex((i) => i.id === active.id);
       const newIndex = prev.findIndex((i) => i.id === over.id);
-      const next = arrayMove(prev, oldIndex, newIndex);
-      fetch("/api/task-templates/reorder", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: next.map((i) => i.id) }),
-      });
-      return next;
+      return arrayMove(prev, oldIndex, newIndex);
     });
+  }
+
+  async function handleSave() {
+    setSaveState("saving");
+    try {
+      const removedIds = [...originalIds.current].filter(
+        (id) => !items.some((i) => i.id === id),
+      );
+
+      const savedItems = await Promise.all(
+        items.map(async (item, index) => {
+          if (isNewId(item.id)) {
+            const response = await fetch("/api/tasks/routines", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title: item.title, type, order: index }),
+            });
+            if (!response.ok) throw new Error("Falha ao criar item");
+            const created = await response.json();
+            return { id: created.id, title: created.title };
+          }
+
+          const response = await fetch(`/api/tasks/routines/${item.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: item.title, order: index }),
+          });
+          if (!response.ok) throw new Error("Falha ao atualizar item");
+          return item;
+        }),
+      );
+
+      await Promise.all(
+        removedIds.map((id) =>
+          fetch(`/api/tasks/routines/${id}`, { method: "DELETE" }),
+        ),
+      );
+
+      setItems(savedItems);
+      originalIds.current = new Set(savedItems.map((i) => i.id));
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    } catch {
+      setSaveState("error");
+    }
   }
 
   return (
@@ -173,6 +210,10 @@ export function RoutineTemplateList({
           Adicionar
         </Button>
       </div>
+
+      <Button onClick={handleSave} disabled={saveState === "saving"}>
+        {SAVE_LABEL[saveState]}
+      </Button>
     </Card>
   );
 }

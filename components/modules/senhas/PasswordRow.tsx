@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff, Lock, User } from "lucide-react";
 import { Card } from "@/components/ui";
 
 type PasswordRowProps = {
@@ -13,6 +13,13 @@ type PasswordRowProps = {
 
 export function PasswordRow({ name, login, password, url }: PasswordRowProps) {
   const [visible, setVisible] = useState(false);
+  const [copied, setCopied] = useState<"login" | "password" | null>(null);
+
+  async function handleCopy(value: string, type: "login" | "password") {
+    await navigator.clipboard.writeText(value);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  }
 
   return (
     <Card className="flex items-center justify-between gap-3">
@@ -41,6 +48,35 @@ export function PasswordRow({ name, login, password, url }: PasswordRowProps) {
             {url}
           </a>
         )}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1">
+        {login && (
+          <button
+            type="button"
+            title="Copiar login"
+            onClick={() => handleCopy(login, "login")}
+            className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+          >
+            {copied === "login" ? (
+              <Check size={14} className="text-emerald-600" />
+            ) : (
+              <User size={14} />
+            )}
+          </button>
+        )}
+        <button
+          type="button"
+          title="Copiar senha"
+          onClick={() => handleCopy(password, "password")}
+          className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+        >
+          {copied === "password" ? (
+            <Check size={14} className="text-emerald-600" />
+          ) : (
+            <Lock size={14} />
+          )}
+        </button>
       </div>
     </Card>
   );

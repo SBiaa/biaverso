@@ -11,8 +11,14 @@ function today() {
   return d;
 }
 
+function utcDate(year: number, month: number, day: number) {
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
 async function main() {
   // Limpa dados de exemplo antes de recriar (seed idempotente em dev).
+  await prisma.productionTask.deleteMany();
+  await prisma.contentPost.deleteMany();
   await prisma.transaction.deleteMany();
   await prisma.mealLog.deleteMany();
   await prisma.mealPlan.deleteMany();
@@ -210,7 +216,7 @@ async function main() {
     ],
   });
 
-  await prisma.client.create({
+  const marina = await prisma.client.create({
     data: {
       name: "Marina Souza",
       email: "marina.souza@example.com",
@@ -224,7 +230,7 @@ async function main() {
       },
     },
   });
-  await prisma.client.create({
+  const rafael = await prisma.client.create({
     data: {
       name: "Rafael Lima",
       email: "rafael.lima@example.com",
@@ -319,13 +325,14 @@ async function main() {
     ],
   });
 
-  await prisma.project.create({
+  const rebranding = await prisma.project.create({
     data: {
       name: "Rebranding cliente Marina",
       description: "Nova identidade visual para o perfil da Marina.",
       status: "EM_ANDAMENTO",
       startDate: date,
       businessId: ace.id,
+      clientId: marina.id,
       tasks: {
         create: [
           { title: "Definir paleta de cores", type: "AVULSA", dueDate: date, done: true, businessId: ace.id },
@@ -333,6 +340,116 @@ async function main() {
         ],
       },
     },
+  });
+
+  const todayUtc = utcDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  const lastMonthRef = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+
+  await prisma.contentPost.createMany({
+    data: [
+      {
+        title: "Reels bastidores do rebranding",
+        type: "REELS",
+        network: "INSTAGRAM",
+        status: "APROVADO",
+        publishDate: utcDate(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth() + 1, todayUtc.getUTCDate() + 2),
+        clientId: marina.id,
+        businessId: ace.id,
+        projectId: rebranding.id,
+      },
+      {
+        title: "Carrossel antes e depois da marca",
+        type: "CARROSSEL",
+        network: "INSTAGRAM",
+        status: "PUBLICADO",
+        publishDate: utcDate(lastMonthRef.getFullYear(), lastMonthRef.getMonth() + 1, 10),
+        completedAt: utcDate(lastMonthRef.getFullYear(), lastMonthRef.getMonth() + 1, 10),
+        clientId: marina.id,
+        businessId: ace.id,
+        projectId: rebranding.id,
+      },
+      {
+        title: "Story enquete nova logo",
+        type: "STORY",
+        network: "INSTAGRAM",
+        status: "PLANEJADO",
+        publishDate: utcDate(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth() + 1, todayUtc.getUTCDate() + 5),
+        clientId: marina.id,
+        businessId: ace.id,
+      },
+      {
+        title: "Feed foto lançamento produto",
+        type: "FEED_FOTO",
+        network: "INSTAGRAM",
+        status: "EM_CRIACAO",
+        publishDate: utcDate(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth() + 1, todayUtc.getUTCDate() + 1),
+        clientId: rafael.id,
+        businessId: ace.id,
+      },
+      {
+        title: "Story making of da produção",
+        type: "STORY",
+        network: "INSTAGRAM",
+        status: "PLANEJADO",
+        publishDate: utcDate(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth() + 1, todayUtc.getUTCDate() - 2),
+        clientId: rafael.id,
+        businessId: ace.id,
+      },
+    ],
+  });
+
+  await prisma.productionTask.createMany({
+    data: [
+      {
+        title: "Criar novo logo",
+        type: "CRIACAO_ARTE",
+        priority: "URGENTE",
+        status: "EM_ANDAMENTO",
+        dueDate: todayUtc,
+        clientId: marina.id,
+        businessId: ace.id,
+        projectId: rebranding.id,
+      },
+      {
+        title: "Editar vídeo de bastidores",
+        type: "EDICAO_VIDEO",
+        priority: "NORMAL",
+        status: "A_FAZER",
+        dueDate: utcDate(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth() + 1, todayUtc.getUTCDate() + 3),
+        clientId: marina.id,
+        businessId: ace.id,
+        projectId: rebranding.id,
+      },
+      {
+        title: "Revisar proposta de site",
+        type: "SITE",
+        priority: "NORMAL",
+        status: "AGUARDANDO_APROVACAO",
+        dueDate: utcDate(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth() + 1, todayUtc.getUTCDate() - 4),
+        clientId: marina.id,
+        businessId: ace.id,
+      },
+      {
+        title: "Criar paleta secundária",
+        type: "CRIACAO_ARTE",
+        priority: "NORMAL",
+        status: "CONCLUIDO",
+        dueDate: utcDate(lastMonthRef.getFullYear(), lastMonthRef.getMonth() + 1, 5),
+        completedAt: utcDate(lastMonthRef.getFullYear(), lastMonthRef.getMonth() + 1, 12),
+        clientId: marina.id,
+        businessId: ace.id,
+        projectId: rebranding.id,
+      },
+      {
+        title: "Fotografar produtos novos",
+        type: "FOTOGRAFIA",
+        priority: "NORMAL",
+        status: "A_FAZER",
+        dueDate: utcDate(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth() + 1, todayUtc.getUTCDate() + 7),
+        clientId: rafael.id,
+        businessId: ace.id,
+      },
+    ],
   });
 
   await prisma.project.create({

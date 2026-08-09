@@ -14,15 +14,28 @@ type Book = {
   author: string | null;
   status: string;
   rating: number | null;
+  totalPages: number | null;
+  currentPage: number | null;
   notes: string | null;
 };
 
 export function BookCard({ book: initialBook }: { book: Book }) {
   const [book, setBook] = useState(initialBook);
+  const [editingPage, setEditingPage] = useState(false);
+  const [pageInput, setPageInput] = useState("");
+  const [editingTotal, setEditingTotal] = useState(false);
+  const [totalInput, setTotalInput] = useState("");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function save(patch: Partial<Book>) {
-    setBook((prev) => ({ ...prev, ...patch }));
+    setBook((prev) => ({
+      ...prev,
+      ...patch,
+      currentPage:
+        patch.status === "LIDO"
+          ? (patch.totalPages ?? prev.totalPages)
+          : (patch.currentPage ?? prev.currentPage),
+    }));
     fetch(`/api/books/${book.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -41,6 +54,27 @@ export function BookCard({ book: initialBook }: { book: Book }) {
       });
     }, 700);
   }
+
+  function submitPage() {
+    const value = Number(pageInput);
+    if (!value || value <= 0) return;
+    save({ currentPage: value });
+    setPageInput("");
+    setEditingPage(false);
+  }
+
+  function submitTotal() {
+    const value = Number(totalInput);
+    if (!value || value <= 0) return;
+    save({ totalPages: value });
+    setTotalInput("");
+    setEditingTotal(false);
+  }
+
+  const progress =
+    book.totalPages && book.currentPage
+      ? Math.min(100, Math.round((book.currentPage / book.totalPages) * 100))
+      : null;
 
   return (
     <Card className="flex flex-col gap-3">
@@ -69,6 +103,95 @@ export function BookCard({ book: initialBook }: { book: Book }) {
           </select>
         </div>
       </div>
+
+      {book.status === "LENDO" && (
+        <div className="flex flex-col gap-1.5">
+          {book.totalPages ? (
+            <>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+                <div
+                  className="h-full rounded-full bg-accent transition-all"
+                  style={{ width: `${progress ?? 0}%` }}
+                />
+              </div>
+              <p className="text-xs text-text-secondary">
+                página {book.currentPage ?? 0} de {book.totalPages}
+                {progress !== null ? ` · ${progress}%` : ""}
+              </p>
+            </>
+          ) : editingTotal ? (
+            <div className="flex gap-2">
+              <input
+                type="number"
+                autoFocus
+                placeholder="Total de páginas"
+                value={totalInput}
+                onChange={(e) => setTotalInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitTotal()}
+                className="w-28 rounded-md border border-border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
+              />
+              <button
+                type="button"
+                onClick={submitTotal}
+                className="text-xs font-medium text-accent"
+              >
+                Salvar
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingTotal(false)}
+                className="text-xs text-text-secondary"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingTotal(true)}
+              className="w-fit text-xs font-medium text-accent"
+            >
+              + Definir total de páginas
+            </button>
+          )}
+
+          {editingPage ? (
+            <div className="flex gap-2">
+              <input
+                type="number"
+                autoFocus
+                placeholder="Página atual"
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitPage()}
+                className="w-28 rounded-md border border-border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
+              />
+              <button
+                type="button"
+                onClick={submitPage}
+                className="text-xs font-medium text-accent"
+              >
+                Salvar
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingPage(false)}
+                className="text-xs text-text-secondary"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingPage(true)}
+              className="w-fit text-xs font-medium text-accent"
+            >
+              + Atualizar página
+            </button>
+          )}
+        </div>
+      )}
 
       {book.status === "LIDO" && (
         <StarRating

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
-  const { name, description, status, startDate, endDate, businessId } =
+  const { name, description, status, startDate, endDate, businessId, clientId } =
     await request.json();
 
   const project = await prisma.project.create({
@@ -13,6 +13,7 @@ export async function POST(request: Request) {
       startDate: startDate ? new Date(startDate) : null,
       endDate: endDate ? new Date(endDate) : null,
       businessId,
+      clientId: clientId || null,
     },
   });
 

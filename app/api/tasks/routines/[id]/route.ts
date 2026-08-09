@@ -6,14 +6,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const { title } = await request.json();
+  const { title, order } = await request.json();
 
-  const template = await prisma.task.update({
+  const routine = await prisma.task.update({
     where: { id },
-    data: { title },
+    data: { title, order },
   });
 
-  return NextResponse.json(template);
+  return NextResponse.json(routine);
 }
 
 export async function DELETE(

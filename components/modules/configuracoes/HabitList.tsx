@@ -5,46 +5,86 @@ import { RotateCcw, Trash2, Plus } from "lucide-react";
 import { Card, Button } from "@/components/ui";
 
 type HabitItem = { id: string; name: string; active: boolean };
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+function isNewId(id: string) {
+  return id.startsWith("new-");
+}
+
+const SAVE_LABEL: Record<SaveState, string> = {
+  idle: "Salvar",
+  saving: "Salvando...",
+  saved: "Salvo!",
+  error: "Erro ao salvar",
+};
 
 export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
   const [items, setItems] = useState(initialItems);
   const [newName, setNewName] = useState("");
-  const timeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const originalIds = useRef(new Set(initialItems.map((i) => i.id)));
 
   const active = items.filter((i) => i.active);
   const inactive = items.filter((i) => !i.active);
 
   function handleEditName(id: string, value: string) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, name: value } : i)));
-    if (timeouts.current[id]) clearTimeout(timeouts.current[id]);
-    timeouts.current[id] = setTimeout(() => {
-      fetch(`/api/habits/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: value }),
-      });
-    }, 600);
   }
 
-  async function toggleActive(id: string, nextActive: boolean) {
+  function toggleActive(id: string, nextActive: boolean) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, active: nextActive } : i)));
-    await fetch(`/api/habits/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: nextActive }),
-    });
   }
 
-  async function handleAdd() {
+  function handleAdd() {
     if (!newName.trim()) return;
-    const response = await fetch("/api/habits", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim() }),
-    });
-    const created = await response.json();
-    setItems((prev) => [...prev, { id: created.id, name: created.name, active: true }]);
+    setItems((prev) => [
+      ...prev,
+      { id: `new-${crypto.randomUUID()}`, name: newName.trim(), active: true },
+    ]);
     setNewName("");
+  }
+
+  async function handleSave() {
+    setSaveState("saving");
+    try {
+      const removedIds = [...originalIds.current].filter(
+        (id) => !items.some((i) => i.id === id),
+      );
+
+      const savedItems = await Promise.all(
+        items.map(async (item) => {
+          if (isNewId(item.id)) {
+            const response = await fetch("/api/habits", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: item.name }),
+            });
+            if (!response.ok) throw new Error("Falha ao criar hábito");
+            const created = await response.json();
+            return { id: created.id, name: created.name, active: created.active };
+          }
+
+          const response = await fetch(`/api/habits/${item.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: item.name, active: item.active }),
+          });
+          if (!response.ok) throw new Error("Falha ao atualizar hábito");
+          return item;
+        }),
+      );
+
+      await Promise.all(
+        removedIds.map((id) => fetch(`/api/habits/${id}`, { method: "DELETE" })),
+      );
+
+      setItems(savedItems);
+      originalIds.current = new Set(savedItems.map((i) => i.id));
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    } catch {
+      setSaveState("error");
+    }
   }
 
   return (
@@ -117,6 +157,10 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
           ))}
         </div>
       )}
+
+      <Button onClick={handleSave} disabled={saveState === "saving"}>
+        {SAVE_LABEL[saveState]}
+      </Button>
     </Card>
   );
 }

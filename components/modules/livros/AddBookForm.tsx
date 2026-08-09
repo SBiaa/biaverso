@@ -15,6 +15,8 @@ export function AddBookForm() {
     title: "",
     author: "",
     status: "QUERO_LER",
+    totalPages: "",
+    currentPage: "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -31,7 +33,13 @@ export function AddBookForm() {
     });
     setSaving(false);
     setOpen(false);
-    setForm({ title: "", author: "", status: "QUERO_LER" });
+    setForm({
+      title: "",
+      author: "",
+      status: "QUERO_LER",
+      totalPages: "",
+      currentPage: "",
+    });
     router.refresh();
   }
 
@@ -65,6 +73,24 @@ export function AddBookForm() {
             </option>
           ))}
         </select>
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="number"
+          placeholder="Total de páginas"
+          value={form.totalPages}
+          onChange={(e) => update("totalPages", e.target.value)}
+          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        />
+        {form.status === "LENDO" && (
+          <input
+            type="number"
+            placeholder="Página atual"
+            value={form.currentPage}
+            onChange={(e) => update("currentPage", e.target.value)}
+            className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
+        )}
       </div>
       <div className="flex gap-2">
         <Button onClick={handleSubmit} disabled={saving}>

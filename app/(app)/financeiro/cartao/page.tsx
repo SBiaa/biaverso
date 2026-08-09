@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge, MonthPicker } from "@/components/ui";
+import { Card, MonthPicker } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
-import { formatCurrencyBRL, formatDateBR, startOfToday } from "@/lib/utils";
-import { transactionCategoryLabels } from "@/lib/labels";
+import { CreditCardEntriesList } from "@/components/modules/financeiro/CreditCardEntriesList";
+import { formatCurrencyBRL, startOfToday } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +19,14 @@ export default async function CartaoPage({
   const month = params.month ? Number(params.month) : today.getMonth() + 1;
   const year = params.year ? Number(params.year) : today.getFullYear();
 
-  const entries = await prisma.creditCardEntry.findMany({
-    where: { invoiceMonth: month, invoiceYear: year },
-    orderBy: { purchaseDate: "desc" },
-    include: { business: true },
-  });
+  const [entries, businesses] = await Promise.all([
+    prisma.creditCardEntry.findMany({
+      where: { invoiceMonth: month, invoiceYear: year },
+      orderBy: { purchaseDate: "desc" },
+      include: { business: true },
+    }),
+    prisma.business.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+  ]);
 
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
 
@@ -41,35 +44,7 @@ export default async function CartaoPage({
         </div>
 
         <Card>
-          {entries.length === 0 ? (
-            <p className="text-sm text-text-secondary">
-              Nenhum lançamento neste mês.
-            </p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-border">
-              {entries.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <BusinessBadge business={entry.business} />
-                    <div>
-                      <p className="text-text-primary">{entry.description}</p>
-                      <p className="text-xs text-text-secondary">
-                        {formatDateBR(entry.purchaseDate)} ·{" "}
-                        {transactionCategoryLabels[entry.category]}
-                        {entry.installment ? ` · ${entry.installment}` : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="font-medium text-text-primary">
-                    {formatCurrencyBRL(entry.amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <CreditCardEntriesList entries={entries} businesses={businesses} />
         </Card>
       </main>
     </>

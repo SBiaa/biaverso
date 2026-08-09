@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { TransactionsFilters } from "@/components/modules/financeiro/TransactionsFilters";
 import { AddTransactionForm } from "@/components/modules/financeiro/AddTransactionForm";
-import { cn, formatCurrencyBRL, formatDateBR, parseLocalDateString } from "@/lib/utils";
-import { transactionCategoryLabels } from "@/lib/labels";
+import { TransactionsList } from "@/components/modules/financeiro/TransactionsList";
+import { parseLocalDateString } from "@/lib/utils";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -61,39 +61,7 @@ export default async function TransacoesPage({
         </div>
 
         <Card>
-          {transactions.length === 0 ? (
-            <p className="text-sm text-text-secondary">
-              Nenhuma transação encontrada.
-            </p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-border">
-              {transactions.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <BusinessBadge business={t.business} />
-                    <div>
-                      <p className="text-text-primary">{t.name}</p>
-                      <p className="text-xs text-text-secondary">
-                        {formatDateBR(t.date)} · {transactionCategoryLabels[t.category]}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={cn(
-                      "font-medium",
-                      t.type === "ENTRADA" ? "text-emerald-600" : "text-red-600",
-                    )}
-                  >
-                    {t.type === "ENTRADA" ? "+" : "-"}
-                    {formatCurrencyBRL(t.amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <TransactionsList transactions={transactions} businesses={businesses} />
         </Card>
       </main>
     </>

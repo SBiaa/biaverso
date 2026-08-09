@@ -425,6 +425,8 @@ model Business {
   transactions      Transaction[]
   creditCardEntries CreditCardEntry[]
   ideas             Idea[]
+  contentPosts      ContentPost[]
+  productionTasks   ProductionTask[]
 }
 
 model Project {
@@ -439,7 +441,12 @@ model Project {
 
   businessId String
   business   Business @relation(fields: [businessId], references: [id])
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id])
   tasks      Task[]
+
+  contentPosts    ContentPost[]
+  productionTasks ProductionTask[]
 }
 
 enum ProjectStatus {
@@ -459,6 +466,10 @@ model Client {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   businessLinks ClientBusiness[]
+  projects      Project[]
+
+  contentPosts    ContentPost[]
+  productionTasks ProductionTask[]
 }
 
 model ClientBusiness {
@@ -480,19 +491,111 @@ enum ClientStatus {
   INATIVO
 }
 
+// ACE — CRONOGRAMA DE CONTEÚDO E PRODUÇÃO
+model ContentPost {
+  id          String        @id @default(cuid())
+  title       String
+  type        PostType
+  network     SocialNetwork
+  status      ContentStatus @default(PLANEJADO)
+  publishDate DateTime?
+  completedAt DateTime?
+  caption     String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id])
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id])
+}
+
+enum PostType {
+  STORY
+  REELS
+  FEED_FOTO
+  FEED_VIDEO
+  CARROSSEL
+}
+
+enum SocialNetwork {
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+  LINKEDIN
+  FACEBOOK
+  OUTRO
+}
+
+enum ContentStatus {
+  PLANEJADO
+  EM_CRIACAO
+  APROVADO
+  PUBLICADO
+  CANCELADO
+}
+
+model ProductionTask {
+  id          String           @id @default(cuid())
+  title       String
+  type        ProductionType
+  description String?
+  priority    Priority         @default(NORMAL)
+  status      ProductionStatus @default(A_FAZER)
+  dueDate     DateTime?
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id])
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id])
+}
+
+enum ProductionType {
+  EDICAO_VIDEO
+  CRIACAO_ARTE
+  SITE
+  FOTOGRAFIA
+  COPY
+  OUTRO
+}
+
+enum Priority {
+  NORMAL
+  URGENTE
+}
+
+enum ProductionStatus {
+  A_FAZER
+  EM_ANDAMENTO
+  AGUARDANDO_APROVACAO
+  CONCLUIDO
+  CANCELADO
+}
+
 // BIBLIOTECA DE LIVROS
 model Book {
-  id         String     @id @default(cuid())
-  title      String
-  author     String?
-  cover      String?
-  status     BookStatus @default(QUERO_LER)
-  rating     Int?
-  startedAt  DateTime?
-  finishedAt DateTime?
-  notes      String?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id          String     @id @default(cuid())
+  title       String
+  author      String?
+  cover       String?
+  status      BookStatus @default(QUERO_LER)
+  rating      Int?
+  totalPages  Int?
+  currentPage Int?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 enum BookStatus {

@@ -22,10 +22,12 @@ export default async function ContasFixasPage() {
 
   const items = logs.map((log) => ({
     logId: log.id,
+    fixedBillId: log.fixedBillId,
     name: log.fixedBill.name,
     amount: log.fixedBill.amount,
     dueDay: log.fixedBill.dueDay,
     type: log.fixedBill.type,
+    notes: log.fixedBill.notes,
     status: log.status,
   }));
 
