@@ -1,0 +1,579 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// USUÁRIO
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// DIA A DIA
+model Day {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  type      DayType  @default(NORMAL)
+  mood      String?
+  energy    Energy?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  habits    HabitLog[]
+  waterLogs WaterLog[]
+  mealLogs  MealLog[]
+  tasks     Task[]
+  events    Event[]
+}
+
+enum DayType {
+  NORMAL
+  FAXINA
+}
+
+enum Energy {
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+model Habit {
+  id        String     @id @default(cuid())
+  name      String
+  icon      String?
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  logs      HabitLog[]
+}
+
+model HabitLog {
+  id      String  @id @default(cuid())
+  done    Boolean @default(false)
+  habitId String
+  habit   Habit   @relation(fields: [habitId], references: [id])
+  dayId   String
+  day     Day     @relation(fields: [dayId], references: [id])
+
+  @@unique([habitId, dayId])
+}
+
+model WaterLog {
+  id       String   @id @default(cuid())
+  amount   Float    @default(300)
+  loggedAt DateTime @default(now())
+  dayId    String
+  day      Day      @relation(fields: [dayId], references: [id])
+}
+
+model Task {
+  id         String    @id @default(cuid())
+  title      String
+  done       Boolean   @default(false)
+  type       TaskType  @default(AVULSA)
+  origin     Origin    @default(PESSOAL)
+  dueDate    DateTime?
+  order      Int       @default(0)
+  createdAt  DateTime  @default(now())
+  dayId      String?
+  day        Day?      @relation(fields: [dayId], references: [id])
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id])
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id])
+}
+
+enum TaskType {
+  ROTINA_NORMAL
+  ROTINA_FAXINA
+  AVULSA
+}
+
+// AGENDA
+model Event {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  time        String?
+  category    EventCategory @default(PESSOAL)
+  createdAt   DateTime      @default(now())
+  dayId       String?
+  day         Day?          @relation(fields: [dayId], references: [id])
+}
+
+enum EventCategory {
+  PESSOAL
+  TAROT
+  ACE
+  CREATIVE
+  SAUDE
+  OUTRO
+}
+
+// CARDÁPIO E RECEITAS
+model Recipe {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  category    RecipeCategory
+  ingredients String
+  steps       String
+  prepTime    Int?
+  imageUrl    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  mealPlans   MealPlan[]
+  mealLogs    MealLog[]
+}
+
+enum RecipeCategory {
+  CAFE_DA_MANHA
+  ALMOCO
+  JANTAR
+  LANCHE
+  SOBREMESA
+  OUTRO
+}
+
+model MealPlan {
+  id        String   @id @default(cuid())
+  weekStart DateTime
+  dayOfWeek Int
+  mealType  MealType
+  createdAt DateTime @default(now())
+  recipeId  String?
+  recipe    Recipe?  @relation(fields: [recipeId], references: [id])
+}
+
+model MealLog {
+  id       String   @id @default(cuid())
+  eaten    Boolean  @default(false)
+  mealType MealType
+  notes    String?
+  dayId    String
+  day      Day      @relation(fields: [dayId], references: [id])
+  recipeId String?
+  recipe   Recipe?  @relation(fields: [recipeId], references: [id])
+}
+
+enum MealType {
+  CAFE_DA_MANHA
+  ALMOCO
+  JANTAR
+  LANCHE
+}
+
+// AVALIAÇÃO
+model WeekReview {
+  id            String       @id @default(cuid())
+  weekStart     DateTime
+  weekEnd       DateTime
+  effectiveness Stars?
+  energy        Energy?
+  biggestBlock  Block?
+  executedPlan  Execution?
+  foodHydration Quality?
+  houseUpToDate Boolean      @default(false)
+  notes         String?
+  nextWeekFocus String?
+  createdAt     DateTime     @default(now())
+  monthReviewId String?
+  monthReview   MonthReview? @relation(fields: [monthReviewId], references: [id])
+}
+
+model MonthReview {
+  id              String         @id @default(cuid())
+  month           Int
+  year            Int
+  effectiveness   Stars?
+  highlights      String?
+  improvements    String?
+  nextMonthGoal   String?
+  createdAt       DateTime       @default(now())
+  weekReviews     WeekReview[]
+  quarterReviewId String?
+  quarterReview   QuarterReview? @relation(fields: [quarterReviewId], references: [id])
+}
+
+model QuarterReview {
+  id              String        @id @default(cuid())
+  quarter         Int
+  year            Int
+  highlights      String?
+  improvements    String?
+  nextQuarterGoal String?
+  createdAt       DateTime      @default(now())
+  monthReviews    MonthReview[]
+}
+
+model Goal {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  period      GoalPeriod
+  area        GoalArea
+  status      GoalStatus @default(EM_ANDAMENTO)
+  deadline    DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+enum Stars {
+  UM
+  DOIS
+  TRES
+  QUATRO
+  CINCO
+}
+
+enum Block {
+  INICIO
+  FINALIZACAO
+  RESPONDER_PESSOAS
+  EMOCIONAL
+  ENERGIA
+}
+
+enum Execution {
+  SIM
+  PARCIAL
+  NAO
+}
+
+enum Quality {
+  BEM
+  MAIS_OU_MENOS
+  DESCUIDEI
+}
+
+enum GoalPeriod {
+  SEMANAL
+  MENSAL
+  TRIMESTRAL
+  ANUAL
+}
+
+enum GoalArea {
+  PESSOAL
+  FINANCEIRO
+  SAUDE
+  NEGOCIOS
+  ESPIRITUALIDADE
+  OUTRO
+}
+
+enum GoalStatus {
+  EM_ANDAMENTO
+  CONCLUIDA
+  PAUSADA
+  CANCELADA
+}
+
+// FINANCEIRO
+model Transaction {
+  id         String              @id @default(cuid())
+  name       String
+  type       TransactionType
+  amount     Float
+  date       DateTime
+  category   TransactionCategory
+  payMethod  PayMethod?
+  notes      String?
+  createdAt  DateTime            @default(now())
+  businessId String?
+  business   Business?           @relation(fields: [businessId], references: [id])
+}
+
+enum TransactionType {
+  ENTRADA
+  SAIDA
+}
+
+// Continua em uso só por Task.origin (categorização simples de tarefas do dia).
+enum Origin {
+  PESSOAL
+  ACE
+  BIATRIX_TAROT
+  CREATIVE
+  CASA
+}
+
+enum TransactionCategory {
+  RECEITA_VENDA
+  CONTA_FIXA
+  ASSINATURA
+  GASTO_PESSOAL
+  WEED
+  GATOS
+  ALIMENTACAO
+  CUSTO_OPERACIONAL
+  CARTAO_CREDITO
+  OUTRO
+}
+
+enum PayMethod {
+  CARTAO_CREDITO
+  PIX_DEBITO
+  DINHEIRO
+  TRANSFERENCIA
+}
+
+model FixedBill {
+  id          String         @id @default(cuid())
+  name        String
+  amount      Float
+  dueDay      Int
+  type        FixedBillType
+  active      Boolean        @default(true)
+  notes       String?
+  createdAt   DateTime       @default(now())
+  monthlyLogs FixedBillLog[]
+}
+
+enum FixedBillType {
+  ASSINATURA_PESSOAL
+  ASSINATURA_TRABALHO
+  CONTA_CASA
+}
+
+model FixedBillLog {
+  id          String     @id @default(cuid())
+  month       Int
+  year        Int
+  status      BillStatus @default(PENDENTE)
+  paidAt      DateTime?
+  fixedBillId String
+  fixedBill   FixedBill  @relation(fields: [fixedBillId], references: [id])
+
+  @@unique([fixedBillId, month, year])
+}
+
+enum BillStatus {
+  PAGO
+  PENDENTE
+  ATRASADO
+}
+
+model CreditCardEntry {
+  id           String              @id @default(cuid())
+  description  String
+  amount       Float
+  purchaseDate DateTime
+  invoiceMonth Int
+  invoiceYear  Int
+  installment  String?
+  category     TransactionCategory
+  notes        String?
+  createdAt    DateTime            @default(now())
+  businessId   String?
+  business     Business?           @relation(fields: [businessId], references: [id])
+}
+
+model FinancialRecord {
+  id           String              @id @default(cuid())
+  name         String
+  type         FinancialRecordType
+  totalAmount  Float
+  paidAmount   Float               @default(0)
+  installments Int?
+  dueDay       Int?
+  status       FinancialStatus     @default(EM_ABERTO)
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+enum FinancialRecordType {
+  DIVIDA
+  INVESTIMENTO
+}
+
+enum FinancialStatus {
+  EM_ABERTO
+  PARCIAL
+  QUITADO
+}
+
+// NEGÓCIOS E CLIENTES
+model Business {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#6366F1")
+  icon        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clients           ClientBusiness[]
+  projects          Project[]
+  tasks             Task[]
+  transactions      Transaction[]
+  creditCardEntries CreditCardEntry[]
+  ideas             Idea[]
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(EM_ANDAMENTO)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  tasks      Task[]
+}
+
+enum ProjectStatus {
+  EM_ANDAMENTO
+  CONCLUIDO
+  PAUSADO
+  CANCELADO
+}
+
+model Client {
+  id            String           @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  instagram     String?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  businessLinks ClientBusiness[]
+}
+
+model ClientBusiness {
+  id         String       @id @default(cuid())
+  businessId String
+  business   Business     @relation(fields: [businessId], references: [id])
+  status     ClientStatus @default(ATIVO)
+  notes      String?
+  joinedAt   DateTime     @default(now())
+  clientId   String
+  client     Client       @relation(fields: [clientId], references: [id])
+
+  @@unique([clientId, businessId])
+}
+
+enum ClientStatus {
+  ATIVO
+  PAUSADO
+  INATIVO
+}
+
+// BIBLIOTECA DE LIVROS
+model Book {
+  id         String     @id @default(cuid())
+  title      String
+  author     String?
+  cover      String?
+  status     BookStatus @default(QUERO_LER)
+  rating     Int?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  notes      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+enum BookStatus {
+  QUERO_LER
+  LENDO
+  LIDO
+  PAUSADO
+  ABANDONADO
+}
+
+// BIBLIOTECA DE CONHECIMENTO
+model Knowledge {
+  id        String        @id @default(cuid())
+  title     String
+  source    String?
+  type      KnowledgeType
+  area      KnowledgeArea
+  summary   String?
+  link      String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum KnowledgeType {
+  VIDEO
+  ARTIGO
+  CURSO
+  PODCAST
+  POST
+  OUTRO
+}
+
+enum KnowledgeArea {
+  MARKETING
+  PROGRAMACAO
+  ESPIRITUALIDADE
+  DESIGN
+  NEGOCIOS
+  SAUDE
+  OUTRO
+}
+
+// BANCO DE IDEIAS
+model Idea {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      IdeaStatus @default(SOLTA)
+  tags        String[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  businessId  String?
+  business    Business?  @relation(fields: [businessId], references: [id])
+}
+
+enum IdeaStatus {
+  SOLTA
+  EM_ANALISE
+  VIROU_PROJETO
+  ARQUIVADA
+}
+
+// COFRE DE SENHAS (v1 sem criptografia)
+// TODO: encrypt in v2
+model PasswordEntry {
+  id        String           @id @default(cuid())
+  name      String
+  login     String?
+  password  String
+  url       String?
+  category  PasswordCategory @default(OUTRO)
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+enum PasswordCategory {
+  REDES_SOCIAIS
+  TRABALHO
+  FINANCEIRO
+  STREAMING
+  FERRAMENTAS
+  OUTRO
+}

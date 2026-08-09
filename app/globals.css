@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --border: #e5e5e5;
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --accent: #6366f1;
+
+  --badge-ace-bg: #fef2f2;
+  --badge-ace-text: #991b1b;
+  --badge-tarot-bg: #f3f0ff;
+  --badge-tarot-text: #5b21b6;
+  --badge-creative-bg: #ecfdf5;
+  --badge-creative-text: #065f46;
+  --badge-pessoal-bg: #eff6ff;
+  --badge-pessoal-text: #1d4ed8;
+  --badge-casa-bg: #f9fafb;
+  --badge-casa-text: #374151;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+
+  --color-badge-ace-bg: var(--badge-ace-bg);
+  --color-badge-ace-text: var(--badge-ace-text);
+  --color-badge-tarot-bg: var(--badge-tarot-bg);
+  --color-badge-tarot-text: var(--badge-tarot-text);
+  --color-badge-creative-bg: var(--badge-creative-bg);
+  --color-badge-creative-text: var(--badge-creative-text);
+  --color-badge-pessoal-bg: var(--badge-pessoal-bg);
+  --color-badge-pessoal-text: var(--badge-pessoal-text);
+  --color-badge-casa-bg: var(--badge-casa-bg);
+  --color-badge-casa-text: var(--badge-casa-text);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-lora);
+}
+
+/* Tokens dark ficam definidos para uso futuro (toggle de tema ainda não faz parte do escopo). */
+:root[data-theme="dark"] {
+  --background: #0f0f0f;
+  --surface: #18181b;
+  --border: #27272a;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+}
+
+body {
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
