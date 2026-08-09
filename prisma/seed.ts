@@ -33,6 +33,12 @@ async function main() {
   await prisma.fixedBill.deleteMany();
   await prisma.creditCardEntry.deleteMany();
   await prisma.financialRecord.deleteMany();
+  await prisma.moodboardItem.deleteMany();
+  await prisma.measuredGoal.deleteMany();
+  await prisma.conceptualGoal.deleteMany();
+  await prisma.principle.deleteMany();
+  await prisma.desire.deleteMany();
+  await prisma.pillar.deleteMany();
   await prisma.clientBusiness.deleteMany();
   await prisma.client.deleteMany();
   await prisma.book.deleteMany();
@@ -487,6 +493,16 @@ async function main() {
         password: "exemplo-senha-789",
         category: "STREAMING",
       },
+    ],
+  });
+
+  await prisma.pillar.createMany({
+    data: [
+      { name: "Saúde", color: "#10B981", icon: "heart" },
+      { name: "Espiritualidade", color: "#8B5CF6", icon: "moon" },
+      { name: "Negócios", color: "#F59E0B", icon: "briefcase" },
+      { name: "Criatividade", color: "#EC4899", icon: "palette" },
+      { name: "Relacionamentos", color: "#3B82F6", icon: "users" },
     ],
   });
 

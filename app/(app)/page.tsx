@@ -10,6 +10,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Badge, StatCard, type BadgeOrigin } from "@/components/ui";
+import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightCard";
 import {
   cn,
   dayOfYear,
@@ -65,11 +66,36 @@ async function getDashboardData() {
 
   const saldo = (entradas._sum.amount ?? 0) - (saidas._sum.amount ?? 0);
 
-  return { day, saldo, date };
+  const pillars = await prisma.pillar.findMany({
+    include: {
+      conceptualGoals: {
+        include: { measuredGoals: { where: { status: "EM_ANDAMENTO" }, orderBy: { deadline: "asc" } } },
+      },
+    },
+  });
+
+  const pillarHighlight = pillars
+    .map((pillar) => {
+      const inProgress = pillar.conceptualGoals.flatMap((g) => g.measuredGoals);
+      return {
+        id: pillar.id,
+        name: pillar.name,
+        color: pillar.color,
+        icon: pillar.icon,
+        inProgressCount: inProgress.length,
+        highlightGoal: inProgress[0]
+          ? { title: inProgress[0].title, progress: inProgress[0].progress }
+          : null,
+      };
+    })
+    .filter((pillar) => pillar.inProgressCount > 0)
+    .sort((a, b) => b.inProgressCount - a.inProgressCount)[0] ?? null;
+
+  return { day, saldo, date, pillarHighlight };
 }
 
 export default async function HomePage() {
-  const { day, saldo, date } = await getDashboardData();
+  const { day, saldo, date, pillarHighlight } = await getDashboardData();
 
   const events = day?.events ?? [];
   const tasks = day?.tasks ?? [];
@@ -239,6 +265,8 @@ export default async function HomePage() {
                 })}
               </div>
             </Card>
+
+            <PillarHighlightCard pillar={pillarHighlight} />
           </div>
         </div>
       </main>
@@ -354,6 +382,8 @@ export default async function HomePage() {
             })}
           </div>
         </Card>
+
+        <PillarHighlightCard pillar={pillarHighlight} />
       </main>
     </>
   );

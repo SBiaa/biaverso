@@ -187,3 +187,16 @@ export const passwordCategoryLabels: Record<string, string> = {
   FERRAMENTAS: "Ferramentas",
   OUTRO: "Outro",
 };
+
+export const measuredGoalStatusLabels: Record<string, string> = {
+  EM_ANDAMENTO: "Em andamento",
+  CONCLUIDO: "Concluído",
+  PAUSADO: "Pausado",
+  CANCELADO: "Cancelado",
+};
+
+export const moodboardTypeLabels: Record<string, string> = {
+  IMAGEM: "Imagem",
+  PALAVRA: "Palavra",
+  FRASE: "Frase",
+};

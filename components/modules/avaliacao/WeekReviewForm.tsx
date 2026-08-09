@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { Check } from "lucide-react";
 import { Card, Button } from "@/components/ui";
 import { StarRating } from "./StarRating";
@@ -23,6 +24,7 @@ type WeekReviewData = {
   houseUpToDate: boolean;
   notes: string | null;
   nextWeekFocus: string | null;
+  visionAlignment: string | null;
 };
 
 function ButtonGroup({
@@ -181,6 +183,21 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
           onChange={(e) => saveDebounced({ nextWeekFocus: e.target.value })}
           className="min-h-[120px] resize-none rounded-lg border border-border p-3 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
+      </Card>
+
+      <Card className="flex flex-col gap-2">
+        <p className="text-base font-semibold text-text-primary">
+          Suas ações desta semana estão alinhadas com seus pilares?
+        </p>
+        <textarea
+          value={form.visionAlignment ?? ""}
+          onChange={(e) => saveDebounced({ visionAlignment: e.target.value })}
+          placeholder="Reflita sobre o que você priorizou nesta semana..."
+          className="min-h-[100px] resize-none rounded-lg border border-border p-3 text-sm outline-none focus:ring-2 focus:ring-accent"
+        />
+        <Link href="/visao" className="self-start text-xs font-medium text-accent">
+          Ver Central de Visão
+        </Link>
       </Card>
 
       <div className="flex items-center justify-end gap-2">

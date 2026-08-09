@@ -15,6 +15,7 @@ export async function PATCH(
     houseUpToDate,
     notes,
     nextWeekFocus,
+    visionAlignment,
   } = await request.json();
 
   const review = await prisma.weekReview.update({
@@ -28,6 +29,7 @@ export async function PATCH(
       houseUpToDate,
       notes,
       nextWeekFocus,
+      visionAlignment,
     },
   });
 
