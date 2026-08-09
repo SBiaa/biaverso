@@ -179,20 +179,21 @@ enum MealType {
 
 // AVALIAÇÃO
 model WeekReview {
-  id            String       @id @default(cuid())
-  weekStart     DateTime
-  weekEnd       DateTime
-  effectiveness Stars?
-  energy        Energy?
-  biggestBlock  Block?
-  executedPlan  Execution?
-  foodHydration Quality?
-  houseUpToDate Boolean      @default(false)
-  notes         String?
-  nextWeekFocus String?
-  createdAt     DateTime     @default(now())
-  monthReviewId String?
-  monthReview   MonthReview? @relation(fields: [monthReviewId], references: [id])
+  id              String       @id @default(cuid())
+  weekStart       DateTime
+  weekEnd         DateTime
+  effectiveness   Stars?
+  energy          Energy?
+  biggestBlock    Block?
+  executedPlan    Execution?
+  foodHydration   Quality?
+  houseUpToDate   Boolean      @default(false)
+  notes           String?
+  nextWeekFocus   String?
+  visionAlignment String?
+  createdAt       DateTime     @default(now())
+  monthReviewId   String?
+  monthReview     MonthReview? @relation(fields: [monthReviewId], references: [id])
 }
 
 model MonthReview {
@@ -230,6 +231,9 @@ model Goal {
   deadline    DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  measuredGoalId String?
+  measuredGoal   MeasuredGoal? @relation(fields: [measuredGoalId], references: [id])
 }
 
 enum Stars {
@@ -679,4 +683,102 @@ enum PasswordCategory {
   STREAMING
   FERRAMENTAS
   OUTRO
+}
+
+// CENTRAL DE VISÃO — conecta os grandes propósitos da vida com as ações do dia a dia
+
+// PILARES — grandes áreas da vida
+model Pillar {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#6366F1")
+  icon        String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  conceptualGoals ConceptualGoal[]
+  moodboardItems  MoodboardItem[]
+  desires         Desire[]
+  principles      Principle[]
+}
+
+// PRINCÍPIOS E VALORES — o "por que" de tudo
+model Principle {
+  id        String   @id @default(cuid())
+  title     String
+  body      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pillarId String?
+  pillar   Pillar? @relation(fields: [pillarId], references: [id])
+}
+
+// OBJETIVOS CONCEITUAIS — o que quer ser/ter/sentir
+model ConceptualGoal {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pillarId      String
+  pillar        Pillar         @relation(fields: [pillarId], references: [id])
+  measuredGoals MeasuredGoal[]
+}
+
+// OBJETIVOS METRIFICADOS — versão mensurável com prazo
+model MeasuredGoal {
+  id        String             @id @default(cuid())
+  title     String
+  target    String?
+  deadline  DateTime?
+  status    MeasuredGoalStatus @default(EM_ANDAMENTO)
+  progress  Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  conceptualGoalId String
+  conceptualGoal   ConceptualGoal @relation(fields: [conceptualGoalId], references: [id])
+  goals            Goal[]
+}
+
+enum MeasuredGoalStatus {
+  EM_ANDAMENTO
+  CONCLUIDO
+  PAUSADO
+  CANCELADO
+}
+
+// DESEJOS E INTENÇÕES — sonhos sem prazo
+model Desire {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pillarId String?
+  pillar   Pillar? @relation(fields: [pillarId], references: [id])
+}
+
+// MOODBOARD — imagens, palavras e frases por pilar
+model MoodboardItem {
+  id        String        @id @default(cuid())
+  type      MoodboardType
+  content   String
+  caption   String?
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  pillarId String
+  pillar   Pillar @relation(fields: [pillarId], references: [id])
+}
+
+enum MoodboardType {
+  IMAGEM
+  PALAVRA
+  FRASE
 }
