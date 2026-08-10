@@ -5,7 +5,7 @@ import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { TransactionsFilters } from "@/components/modules/financeiro/TransactionsFilters";
 import { AddTransactionForm } from "@/components/modules/financeiro/AddTransactionForm";
 import { TransactionsList } from "@/components/modules/financeiro/TransactionsList";
-import { parseLocalDateString } from "@/lib/utils";
+import { nextUtcDay, parseDateOnly } from "@/lib/utils";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -31,12 +31,13 @@ export default async function TransacoesPage({
   if (params.type) where.type = params.type as Prisma.TransactionWhereInput["type"];
   if (params.category)
     where.category = params.category as Prisma.TransactionWhereInput["category"];
-  if (params.from || params.to) {
+  const from = params.from ? parseDateOnly(params.from) : null;
+  const to = params.to ? parseDateOnly(params.to) : null;
+  if (from || to) {
     where.date = {
-      ...(params.from ? { gte: parseLocalDateString(params.from) } : {}),
-      ...(params.to
-        ? { lt: new Date(parseLocalDateString(params.to).getTime() + 86_400_000) }
-        : {}),
+      ...(from ? { gte: from } : {}),
+      // `to` é inclusivo para a usuária: filtra até o fim daquele dia.
+      ...(to ? { lt: nextUtcDay(to) } : {}),
     };
   }
 

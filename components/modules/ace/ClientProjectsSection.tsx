@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Card, Button } from "@/components/ui";
-import { formatUtcDateBR } from "@/lib/utils";
+import { formatDateBR } from "@/lib/utils";
 import { projectStatusLabels, contentStatusLabels, productionStatusLabels } from "@/lib/labels";
 import { ProjectFormModal } from "@/components/modules/negocios/ProjectFormModal";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
@@ -103,7 +103,7 @@ export function ClientProjectsSection({
                                 <span className="flex items-center gap-2 text-xs text-text-secondary">
                                   {contentStatusLabels[post.status]}
                                   {post.publishDate && (
-                                    <span>{formatUtcDateBR(new Date(post.publishDate))}</span>
+                                    <span>{formatDateBR(new Date(post.publishDate))}</span>
                                   )}
                                 </span>
                               </button>
@@ -140,7 +140,7 @@ export function ClientProjectsSection({
                                 <span className="flex items-center gap-2 text-xs text-text-secondary">
                                   {productionStatusLabels[task.status]}
                                   {task.dueDate && (
-                                    <span>{formatUtcDateBR(new Date(task.dueDate))}</span>
+                                    <span>{formatDateBR(new Date(task.dueDate))}</span>
                                   )}
                                 </span>
                               </button>

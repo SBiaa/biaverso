@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { habitCreateSchema } from "@/lib/schemas";
 
-export async function GET() {
+export const GET = route(async () => {
   const habits = await prisma.habit.findMany({
     orderBy: { createdAt: "asc" },
     select: { id: true, name: true, active: true },
   });
-
   return NextResponse.json(habits);
-}
+});
 
-export async function POST(request: Request) {
-  const { name } = await request.json();
-
-  const habit = await prisma.habit.create({
-    data: { name },
-  });
-
-  return NextResponse.json(habit);
-}
+export const POST = route(async (request: Request) => {
+  const { name } = await parseBody(request, habitCreateSchema);
+  return NextResponse.json(await prisma.habit.create({ data: { name } }));
+});

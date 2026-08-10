@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getOrCreateMonthReview, getQuarter } from "@/lib/avaliacao";
 import { prisma } from "@/lib/prisma";
-import { formatDateBR, startOfToday } from "@/lib/utils";
+import { formatDateBR, parseIntParam, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, MonthPicker } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
@@ -17,9 +17,9 @@ export default async function AvaliacaoMesPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const today = startOfToday();
-  const month = params.month ? Number(params.month) : today.getMonth() + 1;
-  const year = params.year ? Number(params.year) : today.getFullYear();
+  const today = todayUtc();
+  const month = parseIntParam(params.month, 1, 12) ?? today.getUTCMonth() + 1;
+  const year = parseIntParam(params.year, 1970, 2999) ?? today.getUTCFullYear();
 
   const review = await getOrCreateMonthReview(month, year);
   const weeks = await prisma.weekReview.findMany({

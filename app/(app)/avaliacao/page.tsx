@@ -6,7 +6,7 @@ import {
   getBiggestBlockStats,
   getOrCreateMonthReview,
 } from "@/lib/avaliacao";
-import { startOfToday, formatMonthYearBR } from "@/lib/utils";
+import { todayUtc, formatMonthYearBR } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
@@ -17,9 +17,9 @@ import { BiggestBlocksSummary } from "@/components/modules/avaliacao/BiggestBloc
 export const dynamic = "force-dynamic";
 
 export default async function AvaliacaoDashboardPage() {
-  const today = startOfToday();
-  const month = today.getMonth() + 1;
-  const year = today.getFullYear();
+  const today = todayUtc();
+  const month = today.getUTCMonth() + 1;
+  const year = today.getUTCFullYear();
 
   const [recentWeeks, habitMonthStats, blockStats, monthReview] = await Promise.all([
     getRecentWeekReviews(12),

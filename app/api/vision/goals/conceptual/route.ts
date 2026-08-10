@@ -1,29 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, parseQuery, route } from "@/lib/api";
+import { conceptualGoalCreateSchema, pillarIdQuerySchema } from "@/lib/schemas";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const pillarId = searchParams.get("pillarId");
-
+export const GET = route(async (request: Request) => {
+  const { pillarId } = parseQuery(request, pillarIdQuerySchema);
   const goals = await prisma.conceptualGoal.findMany({
     where: pillarId ? { pillarId } : undefined,
     include: { measuredGoals: true },
     orderBy: { createdAt: "desc" },
   });
-
   return NextResponse.json(goals);
-}
+});
 
-export async function POST(request: Request) {
-  const { title, description, pillarId } = await request.json();
-
-  const goal = await prisma.conceptualGoal.create({
-    data: {
-      title,
-      description: description || null,
-      pillarId,
-    },
-  });
-
-  return NextResponse.json(goal);
-}
+export const POST = route(async (request: Request) => {
+  const data = await parseBody(request, conceptualGoalCreateSchema);
+  return NextResponse.json(await prisma.conceptualGoal.create({ data }));
+});

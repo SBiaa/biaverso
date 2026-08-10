@@ -1,28 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, parseQuery, route } from "@/lib/api";
+import { desireSchema, pillarIdQuerySchema } from "@/lib/schemas";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const pillarId = searchParams.get("pillarId");
-
+export const GET = route(async (request: Request) => {
+  const { pillarId } = parseQuery(request, pillarIdQuerySchema);
   const desires = await prisma.desire.findMany({
     where: pillarId ? { pillarId } : undefined,
     orderBy: { createdAt: "desc" },
   });
-
   return NextResponse.json(desires);
-}
+});
 
-export async function POST(request: Request) {
-  const { title, description, pillarId } = await request.json();
-
-  const desire = await prisma.desire.create({
-    data: {
-      title,
-      description: description || null,
-      pillarId: pillarId || null,
-    },
-  });
-
-  return NextResponse.json(desire);
-}
+export const POST = route(async (request: Request) => {
+  const data = await parseBody(request, desireSchema);
+  return NextResponse.json(
+    await prisma.desire.create({ data: { ...data, pillarId: data.pillarId ?? null } }),
+  );
+});

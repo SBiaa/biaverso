@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getOrCreateQuarterReview } from "@/lib/avaliacao";
 import { prisma } from "@/lib/prisma";
-import { formatMonthYearBR, startOfToday } from "@/lib/utils";
+import { formatMonthYearBR, parseIntParam, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
@@ -18,11 +18,10 @@ export default async function AvaliacaoTrimestrePage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const today = startOfToday();
-  const quarter = params.quarter
-    ? Number(params.quarter)
-    : Math.ceil((today.getMonth() + 1) / 3);
-  const year = params.year ? Number(params.year) : today.getFullYear();
+  const today = todayUtc();
+  const quarter =
+    parseIntParam(params.quarter, 1, 4) ?? Math.ceil((today.getUTCMonth() + 1) / 3);
+  const year = parseIntParam(params.year, 1970, 2999) ?? today.getUTCFullYear();
 
   const review = await getOrCreateQuarterReview(quarter, year);
   const months = await prisma.monthReview.findMany({

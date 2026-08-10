@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getPillarIcon } from "@/lib/vision-visuals";
 import { measuredGoalStatusLabels } from "@/lib/labels";
-import { formatUtcDateBR } from "@/lib/utils";
+import { formatDateBR } from "@/lib/utils";
 import { Card } from "@/components/ui";
 
 type MeasuredGoalItem = {
@@ -54,7 +54,7 @@ export function MeasuredGoalsOverview({ goals }: { goals: MeasuredGoalItem[] }) 
 
               <div className="flex items-center justify-between text-xs text-text-secondary">
                 <span>{goal.progress}%</span>
-                <span>{goal.deadline ? formatUtcDateBR(goal.deadline) : "Sem prazo"}</span>
+                <span>{goal.deadline ? formatDateBR(goal.deadline) : "Sem prazo"}</span>
               </div>
             </Card>
           </li>

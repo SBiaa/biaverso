@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getMonthRange, formatMonthYearBR, startOfToday } from "@/lib/utils";
+import { getMonthRange, formatMonthYearBR, todayUtc } from "@/lib/utils";
 import { contentStatusLabels, productionStatusLabels } from "@/lib/labels";
 import {
   donePostStatuses,
@@ -132,11 +132,11 @@ export async function getMonthlyHistory(
     prisma.productionTask.findMany({ where: { clientId, businessId } }),
   ]);
 
-  const today = startOfToday();
+  const today = todayUtc();
   const entries: MonthlyHistoryEntry[] = [];
 
   for (let i = monthsBack - 1; i >= 0; i--) {
-    const ref = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const ref = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - i, 1));
     const { start, end } = getMonthRange(ref);
 
     const publishedCount = posts.filter(
@@ -194,9 +194,9 @@ export async function getMonthlyHistory(
     }
 
     entries.push({
-      month: ref.getMonth() + 1,
-      year: ref.getFullYear(),
-      label: formatMonthYearBR(ref.getMonth() + 1, ref.getFullYear()),
+      month: ref.getUTCMonth() + 1,
+      year: ref.getUTCFullYear(),
+      label: formatMonthYearBR(ref.getUTCMonth() + 1, ref.getUTCFullYear()),
       publishedCount,
       completedCount,
       pendingOrLate,

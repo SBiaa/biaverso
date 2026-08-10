@@ -2,24 +2,32 @@
 
 import { useState } from "react";
 import { CheckCircle2, Circle } from "lucide-react";
-import { Badge } from "@/components/ui";
+import { Badge, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type Item = { id: string; title: string; status: string };
 
 export function AceTasksToday({ initialTasks }: { initialTasks: Item[] }) {
   const [tasks, setTasks] = useState(initialTasks);
+  const [error, setError] = useState<string | null>(null);
 
-  function toggle(id: string) {
+  async function toggle(id: string) {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
+
+    const previous = tasks;
     const nextStatus = task.status === "CONCLUIDO" ? "A_FAZER" : "CONCLUIDO";
+
+    setError(null);
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: nextStatus } : t)));
-    fetch(`/api/ace/tasks/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextStatus }),
-    });
+
+    try {
+      await api.patch(`/api/ace/tasks/${id}`, { status: nextStatus });
+    } catch (e) {
+      setTasks(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
@@ -49,6 +57,7 @@ export function AceTasksToday({ initialTasks }: { initialTasks: Item[] }) {
           );
         })
       )}
+      <ErrorNote message={error} />
     </div>
   );
 }

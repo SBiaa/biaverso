@@ -13,20 +13,13 @@ import {
   formatCurrencyBRL,
   formatMonthYearBR,
   monthNameBR,
-  toDateInputValue,
+  todayInputValue,
 } from "@/lib/utils";
 
 const categoryOptions = Object.keys(transactionCategoryLabels);
 const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
 
 type Business = { id: string; name: string };
-
-function todayInputValue() {
-  const d = new Date();
-  return toDateInputValue(
-    new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())),
-  );
-}
 
 export function AddCreditCardEntryForm({
   businesses,

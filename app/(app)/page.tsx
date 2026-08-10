@@ -11,12 +11,14 @@ import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Badge, StatCard, type BadgeOrigin } from "@/components/ui";
 import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightCard";
+import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
 import {
   cn,
   dayOfYear,
   formatCurrencyBRL,
   formatDateBR,
-  startOfToday,
+  getMonthRange,
+  todayUtc,
 } from "@/lib/utils";
 
 const motivationalPhrases = [
@@ -37,7 +39,7 @@ const mealTypeLabels: Record<string, string> = {
 export const dynamic = "force-dynamic";
 
 async function getDashboardData() {
-  const date = startOfToday();
+  const date = todayUtc();
 
   const day = await prisma.day.findUnique({
     where: { date },
@@ -50,8 +52,7 @@ async function getDashboardData() {
     },
   });
 
-  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-  const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  const { start: monthStart, end: monthEnd } = getMonthRange(date);
 
   const [entradas, saidas] = await Promise.all([
     prisma.transaction.aggregate({
@@ -162,6 +163,7 @@ export default async function HomePage() {
                       <span className="w-12 shrink-0 text-text-secondary">
                         {event.time ?? "—"}
                       </span>
+                      <SyncStatusIcon status={event.syncStatus} />
                       <span className="text-text-primary">{event.title}</span>
                     </li>
                   ))}
@@ -292,6 +294,7 @@ export default async function HomePage() {
                   <span className="w-12 shrink-0 text-text-secondary">
                     {event.time ?? "—"}
                   </span>
+                  <SyncStatusIcon status={event.syncStatus} />
                   <span className="text-text-primary">{event.title}</span>
                 </li>
               ))}

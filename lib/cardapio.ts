@@ -9,13 +9,14 @@ export const WEEKDAY_LABELS_LONG = [
   "Domingo",
 ];
 
+// Segunda = 0, domingo = 6.
 export function weekdayIndex(date: Date) {
-  return (date.getDay() + 6) % 7;
+  return (date.getUTCDay() + 6) % 7;
 }
 
 export function getWeekStart(date: Date) {
   const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - weekdayIndex(start));
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCDate(start.getUTCDate() - weekdayIndex(start));
   return start;
 }

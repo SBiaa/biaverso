@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { mealLogPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { eaten } = await request.json();
-
-  const log = await prisma.mealLog.update({
-    where: { id },
-    data: { eaten },
-  });
-
-  return NextResponse.json(log);
-}
+  const { eaten } = await parseBody(request, mealLogPatchSchema);
+  return NextResponse.json(await prisma.mealLog.update({ where: { id }, data: { eaten } }));
+});

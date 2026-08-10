@@ -1,46 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { recipeSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { title, category, description, ingredients, steps, prepTime } =
-    await request.json();
+  const data = await parseBody(request, recipeSchema);
+  return NextResponse.json(
+    await prisma.recipe.update({ where: { id }, data: { ...data, prepTime: data.prepTime ?? null } }),
+  );
+});
 
-  const recipe = await prisma.recipe.update({
-    where: { id },
-    data: {
-      title,
-      category,
-      description: description || null,
-      ingredients,
-      steps,
-      prepTime: prepTime ? Number(prepTime) : null,
-    },
-  });
-
-  return NextResponse.json(recipe);
-}
-
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
-
-  await prisma.$transaction([
-    prisma.mealPlan.updateMany({
-      where: { recipeId: id },
-      data: { recipeId: null },
-    }),
-    prisma.mealLog.updateMany({
-      where: { recipeId: id },
-      data: { recipeId: null },
-    }),
-    prisma.recipe.delete({ where: { id } }),
-  ]);
-
+  // Planos e logs perdem a referencia mas nao somem (onDelete: SetNull).
+  await prisma.recipe.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,4 +1,5 @@
 // Contas de data e dinheiro do financeiro, sem banco — usadas no servidor e no cliente.
+import { todayUtc } from "@/lib/utils";
 
 /**
  * Data em UTC (meia-noite), como as datas vindas de <input type="date">.
@@ -7,11 +8,6 @@
 export function utcDate(year: number, month: number, day: number) {
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   return new Date(Date.UTC(year, month - 1, Math.min(day, lastDay)));
-}
-
-export function todayUtc() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 }
 
 export function daysUntil(date: Date) {

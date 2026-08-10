@@ -1,33 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { pillarPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { name, description, color, icon, order } = await request.json();
+  const data = await parseBody(request, pillarPatchSchema);
+  return NextResponse.json(await prisma.pillar.update({ where: { id }, data }));
+});
 
-  const pillar = await prisma.pillar.update({
-    where: { id },
-    data: { name, description, color, icon, order },
-  });
-
-  return NextResponse.json(pillar);
-}
-
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
-
-  await prisma.$transaction([
-    prisma.moodboardItem.deleteMany({ where: { pillarId: id } }),
-    prisma.measuredGoal.deleteMany({ where: { conceptualGoal: { pillarId: id } } }),
-    prisma.conceptualGoal.deleteMany({ where: { pillarId: id } }),
-    prisma.pillar.delete({ where: { id } }),
-  ]);
-
+  // Moodboard, objetivos conceituais e metrificados somem junto (Cascade);
+  // desejos e principios soltam o vinculo com o pilar (SetNull).
+  await prisma.pillar.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});

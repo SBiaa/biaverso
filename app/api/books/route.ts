@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { bookCreateSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
-  const { title, author, status, totalPages, currentPage } =
-    await request.json();
+export const POST = route(async (request: Request) => {
+  const data = await parseBody(request, bookCreateSchema);
 
   const book = await prisma.book.create({
     data: {
-      title,
-      author: author || null,
-      status: status || "QUERO_LER",
-      totalPages: totalPages ? Number(totalPages) : null,
-      currentPage: currentPage ? Number(currentPage) : null,
+      ...data,
+      totalPages: data.totalPages ?? null,
+      currentPage: data.currentPage ?? null,
     },
   });
 
   return NextResponse.json(book);
-}
+});

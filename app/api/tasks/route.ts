@@ -1,18 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { taskCreateSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
-  const { title, origin, dayId, dueDate } = await request.json();
+export const POST = route(async (request: Request) => {
+  const { title, origin, dayId, dueDate } = await parseBody(request, taskCreateSchema);
 
   const task = await prisma.task.create({
-    data: {
-      title,
-      origin,
-      dayId,
-      dueDate: dueDate ? new Date(dueDate) : null,
-      type: "AVULSA",
-    },
+    data: { title, origin, dayId, dueDate: dueDate ?? null, type: "AVULSA" },
   });
 
   return NextResponse.json(task);
-}
+});

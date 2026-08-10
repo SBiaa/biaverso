@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { knowledgeSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
-  const { title, source, type, area, summary, link } = await request.json();
-
-  const item = await prisma.knowledge.create({
-    data: {
-      title,
-      source: source || null,
-      type,
-      area,
-      summary: summary || null,
-      link: link || null,
-    },
-  });
-
-  return NextResponse.json(item);
-}
+export const POST = route(async (request: Request) => {
+  const data = await parseBody(request, knowledgeSchema);
+  return NextResponse.json(await prisma.knowledge.create({ data }));
+});

@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui";
-import { formatUtcDateBR } from "@/lib/utils";
+import { formatDateBR } from "@/lib/utils";
 import type { PendingItem } from "@/lib/ace";
 
 export function PendingItemsSection({ items }: { items: PendingItem[] }) {
@@ -34,7 +34,7 @@ export function PendingItemsSection({ items }: { items: PendingItem[] }) {
                   </span>
                 )}
                 <span className="text-xs text-text-secondary">
-                  {item.dueOrPublishDate ? formatUtcDateBR(new Date(item.dueOrPublishDate)) : "Sem data"}
+                  {item.dueOrPublishDate ? formatDateBR(new Date(item.dueOrPublishDate)) : "Sem data"}
                 </span>
               </div>
             </Card>

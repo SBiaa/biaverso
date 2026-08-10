@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { businessPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { name, description, color, icon, active } = await request.json();
+  const data = await parseBody(request, businessPatchSchema);
+  return NextResponse.json(await prisma.business.update({ where: { id }, data }));
+});
 
-  const business = await prisma.business.update({
-    where: { id },
-    data: { name, description, color, icon, active },
-  });
-
-  return NextResponse.json(business);
-}
+export const DELETE = route(async (_request: Request, { params }: Params) => {
+  const { id } = await params;
+  // Projetos, vinculos de cliente, posts e tarefas de producao do negocio somem
+  // junto (onDelete: Cascade). Transacoes e ideias soltam o vinculo (SetNull).
+  await prisma.business.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+});

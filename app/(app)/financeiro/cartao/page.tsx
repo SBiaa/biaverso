@@ -7,7 +7,7 @@ import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { CreditCardEntriesList } from "@/components/modules/financeiro/CreditCardEntriesList";
 import { CreditCardSettings } from "@/components/modules/financeiro/CreditCardSettings";
 import { AddCreditCardEntryForm } from "@/components/modules/financeiro/AddCreditCardEntryForm";
-import { formatCurrencyBRL, formatUtcDateBR, startOfToday } from "@/lib/utils";
+import { formatCurrencyBRL, formatDateBR, parseIntParam, todayUtc } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +28,9 @@ export default async function CartaoPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const today = startOfToday();
-  const month = params.month ? Number(params.month) : today.getMonth() + 1;
-  const year = params.year ? Number(params.year) : today.getFullYear();
+  const today = todayUtc();
+  const month = parseIntParam(params.month, 1, 12) ?? today.getUTCMonth() + 1;
+  const year = parseIntParam(params.year, 1970, 2999) ?? today.getUTCFullYear();
 
   const [entries, businesses, card] = await Promise.all([
     prisma.creditCardEntry.findMany({
@@ -62,7 +62,7 @@ export default async function CartaoPage({
           {dueDate ? (
             <p className="text-sm text-text-primary">
               {card!.name} · vence em{" "}
-              <span className="font-semibold">{formatUtcDateBR(dueDate)}</span>{" "}
+              <span className="font-semibold">{formatDateBR(dueDate)}</span>{" "}
               <span className="text-text-secondary">
                 ({dueDateLabel(dueDate)})
               </span>

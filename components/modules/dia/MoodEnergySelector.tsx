@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import type { Energy } from "@/app/generated/prisma/client";
 
@@ -25,13 +27,20 @@ export function MoodEnergySelector({
 }: MoodEnergySelectorProps) {
   const [mood, setMood] = useState(initialMood);
   const [energy, setEnergy] = useState(initialEnergy);
+  const [error, setError] = useState<string | null>(null);
 
-  function save(patch: { mood?: string; energy?: Energy }) {
-    fetch(`/api/dias/${dayId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
+  async function save(patch: { mood?: string; energy?: Energy }) {
+    const previous = { mood, energy };
+    setError(null);
+
+    try {
+      await api.patch(`/api/dias/${dayId}`, patch);
+    } catch (e) {
+      // Desfaz a seleção otimista se o salvamento não passou.
+      setMood(previous.mood);
+      setEnergy(previous.energy);
+      setError(errorMessage(e));
+    }
   }
 
   return (
@@ -83,6 +92,8 @@ export function MoodEnergySelector({
           ))}
         </div>
       </div>
+
+      <ErrorNote message={error} />
     </div>
   );
 }

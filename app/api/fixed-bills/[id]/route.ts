@@ -1,40 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { fixedBillSchema } from "@/lib/schemas";
 import { resyncFixedBillDueDates } from "@/lib/finance";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { name, amount, dueDay, type, notes } = await request.json();
+  const data = await parseBody(request, fixedBillSchema);
 
-  const bill = await prisma.fixedBill.update({
-    where: { id },
-    data: {
-      name,
-      amount,
-      dueDay,
-      type,
-      notes: notes || null,
-    },
-  });
-
+  const bill = await prisma.fixedBill.update({ where: { id }, data });
   await resyncFixedBillDueDates(id, bill.dueDay);
 
   return NextResponse.json(bill);
-}
+});
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
-
-  await prisma.$transaction([
-    prisma.fixedBillLog.deleteMany({ where: { fixedBillId: id } }),
-    prisma.fixedBill.delete({ where: { id } }),
-  ]);
-
+  // Os logs mensais somem junto (onDelete: Cascade).
+  await prisma.fixedBill.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});

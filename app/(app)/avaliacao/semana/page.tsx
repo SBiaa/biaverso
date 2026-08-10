@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getWeekRange, getHabitWeekStats, getOrCreateWeekReview } from "@/lib/avaliacao";
-import { parseLocalDateString, startOfToday } from "@/lib/utils";
+import { parseDateOnly, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
@@ -18,7 +18,9 @@ export default async function AvaliacaoSemanaPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const referenceDate = params.week ? parseLocalDateString(params.week) : startOfToday();
+  // Param inválido cai para hoje em vez de derrubar a página.
+  const referenceDate =
+    (params.week ? parseDateOnly(params.week) : null) ?? todayUtc();
   const { weekStart, weekEnd } = getWeekRange(referenceDate);
 
   const [review, habitStats] = await Promise.all([
@@ -26,7 +28,7 @@ export default async function AvaliacaoSemanaPage({
     getHabitWeekStats(weekStart, weekEnd),
   ]);
 
-  const monthHref = `/avaliacao/mes?month=${weekStart.getMonth() + 1}&year=${weekStart.getFullYear()}`;
+  const monthHref = `/avaliacao/mes?month=${weekStart.getUTCMonth() + 1}&year=${weekStart.getUTCFullYear()}`;
 
   return (
     <>

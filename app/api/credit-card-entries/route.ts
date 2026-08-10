@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { creditCardEntryCreateSchema } from "@/lib/schemas";
 import { addInvoiceMonths, splitInstallments } from "@/lib/finance-calc";
 
-export async function POST(request: Request) {
+export const POST = route(async (request: Request) => {
   const {
     description,
     amount,
@@ -13,53 +15,35 @@ export async function POST(request: Request) {
     category,
     businessId,
     notes,
-  } = await request.json();
+  } = await parseBody(request, creditCardEntryCreateSchema);
 
-  const count = Math.max(1, Number(installments) || 1);
-  const date = new Date(purchaseDate);
+  const shared = { description, purchaseDate, category, businessId: businessId ?? null, notes };
 
-  // Compra à vista: só um lançamento, sem registro de compra parcelada.
-  if (count === 1) {
+  // Compra a vista: so um lancamento, sem registro de compra parcelada.
+  if (installments === 1) {
     const entry = await prisma.creditCardEntry.create({
-      data: {
-        description,
-        amount,
-        purchaseDate: date,
-        invoiceMonth,
-        invoiceYear,
-        category,
-        businessId: businessId || null,
-        notes: notes || null,
-      },
+      data: { ...shared, amount, invoiceMonth, invoiceYear },
     });
     return NextResponse.json(entry);
   }
 
   // Parcelada: uma parcela por fatura, a partir da fatura escolhida.
-  const amounts = splitInstallments(amount, count);
+  const amounts = splitInstallments(amount, installments);
 
   const purchase = await prisma.creditCardPurchase.create({
     data: {
-      description,
+      ...shared,
       totalAmount: amount,
-      installments: count,
-      purchaseDate: date,
-      category,
-      businessId: businessId || null,
-      notes: notes || null,
+      installments,
       entries: {
         create: amounts.map((value, index) => {
           const invoice = addInvoiceMonths(invoiceMonth, invoiceYear, index);
           return {
-            description,
+            ...shared,
             amount: value,
-            purchaseDate: date,
             invoiceMonth: invoice.month,
             invoiceYear: invoice.year,
-            installment: `${index + 1}/${count}`,
-            category,
-            businessId: businessId || null,
-            notes: notes || null,
+            installment: `${index + 1}/${installments}`,
           };
         }),
       },
@@ -68,4 +52,4 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(purchase);
-}
+});

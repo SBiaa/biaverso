@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
+import { ApiError, route } from "@/lib/api";
 import { getMonthlyHistory, getPendingItems } from "@/lib/ace";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ clientId: string }> },
-) {
-  const { clientId } = await params;
-  const { searchParams } = new URL(request.url);
-  const businessId = searchParams.get("businessId");
+type Params = { params: Promise<{ clientId: string }> };
 
-  if (!businessId) {
-    return NextResponse.json({ error: "businessId é obrigatório" }, { status: 400 });
-  }
+export const GET = route(async (request: Request, { params }: Params) => {
+  const { clientId } = await params;
+  const businessId = new URL(request.url).searchParams.get("businessId");
+
+  if (!businessId) throw new ApiError(400, "businessId e obrigatorio");
 
   const [monthlyHistory, pending] = await Promise.all([
     getMonthlyHistory(clientId, businessId),
@@ -19,4 +16,4 @@ export async function GET(
   ]);
 
   return NextResponse.json({ monthlyHistory, pending });
-}
+});

@@ -5,7 +5,7 @@ import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
 import { Card, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { measuredGoalStatusLabels } from "@/lib/labels";
-import { formatUtcDateBR } from "@/lib/utils";
+import { formatDateBR } from "@/lib/utils";
 import { ConceptualGoalFormModal } from "./ConceptualGoalFormModal";
 import { MeasuredGoalFormModal } from "./MeasuredGoalFormModal";
 
@@ -70,7 +70,7 @@ function MeasuredGoalRow({
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary">
         <span>{goal.progress}%</span>
-        <span>{goal.deadline ? formatUtcDateBR(new Date(goal.deadline)) : "Sem prazo"}</span>
+        <span>{goal.deadline ? formatDateBR(new Date(goal.deadline)) : "Sem prazo"}</span>
         <select
           value={goal.status}
           onChange={(e) => {

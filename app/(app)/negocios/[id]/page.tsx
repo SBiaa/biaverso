@@ -16,7 +16,7 @@ import {
   productionStatusColors,
 } from "@/lib/ace";
 import { contentStatusLabels, productionStatusLabels, postTypeLabels, productionTypeLabels } from "@/lib/labels";
-import { startOfToday, getMonthRange } from "@/lib/utils";
+import { todayUtc, getMonthRange, parseIntParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -72,10 +72,10 @@ export default async function BusinessDetailPage({
     const overview = await getClientsOverview(id, sp.status);
     clientesContent = <ClientesTab businessId={id} clients={overview} />;
   } else if (tab === "calendario") {
-    const today = startOfToday();
-    const month = sp.month ? Number(sp.month) : today.getMonth() + 1;
-    const year = sp.year ? Number(sp.year) : today.getFullYear();
-    const { start, end } = getMonthRange(new Date(year, month - 1, 1));
+    const today = todayUtc();
+    const month = parseIntParam(sp.month, 1, 12) ?? today.getUTCMonth() + 1;
+    const year = parseIntParam(sp.year, 1970, 2999) ?? today.getUTCFullYear();
+    const { start, end } = getMonthRange(new Date(Date.UTC(year, month - 1, 1)));
 
     const [posts, tasks] = await Promise.all([
       sp.itemType === "task"

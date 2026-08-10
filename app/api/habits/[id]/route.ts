@@ -1,31 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { habitPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { name, active } = await request.json();
+  const data = await parseBody(request, habitPatchSchema);
+  return NextResponse.json(await prisma.habit.update({ where: { id }, data }));
+});
 
-  const habit = await prisma.habit.update({
-    where: { id },
-    data: { name, active },
-  });
-
-  return NextResponse.json(habit);
-}
-
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
-
-  await prisma.$transaction([
-    prisma.habitLog.deleteMany({ where: { habitId: id } }),
-    prisma.habit.delete({ where: { id } }),
-  ]);
-
+  // Os logs somem junto (onDelete: Cascade).
+  await prisma.habit.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});

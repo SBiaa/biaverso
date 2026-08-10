@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { monthReviewPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { effectiveness, highlights, improvements, nextMonthGoal } =
-    await request.json();
-
-  const review = await prisma.monthReview.update({
-    where: { id },
-    data: { effectiveness, highlights, improvements, nextMonthGoal },
-  });
-
-  return NextResponse.json(review);
-}
+  const data = await parseBody(request, monthReviewPatchSchema);
+  return NextResponse.json(await prisma.monthReview.update({ where: { id }, data }));
+});

@@ -64,9 +64,9 @@ model HabitLog {
   id      String  @id @default(cuid())
   done    Boolean @default(false)
   habitId String
-  habit   Habit   @relation(fields: [habitId], references: [id])
+  habit   Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
   dayId   String
-  day     Day     @relation(fields: [dayId], references: [id])
+  day     Day     @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
   @@unique([habitId, dayId])
 }
@@ -76,7 +76,9 @@ model WaterLog {
   amount   Float    @default(300)
   loggedAt DateTime @default(now())
   dayId    String
-  day      Day      @relation(fields: [dayId], references: [id])
+  day      Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId])
 }
 
 model Task {
@@ -89,11 +91,25 @@ model Task {
   order      Int       @default(0)
   createdAt  DateTime  @default(now())
   dayId      String?
-  day        Day?      @relation(fields: [dayId], references: [id])
+  day        Day?      @relation(fields: [dayId], references: [id], onDelete: Cascade)
   businessId String?
-  business   Business? @relation(fields: [businessId], references: [id])
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
   projectId  String?
-  project    Project?  @relation(fields: [projectId], references: [id])
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  // Cópia de rotina: aponta para o template que a gerou. Sem isso a cópia só
+  // podia ser reconhecida pelo título, e renomear um template duplicava a
+  // tarefa em todo dia já materializado.
+  templateId String?
+  template   Task?     @relation("RoutineTemplate", fields: [templateId], references: [id], onDelete: SetNull)
+  instances  Task[]    @relation("RoutineTemplate")
+
+  @@index([dayId])
+  @@index([businessId])
+  @@index([projectId])
+  @@index([templateId])
+  // Templates de rotina são as tarefas com dayId nulo.
+  @@index([type, dayId])
 }
 
 enum TaskType {
@@ -109,10 +125,62 @@ model Event {
   description String?
   date        DateTime
   time        String?
+  endTime     String?
+  allDay      Boolean       @default(false)
   category    EventCategory @default(PESSOAL)
   createdAt   DateTime      @default(now())
-  dayId       String?
-  day         Day?          @relation(fields: [dayId], references: [id])
+  // `@default(now())` além de `@updatedAt` para que a coluna possa ser
+  // adicionada a uma tabela que já tenha eventos gravados.
+  updatedAt   DateTime      @default(now()) @updatedAt
+
+  // Sincronização com o Google Calendar.
+  googleEventId    String?    @unique
+  googleCalendarId String?
+  lastSyncedAt     DateTime?
+  syncStatus       SyncStatus @default(PENDENTE)
+
+  dayId String?
+  day   Day?    @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId])
+  @@index([date])
+  @@index([syncStatus])
+}
+
+enum SyncStatus {
+  PENDENTE
+  SINCRONIZADO
+  ERRO
+}
+
+// Tokens do Google — registro único (a conta da dona do app).
+model GoogleAuth {
+  id           String   @id @default(cuid())
+  // E-mail da conta conectada, lido do calendário primário na conexão.
+  email        String?
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Histórico de sincronizações — a última alimenta a tela de configurações.
+model SyncLog {
+  id         String        @id @default(cuid())
+  direction  SyncDirection
+  eventsFrom Int           @default(0)
+  eventsTo   Int           @default(0)
+  errors     String?       @db.Text
+  syncedAt   DateTime      @default(now())
+
+  @@index([syncedAt])
+}
+
+enum SyncDirection {
+  APP_TO_GOOGLE
+  GOOGLE_TO_APP
+  BIDIRECIONAL
 }
 
 enum EventCategory {
@@ -156,7 +224,10 @@ model MealPlan {
   mealType  MealType
   createdAt DateTime @default(now())
   recipeId  String?
-  recipe    Recipe?  @relation(fields: [recipeId], references: [id])
+  recipe    Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@unique([weekStart, dayOfWeek, mealType])
+  @@index([recipeId])
 }
 
 model MealLog {
@@ -165,9 +236,12 @@ model MealLog {
   mealType MealType
   notes    String?
   dayId    String
-  day      Day      @relation(fields: [dayId], references: [id])
+  day      Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
   recipeId String?
-  recipe   Recipe?  @relation(fields: [recipeId], references: [id])
+  recipe   Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@unique([dayId, mealType])
+  @@index([recipeId])
 }
 
 enum MealType {
@@ -193,7 +267,10 @@ model WeekReview {
   visionAlignment String?
   createdAt       DateTime     @default(now())
   monthReviewId   String?
-  monthReview     MonthReview? @relation(fields: [monthReviewId], references: [id])
+  monthReview     MonthReview? @relation(fields: [monthReviewId], references: [id], onDelete: SetNull)
+
+  @@unique([weekStart])
+  @@index([monthReviewId])
 }
 
 model MonthReview {
@@ -207,7 +284,10 @@ model MonthReview {
   createdAt       DateTime       @default(now())
   weekReviews     WeekReview[]
   quarterReviewId String?
-  quarterReview   QuarterReview? @relation(fields: [quarterReviewId], references: [id])
+  quarterReview   QuarterReview? @relation(fields: [quarterReviewId], references: [id], onDelete: SetNull)
+
+  @@unique([month, year])
+  @@index([quarterReviewId])
 }
 
 model QuarterReview {
@@ -219,6 +299,8 @@ model QuarterReview {
   nextQuarterGoal String?
   createdAt       DateTime      @default(now())
   monthReviews    MonthReview[]
+
+  @@unique([quarter, year])
 }
 
 model Goal {
@@ -233,7 +315,9 @@ model Goal {
   updatedAt   DateTime   @updatedAt
 
   measuredGoalId String?
-  measuredGoal   MeasuredGoal? @relation(fields: [measuredGoalId], references: [id])
+  measuredGoal   MeasuredGoal? @relation(fields: [measuredGoalId], references: [id], onDelete: SetNull)
+
+  @@index([measuredGoalId])
 }
 
 enum Stars {
@@ -299,7 +383,11 @@ model Transaction {
   notes      String?
   createdAt  DateTime            @default(now())
   businessId String?
-  business   Business?           @relation(fields: [businessId], references: [id])
+  business   Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([type, date])
+  @@index([businessId])
 }
 
 enum TransactionType {
@@ -363,9 +451,10 @@ model FixedBillLog {
   status      BillStatus @default(PENDENTE)
   paidAt      DateTime?
   fixedBillId String
-  fixedBill   FixedBill  @relation(fields: [fixedBillId], references: [id])
+  fixedBill   FixedBill  @relation(fields: [fixedBillId], references: [id], onDelete: Cascade)
 
   @@unique([fixedBillId, month, year])
+  @@index([year, month, status])
 }
 
 enum BillStatus {
@@ -396,8 +485,10 @@ model CreditCardPurchase {
   notes        String?
   createdAt    DateTime            @default(now())
   businessId   String?
-  business     Business?           @relation(fields: [businessId], references: [id])
+  business     Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
   entries      CreditCardEntry[]
+
+  @@index([businessId])
 }
 
 model CreditCardEntry {
@@ -412,9 +503,13 @@ model CreditCardEntry {
   notes        String?
   createdAt    DateTime            @default(now())
   businessId   String?
-  business     Business?           @relation(fields: [businessId], references: [id])
+  business     Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
   purchaseId   String?
-  purchase     CreditCardPurchase? @relation(fields: [purchaseId], references: [id])
+  purchase     CreditCardPurchase? @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceYear, invoiceMonth])
+  @@index([businessId])
+  @@index([purchaseId])
 }
 
 model FinancialRecord {
@@ -475,13 +570,16 @@ model Project {
   updatedAt   DateTime      @updatedAt
 
   businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   clientId   String?
-  client     Client?  @relation(fields: [clientId], references: [id])
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
   tasks      Task[]
 
   contentPosts    ContentPost[]
   productionTasks ProductionTask[]
+
+  @@index([businessId])
+  @@index([clientId])
 }
 
 enum ProjectStatus {
@@ -510,14 +608,15 @@ model Client {
 model ClientBusiness {
   id         String       @id @default(cuid())
   businessId String
-  business   Business     @relation(fields: [businessId], references: [id])
+  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
   status     ClientStatus @default(ATIVO)
   notes      String?
   joinedAt   DateTime     @default(now())
   clientId   String
-  client     Client       @relation(fields: [clientId], references: [id])
+  client     Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@unique([clientId, businessId])
+  @@index([businessId, status])
 }
 
 enum ClientStatus {
@@ -541,11 +640,16 @@ model ContentPost {
   updatedAt   DateTime      @updatedAt
 
   businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   clientId   String
-  client     Client   @relation(fields: [clientId], references: [id])
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   projectId  String?
-  project    Project? @relation(fields: [projectId], references: [id])
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status])
+  @@index([businessId, publishDate])
+  @@index([clientId])
+  @@index([projectId])
 }
 
 enum PostType {
@@ -587,11 +691,17 @@ model ProductionTask {
   updatedAt   DateTime         @updatedAt
 
   businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   clientId   String
-  client     Client   @relation(fields: [clientId], references: [id])
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   projectId  String?
-  project    Project? @relation(fields: [projectId], references: [id])
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status])
+  @@index([businessId, dueDate])
+  @@index([dueDate, status])
+  @@index([clientId])
+  @@index([projectId])
 }
 
 enum ProductionType {
@@ -683,7 +793,9 @@ model Idea {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   businessId  String?
-  business    Business?  @relation(fields: [businessId], references: [id])
+  business    Business?  @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
 }
 
 enum IdeaStatus {
@@ -744,7 +856,9 @@ model Principle {
   updatedAt DateTime @updatedAt
 
   pillarId String?
-  pillar   Pillar? @relation(fields: [pillarId], references: [id])
+  pillar   Pillar? @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+
+  @@index([pillarId])
 }
 
 // OBJETIVOS CONCEITUAIS — o que quer ser/ter/sentir
@@ -756,8 +870,10 @@ model ConceptualGoal {
   updatedAt   DateTime @updatedAt
 
   pillarId      String
-  pillar        Pillar         @relation(fields: [pillarId], references: [id])
+  pillar        Pillar         @relation(fields: [pillarId], references: [id], onDelete: Cascade)
   measuredGoals MeasuredGoal[]
+
+  @@index([pillarId])
 }
 
 // OBJETIVOS METRIFICADOS — versão mensurável com prazo
@@ -772,8 +888,11 @@ model MeasuredGoal {
   updatedAt DateTime           @updatedAt
 
   conceptualGoalId String
-  conceptualGoal   ConceptualGoal @relation(fields: [conceptualGoalId], references: [id])
+  conceptualGoal   ConceptualGoal @relation(fields: [conceptualGoalId], references: [id], onDelete: Cascade)
   goals            Goal[]
+
+  @@index([conceptualGoalId])
+  @@index([status])
 }
 
 enum MeasuredGoalStatus {
@@ -792,7 +911,9 @@ model Desire {
   updatedAt   DateTime @updatedAt
 
   pillarId String?
-  pillar   Pillar? @relation(fields: [pillarId], references: [id])
+  pillar   Pillar? @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+
+  @@index([pillarId])
 }
 
 // MOODBOARD — imagens, palavras e frases por pilar
@@ -805,7 +926,9 @@ model MoodboardItem {
   createdAt DateTime      @default(now())
 
   pillarId String
-  pillar   Pillar @relation(fields: [pillarId], references: [id])
+  pillar   Pillar @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+
+  @@index([pillarId, order])
 }
 
 enum MoodboardType {

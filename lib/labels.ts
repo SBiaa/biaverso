@@ -200,3 +200,18 @@ export const moodboardTypeLabels: Record<string, string> = {
   PALAVRA: "Palavra",
   FRASE: "Frase",
 };
+
+export const eventCategoryLabels: Record<string, string> = {
+  PESSOAL: "Pessoal",
+  TAROT: "Tarot",
+  ACE: "Ace",
+  CREATIVE: "Creative",
+  SAUDE: "Saúde",
+  OUTRO: "Outro",
+};
+
+export const syncStatusLabels: Record<string, string> = {
+  PENDENTE: "Aguardando sincronização",
+  SINCRONIZADO: "Sincronizado com o Google",
+  ERRO: "Erro ao sincronizar",
+};

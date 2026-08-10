@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { clientBusinessPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { status } = await request.json();
+  const { status } = await parseBody(request, clientBusinessPatchSchema);
+  return NextResponse.json(await prisma.clientBusiness.update({ where: { id }, data: { status } }));
+});
 
-  const link = await prisma.clientBusiness.update({
-    where: { id },
-    data: { status },
-  });
-
-  return NextResponse.json(link);
-}
+export const DELETE = route(async (_request: Request, { params }: Params) => {
+  const { id } = await params;
+  await prisma.clientBusiness.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+});

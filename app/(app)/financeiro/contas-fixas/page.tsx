@@ -3,14 +3,14 @@ import { ensureFixedBillLogsForMonth } from "@/lib/finance";
 import { Topbar } from "@/components/layout/Topbar";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { FixedBillList } from "@/components/modules/financeiro/FixedBillList";
-import { startOfToday } from "@/lib/utils";
+import { todayUtc } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ContasFixasPage() {
-  const date = startOfToday();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
+  const date = todayUtc();
+  const month = date.getUTCMonth() + 1;
+  const year = date.getUTCFullYear();
 
   await ensureFixedBillLogsForMonth(month, year);
 

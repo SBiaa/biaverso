@@ -1,74 +1,41 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, parseQuery, route } from "@/lib/api";
+import { aceListQuerySchema, contentPostCreateSchema } from "@/lib/schemas";
 import { resolvePostCompletedAt } from "@/lib/ace";
 import type { Prisma } from "@/app/generated/prisma/client";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const businessId = searchParams.get("businessId");
-  const clientId = searchParams.get("clientId");
-  const projectId = searchParams.get("projectId");
-  const status = searchParams.get("status");
-  const type = searchParams.get("type");
-  const network = searchParams.get("network");
-  const from = searchParams.get("from");
-  const to = searchParams.get("to");
+export const GET = route(async (request: Request) => {
+  const q = parseQuery(request, aceListQuerySchema);
 
   const posts = await prisma.contentPost.findMany({
     where: {
-      businessId: businessId || undefined,
-      clientId: clientId || undefined,
-      projectId: projectId || undefined,
-      status: status ? (status as Prisma.ContentPostWhereInput["status"]) : undefined,
-      type: type ? (type as Prisma.ContentPostWhereInput["type"]) : undefined,
-      network: network ? (network as Prisma.ContentPostWhereInput["network"]) : undefined,
-      publishDate:
-        from || to
-          ? {
-              gte: from ? new Date(from) : undefined,
-              lte: to ? new Date(to) : undefined,
-            }
-          : undefined,
+      businessId: q.businessId,
+      clientId: q.clientId,
+      projectId: q.projectId,
+      status: q.status as Prisma.ContentPostWhereInput["status"],
+      type: q.type as Prisma.ContentPostWhereInput["type"],
+      network: q.network,
+      publishDate: q.from || q.to ? { gte: q.from, lte: q.to } : undefined,
     },
     include: { client: true, project: true },
     orderBy: { publishDate: "asc" },
   });
 
   return NextResponse.json(posts);
-}
+});
 
-export async function POST(request: Request) {
-  const {
-    title,
-    type,
-    network,
-    status,
-    publishDate,
-    completedAt,
-    businessId,
-    clientId,
-    projectId,
-    caption,
-    notes,
-  } = await request.json();
-
-  const resolvedStatus = status || "PLANEJADO";
+export const POST = route(async (request: Request) => {
+  const { completedAt, ...data } = await parseBody(request, contentPostCreateSchema);
 
   const post = await prisma.contentPost.create({
     data: {
-      title,
-      type,
-      network,
-      status: resolvedStatus,
-      publishDate: publishDate ? new Date(publishDate) : null,
-      completedAt: resolvePostCompletedAt(resolvedStatus, completedAt, null),
-      caption: caption || null,
-      notes: notes || null,
-      businessId,
-      clientId,
-      projectId: projectId || null,
+      ...data,
+      publishDate: data.publishDate ?? null,
+      projectId: data.projectId ?? null,
+      completedAt: resolvePostCompletedAt(data.status, completedAt, null),
     },
   });
 
   return NextResponse.json(post);
-}
+});

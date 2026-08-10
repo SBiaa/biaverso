@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card } from "@/components/ui";
-import { formatUtcDateBR } from "@/lib/utils";
+import { formatDateBR } from "@/lib/utils";
 import { KANBAN_COLUMNS } from "@/lib/ace-shared";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
 import { ProductionTaskModal, type TaskRecord } from "./ProductionTaskModal";
@@ -69,7 +69,7 @@ export function KanbanBoard({
                       </div>
                       {item.date && (
                         <span className="text-xs text-text-secondary">
-                          {formatUtcDateBR(new Date(item.date))}
+                          {formatDateBR(new Date(item.date))}
                         </span>
                       )}
                     </Card>

@@ -4,15 +4,15 @@ import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { FinancialRecordsSection } from "@/components/modules/financeiro/FinancialRecordsSection";
 import { CardInstallmentsList } from "@/components/modules/financeiro/CardInstallmentsList";
 import { compareInvoiceMonths } from "@/lib/finance-calc";
-import { formatCurrencyBRL, formatMonthYearBR, startOfToday } from "@/lib/utils";
+import { formatCurrencyBRL, formatMonthYearBR, todayUtc } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function DividasPage() {
-  const today = startOfToday();
+  const today = todayUtc();
   const currentInvoice = {
-    month: today.getMonth() + 1,
-    year: today.getFullYear(),
+    month: today.getUTCMonth() + 1,
+    year: today.getUTCFullYear(),
   };
 
   const [records, purchases] = await Promise.all([

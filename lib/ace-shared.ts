@@ -1,4 +1,4 @@
-import { startOfToday } from "@/lib/utils";
+import { nextUtcDay, todayUtc } from "@/lib/utils";
 import type { ContentStatus, ProductionStatus } from "@/app/generated/prisma/client";
 
 // Pure helpers/constants shared between server code and client components —
@@ -55,21 +55,16 @@ export const productionStatusColors: Record<string, string> = {
 export const donePostStatuses: ContentStatus[] = ["PUBLICADO", "CANCELADO"];
 export const doneTaskStatuses: ProductionStatus[] = ["CONCLUIDO", "CANCELADO"];
 
-// Datas de posts/tarefas Ace são gravadas como meia-noite UTC (a partir de <input type="date">),
-// então o dia "local" precisa ser convertido para o mesmo referencial antes de comparar no banco.
-export function getUtcDayRange(localDate: Date) {
-  const start = new Date(
-    Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()),
-  );
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 1);
-  return { start, end };
+/** Intervalo [início, fim) de um dia, em UTC — o referencial em que as datas são gravadas. */
+export function getUtcDayRange(date: Date) {
+  const start = new Date(date);
+  start.setUTCHours(0, 0, 0, 0);
+  return { start, end: nextUtcDay(start) };
 }
 
 export function isOverdue(dueDate: Date | null, status: string, doneStatuses: string[]) {
   if (!dueDate || doneStatuses.includes(status)) return false;
-  const { start: todayUtc } = getUtcDayRange(startOfToday());
-  return dueDate.getTime() < todayUtc.getTime();
+  return dueDate.getTime() < todayUtc().getTime();
 }
 
 export function isPostOverdue(post: { publishDate: Date | null; status: string }) {
@@ -84,20 +79,20 @@ export function isTaskOverdue(task: { dueDate: Date | null; status: string }) {
 // sem sobrescrever uma data já definida manualmente pelo usuário.
 export function resolvePostCompletedAt(
   status: string,
-  completedAt: string | null | undefined,
+  completedAt: Date | null | undefined,
   previousCompletedAt: Date | null,
 ) {
-  if (completedAt !== undefined) return completedAt ? new Date(completedAt) : null;
+  if (completedAt !== undefined) return completedAt ?? null;
   if (status === "PUBLICADO" && !previousCompletedAt) return new Date();
   return previousCompletedAt;
 }
 
 export function resolveTaskCompletedAt(
   status: string,
-  completedAt: string | null | undefined,
+  completedAt: Date | null | undefined,
   previousCompletedAt: Date | null,
 ) {
-  if (completedAt !== undefined) return completedAt ? new Date(completedAt) : null;
+  if (completedAt !== undefined) return completedAt ?? null;
   if (status === "CONCLUIDO" && !previousCompletedAt) return new Date();
   return previousCompletedAt;
 }

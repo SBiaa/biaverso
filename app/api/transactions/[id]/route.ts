@@ -1,36 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { transactionSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { name, type, amount, date, businessId, category, payMethod, notes } =
-    await request.json();
+  const data = await parseBody(request, transactionSchema);
 
   const transaction = await prisma.transaction.update({
     where: { id },
     data: {
-      name,
-      type,
-      amount,
-      date: new Date(date),
-      businessId: businessId || null,
-      category,
-      payMethod: payMethod || null,
-      notes: notes || null,
+      ...data,
+      payMethod: data.payMethod ?? null,
+      businessId: data.businessId ?? null,
     },
   });
 
   return NextResponse.json(transaction);
-}
+});
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
   await prisma.transaction.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});

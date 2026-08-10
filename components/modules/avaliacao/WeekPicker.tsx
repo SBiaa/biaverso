@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { formatDateBR } from "@/lib/utils";
+import { addUtcDays, formatDateBR, toDateInputValue } from "@/lib/utils";
 
 type WeekPickerProps = {
   weekStart: string;
@@ -14,9 +14,8 @@ export function WeekPicker({ weekStart, weekEnd }: WeekPickerProps) {
   const pathname = usePathname();
 
   function go(deltaDays: number) {
-    const next = new Date(weekStart);
-    next.setDate(next.getDate() + deltaDays);
-    router.push(`${pathname}?week=${next.toISOString().slice(0, 10)}`);
+    const next = addUtcDays(new Date(weekStart), deltaDays);
+    router.push(`${pathname}?week=${toDateInputValue(next)}`);
   }
 
   return (

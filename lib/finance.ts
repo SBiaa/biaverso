@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { todayUtc, unpaidStatus, utcDate } from "@/lib/finance-calc";
+import { unpaidStatus, utcDate } from "@/lib/finance-calc";
+import { todayUtc } from "@/lib/utils";
 
 // Só existe um cartão — a configuração fica sempre nesta linha.
 export const CREDIT_CARD_ID = "single";

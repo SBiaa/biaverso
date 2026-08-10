@@ -1,34 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { measuredGoalPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { title, target, deadline, status, progress, conceptualGoalId } =
-    await request.json();
+  const data = await parseBody(request, measuredGoalPatchSchema);
+  return NextResponse.json(await prisma.measuredGoal.update({ where: { id }, data }));
+});
 
-  const goal = await prisma.measuredGoal.update({
-    where: { id },
-    data: {
-      title,
-      target,
-      deadline: deadline ? new Date(deadline) : deadline,
-      status,
-      progress,
-      conceptualGoalId,
-    },
-  });
-
-  return NextResponse.json(goal);
-}
-
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
   await prisma.measuredGoal.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});

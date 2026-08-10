@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, Pencil, Trash2 } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import {
   cn,
   formatCurrencyBRL,
-  formatUtcDateBR,
+  formatDateBR,
   toDateInputValue,
+  todayInputValue,
 } from "@/lib/utils";
 import { billStatusLabels, fixedBillTypeLabels } from "@/lib/labels";
 
@@ -30,13 +32,6 @@ const statusStyles: Record<string, string> = {
   PENDENTE: "bg-badge-casa-bg text-badge-casa-text",
   ATRASADO: "bg-badge-ace-bg text-badge-ace-text",
 };
-
-function todayInputValue() {
-  const d = new Date();
-  return toDateInputValue(
-    new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())),
-  );
-}
 
 function FixedBillForm({
   item,
@@ -144,6 +139,7 @@ function FixedBillForm({
 export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
+  const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -151,20 +147,27 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
   async function toggle(logId: string) {
     const item = items.find((i) => i.logId === logId);
     if (!item) return;
+
+    const previous = items;
     const nextStatus = item.status === "PAGO" ? "PENDENTE" : "PAGO";
+
+    setError(null);
     setItems((prev) =>
       prev.map((i) => (i.logId === logId ? { ...i, status: nextStatus } : i)),
     );
-    const response = await fetch(`/api/fixed-bill-logs/${logId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextStatus }),
-    });
-    // Ao desmarcar, o servidor decide entre PENDENTE e ATRASADO.
-    const log = await response.json();
-    setItems((prev) =>
-      prev.map((i) => (i.logId === logId ? { ...i, status: log.status } : i)),
-    );
+
+    try {
+      // Ao desmarcar, o servidor decide entre PENDENTE e ATRASADO.
+      const log = await api.patch<BillItem>(`/api/fixed-bill-logs/${logId}`, {
+        status: nextStatus,
+      });
+      setItems((prev) =>
+        prev.map((i) => (i.logId === logId ? { ...i, status: log.status } : i)),
+      );
+    } catch (e) {
+      setItems(previous);
+      setError(errorMessage(e));
+    }
   }
 
   async function handleDelete(fixedBillId: string) {
@@ -175,12 +178,21 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
     )
       return;
     setDeletingId(fixedBillId);
-    await fetch(`/api/fixed-bills/${fixedBillId}`, { method: "DELETE" });
-    router.refresh();
+    setError(null);
+    try {
+      await api.delete(`/api/fixed-bills/${fixedBillId}`);
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
     <div className="flex flex-col gap-2">
+      <ErrorNote message={error} />
+
       {items.length === 0 && !creating && (
         <p className="text-sm text-text-secondary">
           Nenhuma conta fixa cadastrada.
@@ -216,7 +228,7 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
                 </p>
                 <p className="text-xs text-text-secondary">
                   {fixedBillTypeLabels[item.type]} · vence em{" "}
-                  {formatUtcDateBR(new Date(item.dueDate))}
+                  {formatDateBR(new Date(item.dueDate))}
                 </p>
               </div>
             </button>

@@ -10,19 +10,19 @@ import { TransactionsList } from "@/components/modules/financeiro/TransactionsLi
 import {
   cn,
   formatCurrencyBRL,
-  formatUtcDateBR,
+  formatDateBR,
   getMonthRange,
-  startOfToday,
+  todayUtc,
 } from "@/lib/utils";
 import { billStatusLabels } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
 
 async function getFinanceData() {
-  const date = startOfToday();
+  const date = todayUtc();
   const { start, end } = getMonthRange(date);
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
+  const month = date.getUTCMonth() + 1;
+  const year = date.getUTCFullYear();
 
   await ensureFixedBillLogsForMonth(month, year);
 
@@ -209,7 +209,7 @@ export default async function FinanceiroPage() {
                       <div>
                         <p className="text-text-primary">{log.fixedBill.name}</p>
                         <p className="text-xs text-text-secondary">
-                          vence em {formatUtcDateBR(log.dueDate)}
+                          vence em {formatDateBR(log.dueDate)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export default async function FinanceiroPage() {
                   {data.faturaVenceEm && (
                     <span className="font-normal text-text-secondary">
                       {" "}
-                      · vence em {formatUtcDateBR(data.faturaVenceEm)}
+                      · vence em {formatDateBR(data.faturaVenceEm)}
                     </span>
                   )}
                 </h2>

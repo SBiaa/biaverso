@@ -6,7 +6,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button, BusinessBadge } from "@/components/ui";
 import {
   formatCurrencyBRL,
-  formatUtcDateBR,
+  formatDateBR,
   toDateInputValue,
 } from "@/lib/utils";
 import { transactionCategoryLabels } from "@/lib/labels";
@@ -229,7 +229,7 @@ export function CreditCardEntriesList({
               <div>
                 <p className="text-text-primary">{entry.description}</p>
                 <p className="text-xs text-text-secondary">
-                  {formatUtcDateBR(new Date(entry.purchaseDate))} ·{" "}
+                  {formatDateBR(new Date(entry.purchaseDate))} ·{" "}
                   {transactionCategoryLabels[entry.category]}
                   {entry.installment ? ` · parcela ${entry.installment}` : ""}
                 </p>

@@ -1,26 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { desirePatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { title, description, pillarId } = await request.json();
+  const data = await parseBody(request, desirePatchSchema);
+  return NextResponse.json(await prisma.desire.update({ where: { id }, data }));
+});
 
-  const desire = await prisma.desire.update({
-    where: { id },
-    data: { title, description, pillarId },
-  });
-
-  return NextResponse.json(desire);
-}
-
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
   await prisma.desire.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});

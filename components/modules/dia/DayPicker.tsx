@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { formatDateLongBR } from "@/lib/utils";
+import { addUtcDays, formatDateLongBR, toDateInputValue } from "@/lib/utils";
 
 type DayPickerProps = {
   date: string;
@@ -13,10 +13,8 @@ export function DayPicker({ date }: DayPickerProps) {
   const pathname = usePathname();
 
   function go(deltaDays: number) {
-    const next = new Date(date);
-    next.setDate(next.getDate() + deltaDays);
-    const isoDate = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
-    router.push(`${pathname}?date=${isoDate}`);
+    const next = addUtcDays(new Date(date), deltaDays);
+    router.push(`${pathname}?date=${toDateInputValue(next)}`);
   }
 
   function goToday() {

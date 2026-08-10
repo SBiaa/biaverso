@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDay, materializeRoutineTasks, materializeHabits } from "@/lib/day";
-import { parseLocalDateString, startOfToday } from "@/lib/utils";
+import { parseDateOnly, toDateInputValue, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
@@ -48,7 +48,8 @@ export default async function DiaPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const date = params.date ? parseLocalDateString(params.date) : startOfToday();
+  // Param inválido cai para hoje em vez de criar um Day com data inválida.
+  const date = (params.date ? parseDateOnly(params.date) : null) ?? todayUtc();
   const day = await getDay(date);
 
   const { start: dueStart, end: dueEnd } = getUtcDayRange(date);
@@ -104,6 +105,7 @@ export default async function DiaPage({
           </h2>
           <TaskListByOrigin
             dayId={day.id}
+            dayDate={toDateInputValue(day.date)}
             initialTasks={day.tasks.map((t) => ({
               id: t.id,
               title: t.title,

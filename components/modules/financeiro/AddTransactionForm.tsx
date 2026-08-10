@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import { payMethodLabels, transactionCategoryLabels } from "@/lib/labels";
+import { toDateInputValue, todayInputValue } from "@/lib/utils";
 
 const categoryOptions = Object.keys(transactionCategoryLabels);
 const payMethodOptions = Object.keys(payMethodLabels);
@@ -21,20 +22,6 @@ type TransactionInitial = {
   payMethod: string | null;
   notes: string | null;
 };
-
-function todayInputValue() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString().slice(0, 10);
-}
-
-function dateInputValue(date: string | Date) {
-  const d = new Date(date);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 function emptyForm() {
   return {
@@ -54,7 +41,7 @@ function formFromTransaction(transaction: TransactionInitial) {
     name: transaction.name,
     type: transaction.type,
     amount: String(transaction.amount),
-    date: dateInputValue(transaction.date),
+    date: toDateInputValue(transaction.date),
     businessId: transaction.businessId ?? "",
     category: transaction.category,
     payMethod: transaction.payMethod ?? "",

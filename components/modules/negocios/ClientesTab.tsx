@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui";
-import { getInitials, formatUtcDateBR } from "@/lib/utils";
+import { getInitials, formatDateBR } from "@/lib/utils";
 import { ClientStatusFilter } from "./ClientStatusFilter";
 import { AddClientForm } from "./AddClientForm";
 import type { ClientOverview } from "@/lib/ace";
@@ -42,7 +42,7 @@ export function ClientesTab({
                   <p className="text-xs text-text-secondary">Próxima entrega</p>
                   <p className="text-xs font-medium text-text-primary">
                     {client.nextDelivery
-                      ? formatUtcDateBR(new Date(client.nextDelivery.date))
+                      ? formatDateBR(new Date(client.nextDelivery.date))
                       : "—"}
                   </p>
                 </div>

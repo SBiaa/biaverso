@@ -1,67 +1,50 @@
 import { prisma } from "@/lib/prisma";
 import { getWeekStart } from "@/lib/cardapio";
-import { getMonthRange, startOfToday } from "@/lib/utils";
+import { addUtcDays, getMonthRange, todayUtc } from "@/lib/utils";
 import { blockLabels } from "@/lib/labels";
 
 export function getWeekRange(date: Date) {
   const weekStart = getWeekStart(date);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 6);
-  return { weekStart, weekEnd };
+  return { weekStart, weekEnd: addUtcDays(weekStart, 6) };
 }
 
 export function getQuarter(month: number) {
   return Math.ceil(month / 3);
 }
 
+// Os três usam upsert na unique correspondente: o findFirst + create anterior
+// deixava duas abas (ou um prefetch concorrente) criarem avaliações duplicadas
+// para o mesmo período.
+
 export async function getOrCreateQuarterReview(quarter: number, year: number) {
-  const existing = await prisma.quarterReview.findFirst({
-    where: { quarter, year },
+  return prisma.quarterReview.upsert({
+    where: { quarter_year: { quarter, year } },
+    create: { quarter, year },
+    update: {},
   });
-  if (existing) return existing;
-  return prisma.quarterReview.create({ data: { quarter, year } });
 }
 
 export async function getOrCreateMonthReview(month: number, year: number) {
   const quarterReview = await getOrCreateQuarterReview(getQuarter(month), year);
 
-  const existing = await prisma.monthReview.findFirst({
-    where: { month, year },
-  });
-  if (existing) {
-    if (existing.quarterReviewId !== quarterReview.id) {
-      return prisma.monthReview.update({
-        where: { id: existing.id },
-        data: { quarterReviewId: quarterReview.id },
-      });
-    }
-    return existing;
-  }
-  return prisma.monthReview.create({
-    data: { month, year, quarterReviewId: quarterReview.id },
+  return prisma.monthReview.upsert({
+    where: { month_year: { month, year } },
+    create: { month, year, quarterReviewId: quarterReview.id },
+    // Reancora um mês que tenha ficado sem trimestre (ou no trimestre errado).
+    update: { quarterReviewId: quarterReview.id },
   });
 }
 
 export async function getOrCreateWeekReview(weekStart: Date, weekEnd: Date) {
   const monthReview = await getOrCreateMonthReview(
-    weekStart.getMonth() + 1,
-    weekStart.getFullYear(),
+    weekStart.getUTCMonth() + 1,
+    weekStart.getUTCFullYear(),
   );
 
-  const existing = await prisma.weekReview.findFirst({
+  return prisma.weekReview.upsert({
     where: { weekStart },
-  });
-  if (existing) {
-    if (existing.monthReviewId !== monthReview.id) {
-      return prisma.weekReview.update({
-        where: { id: existing.id },
-        data: { monthReviewId: monthReview.id },
-      });
-    }
-    return existing;
-  }
-  return prisma.weekReview.create({
-    data: { weekStart, weekEnd, monthReviewId: monthReview.id },
+    create: { weekStart, weekEnd, monthReviewId: monthReview.id },
+    update: { monthReviewId: monthReview.id },
   });
 }
 
@@ -88,7 +71,7 @@ export async function getHabitWeekStats(weekStart: Date, weekEnd: Date) {
 
 export async function getHabitMonthStats(date: Date) {
   const { start, end } = getMonthRange(date);
-  const today = startOfToday();
+  const today = todayUtc();
   const isCurrentMonth = start <= today && today < end;
   const totalDays = isCurrentMonth
     ? Math.floor((today.getTime() - start.getTime()) / 86_400_000) + 1
