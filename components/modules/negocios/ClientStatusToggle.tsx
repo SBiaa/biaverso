@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { clientStatusLabels } from "@/lib/labels";
 
 const statusOptions = Object.keys(clientStatusLabels);
@@ -15,17 +17,23 @@ export function ClientStatusToggle({
   initialStatus,
 }: ClientStatusToggleProps) {
   const [status, setStatus] = useState(initialStatus);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleChange(value: string) {
+  async function handleChange(value: string) {
+    const previous = status;
+    setError(null);
     setStatus(value);
-    fetch(`/api/client-business/${linkId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: value }),
-    });
+
+    try {
+      await api.patch(`/api/client-business/${linkId}`, { status: value });
+    } catch (e) {
+      setStatus(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
+    <div className="flex flex-col items-end gap-1">
     <select
       value={status}
       onChange={(e) => handleChange(e.target.value)}
@@ -37,5 +45,7 @@ export function ClientStatusToggle({
         </option>
       ))}
     </select>
+      <ErrorNote message={error} />
+    </div>
   );
 }

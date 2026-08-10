@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { financialStatusLabels } from "@/lib/labels";
 
@@ -40,6 +41,7 @@ function EditRecordForm({
   onClose: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: record.name,
     totalAmount: String(record.totalAmount),
@@ -56,26 +58,32 @@ function EditRecordForm({
   async function handleSubmit() {
     if (!form.name.trim() || !form.totalAmount) return;
     setSaving(true);
-    const response = await fetch(`/api/financial-records/${record.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
-        totalAmount: Number(form.totalAmount),
-        paidAmount: form.paidAmount ? Number(form.paidAmount) : 0,
-        installments: form.installments ? Number(form.installments) : null,
-        dueDay: form.dueDay ? Number(form.dueDay) : null,
-        notes: form.notes || null,
-      }),
-    });
-    const updated = await response.json();
-    setSaving(false);
-    onSaved(updated);
-    onClose();
+    setError(null);
+
+    try {
+      const updated = await api.patch<FinancialRecordItem>(
+        `/api/financial-records/${record.id}`,
+        {
+          name: form.name,
+          totalAmount: Number(form.totalAmount),
+          paidAmount: form.paidAmount ? Number(form.paidAmount) : 0,
+          installments: form.installments ? Number(form.installments) : null,
+          dueDay: form.dueDay ? Number(form.dueDay) : null,
+          notes: form.notes || null,
+        },
+      );
+      onSaved(updated);
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <Card className="flex flex-col gap-2">
+      <ErrorNote message={error} />
       <input
         placeholder="Nome"
         value={form.name}
@@ -155,20 +163,25 @@ export function FinancialRecordsSection({
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
 
   const paymentLabel = type === "DIVIDA" ? "Registrar pagamento" : "Registrar aporte";
 
   async function submitPayment(id: string) {
     const value = Number(paymentInputs[id]);
     if (!value || value <= 0) return;
-    const response = await fetch(`/api/financial-records/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment: value }),
-    });
-    const updated = await response.json();
-    setRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
-    setPaymentInputs((prev) => ({ ...prev, [id]: "" }));
+    setListError(null);
+
+    try {
+      // O servidor recalcula saldo e status, então a lista usa a resposta dele.
+      const updated = await api.patch<FinancialRecordItem>(`/api/financial-records/${id}`, {
+        payment: value,
+      });
+      setRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
+      setPaymentInputs((prev) => ({ ...prev, [id]: "" }));
+    } catch (e) {
+      setListError(errorMessage(e));
+    }
   }
 
   async function handleDelete(id: string) {
@@ -180,35 +193,46 @@ export function FinancialRecordsSection({
     )
       return;
     setDeletingId(id);
-    await fetch(`/api/financial-records/${id}`, { method: "DELETE" });
-    setRecords((prev) => prev.filter((r) => r.id !== id));
-    setDeletingId(null);
+    setListError(null);
+
+    try {
+      await api.delete(`/api/financial-records/${id}`);
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (e) {
+      setListError(errorMessage(e));
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function submitNewRecord() {
     if (!newRecord.name.trim() || !newRecord.totalAmount) return;
     setSaving(true);
-    const response = await fetch("/api/financial-records", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    setListError(null);
+
+    try {
+      const created = await api.post<FinancialRecordItem>("/api/financial-records", {
         name: newRecord.name,
         type,
         totalAmount: Number(newRecord.totalAmount),
         installments: newRecord.installments ? Number(newRecord.installments) : null,
         dueDay: newRecord.dueDay ? Number(newRecord.dueDay) : null,
         notes: newRecord.notes || null,
-      }),
-    });
-    const created = await response.json();
-    setRecords((prev) => [...prev, created]);
-    setNewRecord({ name: "", totalAmount: "", installments: "", dueDay: "", notes: "" });
-    setSaving(false);
-    setShowForm(false);
+      });
+      setRecords((prev) => [...prev, created]);
+      setNewRecord({ name: "", totalAmount: "", installments: "", dueDay: "", notes: "" });
+      setShowForm(false);
+    } catch (e) {
+      setListError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="flex flex-col gap-3">
+      <ErrorNote message={listError} />
+
       {records.length === 0 && (
         <p className="text-sm text-text-secondary">Nenhum registro ainda.</p>
       )}

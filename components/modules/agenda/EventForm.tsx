@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { eventCategoryLabels } from "@/lib/labels";
 import { todayInputValue } from "@/lib/utils";
 import type { AgendaEvent } from "@/lib/agenda-shared";
@@ -47,6 +48,7 @@ export function EventForm({
   const isEdit = !!event;
   const [open, setOpen] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(event ? formFromEvent(event) : emptyForm());
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -62,20 +64,25 @@ export function EventForm({
     if (!form.title.trim()) return;
 
     setSaving(true);
+    setError(null);
+
+    const payload = {
+      title: form.title,
+      description: form.description,
+      date: form.date,
+      allDay: form.allDay,
+      time: form.allDay ? null : form.time || null,
+      endTime: form.allDay ? null : form.endTime || null,
+      category: form.category,
+    };
+
     try {
-      await fetch(isEdit ? `/api/events/${event.id}` : "/api/events", {
-        method: isEdit ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.title,
-          description: form.description,
-          date: form.date,
-          allDay: form.allDay,
-          time: form.allDay ? null : form.time || null,
-          endTime: form.allDay ? null : form.endTime || null,
-          category: form.category,
-        }),
-      });
+      if (isEdit) await api.patch(`/api/events/${event.id}`, payload);
+      else await api.post("/api/events", payload);
+    } catch (e) {
+      // O formulário fica aberto com o que foi digitado, para não perder o texto.
+      setError(errorMessage(e));
+      return;
     } finally {
       setSaving(false);
     }
@@ -152,6 +159,8 @@ export function EventForm({
         rows={2}
         className={inputClass}
       />
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
 
       <div className="flex items-center gap-2">
         <Button onClick={handleSubmit} disabled={saving || !form.title.trim()}>

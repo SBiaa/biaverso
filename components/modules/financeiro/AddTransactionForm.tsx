@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { payMethodLabels, transactionCategoryLabels } from "@/lib/labels";
 import { toDateInputValue, todayInputValue } from "@/lib/utils";
 
@@ -62,6 +63,7 @@ export function AddTransactionForm({
   const isEdit = !!transaction;
   const [open, setOpen] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(
     transaction ? formFromTransaction(transaction) : emptyForm(),
   );
@@ -78,24 +80,28 @@ export function AddTransactionForm({
   async function handleSubmit() {
     if (!form.name.trim() || !form.amount) return;
     setSaving(true);
-    await fetch(
-      isEdit ? `/api/transactions/${transaction!.id}` : "/api/transactions",
-      {
-        method: isEdit ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          businessId: form.businessId || null,
-          amount: Number(form.amount),
-          date: new Date(form.date).toISOString(),
-        }),
-      },
-    );
-    setSaving(false);
-    setOpen(false);
-    if (!isEdit) setForm((prev) => ({ ...prev, name: "", amount: "", notes: "" }));
-    onClose?.();
-    router.refresh();
+    setError(null);
+
+    const payload = {
+      ...form,
+      businessId: form.businessId || null,
+      payMethod: form.payMethod || null,
+      amount: Number(form.amount),
+      date: form.date,
+    };
+
+    try {
+      if (isEdit) await api.patch(`/api/transactions/${transaction!.id}`, payload);
+      else await api.post("/api/transactions", payload);
+      setOpen(false);
+      if (!isEdit) setForm((prev) => ({ ...prev, name: "", amount: "", notes: "" }));
+      onClose?.();
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
@@ -104,6 +110,7 @@ export function AddTransactionForm({
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
+      <ErrorNote message={error} />
       <div className="grid grid-cols-2 gap-2">
         <input
           placeholder="Nome"

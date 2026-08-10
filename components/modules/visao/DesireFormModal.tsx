@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 
 type DesireFormModalProps = {
   pillarId: string;
@@ -20,6 +21,7 @@ export function DesireFormModal({
   onSaved,
 }: DesireFormModalProps) {
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: initial?.title ?? "",
     description: initial?.description ?? "",
@@ -28,22 +30,22 @@ export function DesireFormModal({
   async function handleSubmit() {
     if (!form.title.trim()) return;
     setSaving(true);
-    if (mode === "create") {
-      await fetch("/api/vision/desires", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, pillarId }),
-      });
-    } else if (initial) {
-      await fetch(`/api/vision/desires/${initial.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+    setError(null);
+
+    try {
+      if (mode === "create") {
+        await api.post("/api/vision/desires", { ...form, pillarId });
+      } else if (initial) {
+        await api.patch(`/api/vision/desires/${initial.id}`, form);
+      }
+      onSaved();
+      onClose();
+    } catch (e) {
+      // O modal fica aberto com o que foi digitado, para não perder o texto.
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    onSaved();
-    onClose();
   }
 
   return (
@@ -76,6 +78,8 @@ export function DesireFormModal({
           onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
           className="min-h-[80px] resize-none rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
+
+        <ErrorNote message={error} />
 
         <div className="mt-2 flex gap-2">
           <Button onClick={handleSubmit} disabled={saving}>

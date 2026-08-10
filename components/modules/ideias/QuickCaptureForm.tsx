@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lightbulb } from "lucide-react";
+import { ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 
 type Business = { id: string; name: string };
 
@@ -11,23 +13,32 @@ export function QuickCaptureForm({ businesses }: { businesses: Business[] }) {
   const [title, setTitle] = useState("");
   const [businessId, setBusinessId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
     if (!title.trim()) return;
     setSaving(true);
-    await fetch("/api/ideas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title.trim(), businessId: businessId || null }),
-    });
-    setTitle("");
-    setBusinessId("");
-    setSaving(false);
-    router.refresh();
+    setError(null);
+
+    try {
+      await api.post("/api/ideas", {
+        title: title.trim(),
+        businessId: businessId || null,
+      });
+      // Só limpa o campo depois de gravar, para a ideia não sumir sem ter salvo.
+      setTitle("");
+      setBusinessId("");
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border-2 border-dashed border-border p-4">
+    <div className="flex flex-col gap-2 rounded-lg border-2 border-dashed border-border p-4">
+      <div className="flex items-center gap-2">
       <Lightbulb size={20} className="shrink-0 text-accent" />
       <input
         value={title}
@@ -56,6 +67,8 @@ export function QuickCaptureForm({ businesses }: { businesses: Business[] }) {
       >
         Guardar
       </button>
+      </div>
+      <ErrorNote message={error} />
     </div>
   );
 }

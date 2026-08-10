@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Button } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import type { GoogleSyncStatus } from "@/lib/agenda-shared";
 import { SyncNowButton } from "./SyncNowButton";
@@ -47,6 +48,7 @@ export function GoogleCalendarCard({
 }) {
   const router = useRouter();
   const [disconnecting, setDisconnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const message = feedback ? FEEDBACK[feedback] : undefined;
 
@@ -56,9 +58,12 @@ export function GoogleCalendarCard({
     }
 
     setDisconnecting(true);
+    setError(null);
     try {
-      await fetch("/api/calendar/disconnect", { method: "POST" });
+      await api.post("/api/calendar/disconnect", {});
       router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
     } finally {
       setDisconnecting(false);
     }
@@ -137,6 +142,8 @@ export function GoogleCalendarCard({
               </pre>
             </details>
           )}
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
 
           <div className="flex flex-wrap items-center gap-2">
             <SyncNowButton />

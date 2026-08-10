@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, Power, Users } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { getBusinessIcon } from "@/lib/business-visuals";
 import { cn } from "@/lib/utils";
 import { BusinessFormModal } from "./BusinessFormModal";
@@ -23,19 +24,24 @@ export function BusinessGrid({ businesses }: { businesses: BusinessItem[] }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<BusinessItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function toggleActive(business: BusinessItem) {
-    await fetch(`/api/businesses/${business.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !business.active }),
-    });
-    router.refresh();
+    setError(null);
+
+    try {
+      await api.patch(`/api/businesses/${business.id}`, { active: !business.active });
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    }
   }
 
   return (
     <div className="flex flex-col gap-4">
       <Button onClick={() => setCreating(true)}>+ Novo negócio</Button>
+
+      <ErrorNote message={error} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {businesses.map((business) => {

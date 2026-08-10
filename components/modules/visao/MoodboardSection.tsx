@@ -17,7 +17,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Plus } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { MoodboardItemModal } from "./MoodboardItemModal";
 
 type MoodboardItem = {
@@ -125,18 +126,31 @@ export function MoodboardSection({
   const [items, setItems] = useState(initialItems);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<MoodboardItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
   async function refresh() {
-    const response = await fetch(`/api/vision/pillars/${pillarId}/moodboard`);
-    setItems(await response.json());
+    try {
+      setItems(await api.get<MoodboardItem[]>(`/api/vision/pillars/${pillarId}/moodboard`));
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
   }
 
   async function handleDelete(id: string) {
+    const previous = items;
+    setError(null);
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await fetch(`/api/vision/moodboard/${id}`, { method: "DELETE" });
+
+    try {
+      await api.delete(`/api/vision/moodboard/${id}`);
+    } catch (e) {
+      setItems(previous);
+      setError(errorMessage(e));
+    }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -145,18 +159,24 @@ export function MoodboardSection({
 
     const oldIndex = items.findIndex((i) => i.id === active.id);
     const newIndex = items.findIndex((i) => i.id === over.id);
+    const previous = items;
     const reordered = arrayMove(items, oldIndex, newIndex);
+
+    setError(null);
     setItems(reordered);
 
-    await Promise.all(
-      reordered.map((item, index) =>
-        fetch(`/api/vision/moodboard/${item.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: index }),
-        }),
-      ),
-    );
+    try {
+      await Promise.all(
+        reordered.map((item, index) =>
+          api.patch(`/api/vision/moodboard/${item.id}`, { order: index }),
+        ),
+      );
+    } catch (e) {
+      // Se alguma ordem não gravou, a lista volta ao arranjo anterior em vez
+      // de ficar mostrando uma ordem que o banco não tem.
+      setItems(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
@@ -168,6 +188,8 @@ export function MoodboardSection({
           Adicionar
         </Button>
       </div>
+
+      <ErrorNote message={error} />
 
       {items.length === 0 ? (
         <p className="text-sm text-text-secondary">Nenhum item no moodboard ainda.</p>

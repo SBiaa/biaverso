@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { transactionCategoryLabels } from "@/lib/labels";
 import {
   addInvoiceMonths,
@@ -35,6 +36,7 @@ export function AddCreditCardEntryForm({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     description: "",
     amount: "",
@@ -79,10 +81,10 @@ export function AddCreditCardEntryForm({
   async function handleSubmit() {
     if (!form.description.trim() || !form.amount) return;
     setSaving(true);
-    await fetch("/api/credit-card-entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    setError(null);
+
+    try {
+      await api.post("/api/credit-card-entries", {
         description: form.description,
         amount: total,
         purchaseDate: form.purchaseDate,
@@ -92,18 +94,21 @@ export function AddCreditCardEntryForm({
         category: form.category,
         businessId: form.businessId || null,
         notes: form.notes || null,
-      }),
-    });
-    setSaving(false);
-    setOpen(false);
-    setForm((prev) => ({
-      ...prev,
-      description: "",
-      amount: "",
-      installments: "1",
-      notes: "",
-    }));
-    router.refresh();
+      });
+      setOpen(false);
+      setForm((prev) => ({
+        ...prev,
+        description: "",
+        amount: "",
+        installments: "1",
+        notes: "",
+      }));
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
@@ -112,6 +117,7 @@ export function AddCreditCardEntryForm({
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
+      <ErrorNote message={error} />
       <div className="grid grid-cols-2 gap-2">
         <input
           placeholder="Descrição"

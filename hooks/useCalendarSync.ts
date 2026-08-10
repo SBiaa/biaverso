@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/client-api";
 
 /** Intervalo do polling automático. */
 export const SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -19,14 +20,17 @@ export function useCalendarSync() {
 
     async function sync() {
       try {
-        const response = await fetch("/api/calendar/sync", { method: "POST" });
-        if (!response.ok || cancelled) return;
+        const result = await api.post<{ fromGoogle: number; toGoogle: number }>(
+          "/api/calendar/sync",
+          {},
+        );
+        if (cancelled) return;
 
-        const result = await response.json();
         // Só recarrega a tela se alguma coisa mudou de fato.
         if (result.fromGoogle > 0 || result.toGoogle > 0) router.refresh();
       } catch {
-        // Sem conexão ou sync já em andamento: a próxima rodada tenta de novo.
+        // Google não conectado, sem rede ou sync já em andamento: a próxima
+        // rodada tenta de novo. O status fica visível em Configurações.
       }
     }
 

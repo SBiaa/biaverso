@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { knowledgeAreaLabels, knowledgeTypeLabels } from "@/lib/labels";
 
 const typeOptions = Object.keys(knowledgeTypeLabels);
@@ -12,6 +13,7 @@ export function AddKnowledgeForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "",
     source: "",
@@ -28,22 +30,25 @@ export function AddKnowledgeForm() {
   async function handleSubmit() {
     if (!form.title.trim()) return;
     setSaving(true);
-    await fetch("/api/knowledge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setSaving(false);
-    setOpen(false);
-    setForm({
-      title: "",
-      source: "",
-      type: typeOptions[0],
-      area: areaOptions[0],
-      summary: "",
-      link: "",
-    });
-    router.refresh();
+    setError(null);
+
+    try {
+      await api.post("/api/knowledge", form);
+      setOpen(false);
+      setForm({
+        title: "",
+        source: "",
+        type: typeOptions[0],
+        area: areaOptions[0],
+        summary: "",
+        link: "",
+      });
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
@@ -52,6 +57,7 @@ export function AddKnowledgeForm() {
 
   return (
     <Card className="flex flex-col gap-2">
+      <ErrorNote message={error} />
       <input
         placeholder="Título"
         value={form.title}

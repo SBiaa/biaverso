@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { PrincipleFormModal } from "./PrincipleFormModal";
 
@@ -19,15 +20,28 @@ export function PrinciplesSection({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Principle | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
-    const response = await fetch(`/api/vision/principles?pillarId=${pillarId}`);
-    setPrinciples(await response.json());
+    try {
+      setPrinciples(await api.get<Principle[]>(`/api/vision/principles?pillarId=${pillarId}`));
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
   }
 
   async function handleDelete(id: string) {
+    const previous = principles;
+    setError(null);
     setPrinciples((prev) => prev.filter((p) => p.id !== id));
-    await fetch(`/api/vision/principles/${id}`, { method: "DELETE" });
+
+    try {
+      await api.delete(`/api/vision/principles/${id}`);
+    } catch (e) {
+      setPrinciples(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
@@ -41,6 +55,8 @@ export function PrinciplesSection({
           Novo princípio
         </Button>
       </div>
+
+      <ErrorNote message={error} />
 
       {principles.length === 0 ? (
         <p className="text-sm text-text-secondary">Nenhum princípio cadastrado ainda.</p>

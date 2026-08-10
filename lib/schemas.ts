@@ -388,3 +388,54 @@ export const moodboardPatchSchema = moodboardCreateSchema.partial().extend({
 
 export const pillarIdQuerySchema = z.object({ pillarId: filter(id) });
 export const conceptualGoalIdQuerySchema = z.object({ conceptualGoalId: filter(id) });
+
+// ---------------------------------------------------------------- agenda
+/**
+ * "HH:mm" no fuso do app. Aceita o que os `<input type="time">` mandam
+ * ("9:05", "09:05:30") e trata string vazia como "sem hora". Campo ausente
+ * continua `undefined`, para o PATCH saber a diferença entre limpar e não mexer.
+ */
+const timeOfDay = z
+  .string()
+  .trim()
+  .nullish()
+  .transform((value) => {
+    if (value === undefined) return undefined;
+    if (!value) return null;
+
+    const match = /^(\d{1,2}):(\d{2})/.exec(value);
+    if (!match) return null;
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return null;
+
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  });
+
+/** Ausente = não mexe; `null` ou "" = limpa. */
+const patchText = z
+  .string()
+  .trim()
+  .nullish()
+  .transform((value) => (value === undefined ? undefined : value || null));
+
+export const eventCreateSchema = z.object({
+  title: text,
+  description: optionalText,
+  date: dateOnly,
+  time: timeOfDay,
+  endTime: timeOfDay,
+  allDay: z.boolean().default(false),
+  category: z.enum(E.EventCategory).default("PESSOAL"),
+});
+
+export const eventPatchSchema = z.object({
+  title: text.optional(),
+  description: patchText,
+  date: dateOnly.optional(),
+  time: timeOfDay,
+  endTime: timeOfDay,
+  allDay: z.boolean().optional(),
+  category: z.enum(E.EventCategory).optional(),
+});

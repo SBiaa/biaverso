@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { projectStatusLabels } from "@/lib/labels";
 
 const statusOptions = Object.keys(projectStatusLabels);
@@ -17,6 +18,7 @@ type ProjectFormModalProps = {
 export function ProjectFormModal({ businessId, clientId, onClose }: ProjectFormModalProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -32,14 +34,17 @@ export function ProjectFormModal({ businessId, clientId, onClose }: ProjectFormM
   async function handleSubmit() {
     if (!form.name.trim()) return;
     setSaving(true);
-    await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, businessId, clientId }),
-    });
-    setSaving(false);
-    router.refresh();
-    onClose();
+    setError(null);
+
+    try {
+      await api.post("/api/projects", { ...form, businessId, clientId });
+      router.refresh();
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -103,6 +108,8 @@ export function ProjectFormModal({ businessId, clientId, onClose }: ProjectFormM
             />
           </div>
         </div>
+
+        <ErrorNote message={error} />
 
         <div className="mt-2 flex gap-2">
           <Button onClick={handleSubmit} disabled={saving}>

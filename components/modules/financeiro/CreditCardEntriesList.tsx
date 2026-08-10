@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { Button, BusinessBadge } from "@/components/ui";
+import { Button, BusinessBadge, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import {
   formatCurrencyBRL,
   formatDateBR,
@@ -55,6 +56,7 @@ function EditCreditCardEntryForm({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(formFromEntry(entry));
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -64,24 +66,29 @@ function EditCreditCardEntryForm({
   async function handleSubmit() {
     if (!form.description.trim() || !form.amount) return;
     setSaving(true);
-    await fetch(`/api/credit-card-entries/${entry.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    setError(null);
+
+    try {
+      // Se for parcela, o servidor reajusta o total da compra na mesma transação.
+      await api.patch(`/api/credit-card-entries/${entry.id}`, {
         ...form,
         amount: Number(form.amount),
         invoiceMonth: Number(form.invoiceMonth),
         invoiceYear: Number(form.invoiceYear),
         businessId: form.businessId || null,
-      }),
-    });
-    setSaving(false);
-    onClose();
-    router.refresh();
+      });
+      onClose();
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
+      <ErrorNote message={error} />
       <div className="grid grid-cols-2 gap-2">
         <input
           placeholder="Descrição"
@@ -177,6 +184,7 @@ export function CreditCardEntriesList({
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
   async function handleDelete(entry: CreditCardEntry) {
     // Apagar uma parcela sozinha deixaria a compra sem bater com o total,
@@ -187,13 +195,19 @@ export function CreditCardEntriesList({
     if (!confirm(message)) return;
 
     setDeletingId(entry.id);
-    await fetch(
-      entry.purchaseId
-        ? `/api/credit-card-purchases/${entry.purchaseId}`
-        : `/api/credit-card-entries/${entry.id}`,
-      { method: "DELETE" },
-    );
-    router.refresh();
+    setListError(null);
+
+    try {
+      await api.delete(
+        entry.purchaseId
+          ? `/api/credit-card-purchases/${entry.purchaseId}`
+          : `/api/credit-card-entries/${entry.id}`,
+      );
+      router.refresh();
+    } catch (e) {
+      setListError(errorMessage(e));
+      setDeletingId(null);
+    }
   }
 
   if (entries.length === 0) {
@@ -205,6 +219,8 @@ export function CreditCardEntriesList({
   }
 
   return (
+    <>
+      <ErrorNote message={listError} />
     <ul className="flex flex-col divide-y divide-border">
       {entries.map((entry) => {
         if (editingId === entry.id) {
@@ -263,5 +279,6 @@ export function CreditCardEntriesList({
         );
       })}
     </ul>
+    </>
   );
 }

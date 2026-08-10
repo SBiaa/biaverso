@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { BusinessBadge } from "@/components/ui";
+import { BusinessBadge, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { AddTransactionForm } from "./AddTransactionForm";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { transactionCategoryLabels } from "@/lib/labels";
@@ -33,6 +34,7 @@ export function TransactionsList({
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
     if (
@@ -42,8 +44,15 @@ export function TransactionsList({
     )
       return;
     setDeletingId(id);
-    await fetch(`/api/transactions/${id}`, { method: "DELETE" });
-    router.refresh();
+    setError(null);
+
+    try {
+      await api.delete(`/api/transactions/${id}`);
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+      setDeletingId(null);
+    }
   }
 
   if (transactions.length === 0) {
@@ -55,6 +64,8 @@ export function TransactionsList({
   }
 
   return (
+    <>
+      <ErrorNote message={error} />
     <ul className="flex flex-col divide-y divide-border">
       {transactions.map((t) => {
         if (editingId === t.id) {
@@ -118,5 +129,6 @@ export function TransactionsList({
         );
       })}
     </ul>
+    </>
   );
 }

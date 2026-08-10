@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { recipeCategoryLabels } from "@/lib/labels";
 
 const categoryOptions = Object.keys(recipeCategoryLabels);
@@ -50,6 +51,7 @@ export function AddRecipeForm({
   const isEdit = !!recipe;
   const [open, setOpen] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(recipe ? formFromRecipe(recipe) : emptyForm());
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -69,16 +71,20 @@ export function AddRecipeForm({
   async function handleSubmit() {
     if (!form.title.trim() || !form.ingredients.trim() || !form.steps.trim()) return;
     setSaving(true);
-    await fetch(isEdit ? `/api/recipes/${recipe!.id}` : "/api/recipes", {
-      method: isEdit ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setSaving(false);
-    setOpen(false);
-    if (!isEdit) setForm(emptyForm());
-    onClose?.();
-    router.refresh();
+    setError(null);
+
+    try {
+      if (isEdit) await api.patch(`/api/recipes/${recipe!.id}`, form);
+      else await api.post("/api/recipes", form);
+      setOpen(false);
+      if (!isEdit) setForm(emptyForm());
+      onClose?.();
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
@@ -87,6 +93,7 @@ export function AddRecipeForm({
 
   return (
     <Card className="flex flex-col gap-2">
+      <ErrorNote message={error} />
       <input
         placeholder="Título"
         value={form.title}

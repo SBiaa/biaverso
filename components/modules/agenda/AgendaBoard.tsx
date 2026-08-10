@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { eventCategoryLabels } from "@/lib/labels";
 import { cn, formatDateLongBR, parseDateOnly, todayInputValue } from "@/lib/utils";
 import { groupEventsByDate, type AgendaEvent } from "@/lib/agenda-shared";
@@ -74,6 +75,7 @@ export function AgendaBoard({ initialEvents }: { initialEvents: AgendaEvent[] })
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const today = todayInputValue();
   const groups = groupEventsByDate(initialEvents);
@@ -82,9 +84,12 @@ export function AgendaBoard({ initialEvents }: { initialEvents: AgendaEvent[] })
     if (!confirm(`Excluir "${event.title}"?`)) return;
 
     setDeletingId(event.id);
+    setError(null);
     try {
-      await fetch(`/api/events/${event.id}`, { method: "DELETE" });
+      await api.delete(`/api/events/${event.id}`);
       router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
     } finally {
       setDeletingId(null);
     }
@@ -93,6 +98,8 @@ export function AgendaBoard({ initialEvents }: { initialEvents: AgendaEvent[] })
   return (
     <div className="flex flex-col gap-4">
       <EventForm />
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
 
       {groups.length === 0 ? (
         <Card>

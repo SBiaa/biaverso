@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { ideaStatusLabels } from "@/lib/labels";
 
 const statusOptions = Object.keys(ideaStatusLabels);
@@ -13,17 +15,23 @@ export function IdeaStatusToggle({
   initialStatus: string;
 }) {
   const [status, setStatus] = useState(initialStatus);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleChange(value: string) {
+  async function handleChange(value: string) {
+    const previous = status;
+    setError(null);
     setStatus(value);
-    fetch(`/api/ideas/${ideaId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: value }),
-    });
+
+    try {
+      await api.patch(`/api/ideas/${ideaId}`, { status: value });
+    } catch (e) {
+      setStatus(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
+    <div className="flex flex-col items-end gap-1">
     <select
       value={status}
       onChange={(e) => handleChange(e.target.value)}
@@ -35,5 +43,7 @@ export function IdeaStatusToggle({
         </option>
       ))}
     </select>
+      <ErrorNote message={error} />
+    </div>
   );
 }

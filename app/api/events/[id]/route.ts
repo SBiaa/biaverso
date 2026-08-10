@@ -1,82 +1,58 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { calendarClient, getAuthClient, normalizeTime } from "@/lib/google-calendar";
-import { parseDateOnly } from "@/lib/utils";
+import { ApiError, parseBody, route } from "@/lib/api";
+import { eventPatchSchema } from "@/lib/schemas";
+import { calendarClient, getAuthClient } from "@/lib/google-calendar";
+import type { Prisma } from "@/app/generated/prisma/client";
 
-export const dynamic = "force-dynamic";
+type Params = { params: Promise<{ id: string }> };
 
 // Edita um evento e volta a marcá-lo como PENDENTE — assim a próxima
 // sincronização sabe que precisa levar a alteração ao Google (o app prevalece).
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const body = await request.json();
+  const body = await parseBody(request, eventPatchSchema);
 
-  const data: Record<string, unknown> = {};
+  const data: Prisma.EventUncheckedUpdateInput = { syncStatus: "PENDENTE" };
 
-  if (typeof body.title === "string" && body.title.trim() !== "") {
-    data.title = body.title.trim();
-  }
+  if (body.title !== undefined) data.title = body.title;
+  if (body.description !== undefined) data.description = body.description;
+  if (body.category !== undefined) data.category = body.category;
+  if (body.allDay !== undefined) data.allDay = body.allDay;
+  if (body.time !== undefined) data.time = body.time;
+  if (body.endTime !== undefined) data.endTime = body.endTime;
 
-  if ("description" in body) {
-    data.description =
-      typeof body.description === "string" && body.description.trim() !== ""
-        ? body.description.trim()
-        : null;
-  }
-
-  if (typeof body.date === "string") {
-    const eventDate = parseDateOnly(body.date);
-    if (!eventDate) {
-      return NextResponse.json({ error: "Data inválida" }, { status: 400 });
-    }
-    data.date = eventDate;
+  if (body.date !== undefined) {
+    data.date = body.date;
 
     const day = await prisma.day.upsert({
-      where: { date: eventDate },
+      where: { date: body.date },
       update: {},
-      create: { date: eventDate },
+      create: { date: body.date },
       select: { id: true },
     });
     data.dayId = day.id;
   }
 
-  if ("allDay" in body) data.allDay = Boolean(body.allDay);
-  if ("time" in body) data.time = normalizeTime(body.time);
-  if ("endTime" in body) data.endTime = normalizeTime(body.endTime);
-  if ("category" in body) data.category = body.category;
-
   // Evento sem hora é evento de dia inteiro — o Google recusa o contrário.
   if (data.allDay === true) {
     data.time = null;
     data.endTime = null;
-  } else if (data.time === null && "time" in body) {
+  } else if (body.time === null) {
     data.allDay = true;
     data.endTime = null;
   }
 
-  const event = await prisma.event.update({
-    where: { id },
-    data: { ...data, syncStatus: "PENDENTE" },
-  });
-
-  return NextResponse.json(event);
-}
+  return NextResponse.json(await prisma.event.update({ where: { id }, data }));
+});
 
 // Apaga o evento no app e também no Google. Sem apagar lá, a próxima
 // sincronização traria o evento de volta.
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
 
   const event = await prisma.event.findUnique({ where: { id } });
-  if (!event) {
-    return NextResponse.json({ error: "Evento não encontrado" }, { status: 404 });
-  }
+  if (!event) throw new ApiError(404, "Evento não encontrado.");
 
   let googleDeleted = true;
 
@@ -97,4 +73,4 @@ export async function DELETE(
   await prisma.event.delete({ where: { id } });
 
   return NextResponse.json({ ok: true, googleDeleted });
-}
+});

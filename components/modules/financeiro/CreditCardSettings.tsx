@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 
 type Card = {
   name: string;
@@ -15,6 +16,7 @@ export function CreditCardSettings({ card }: { card: Card | null }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: card?.name ?? "Cartão de crédito",
     closingDay: card?.closingDay ? String(card.closingDay) : "",
@@ -28,18 +30,21 @@ export function CreditCardSettings({ card }: { card: Card | null }) {
   async function handleSubmit() {
     if (!form.dueDay) return;
     setSaving(true);
-    await fetch("/api/credit-card", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    setError(null);
+
+    try {
+      await api.put("/api/credit-card", {
         name: form.name,
         closingDay: form.closingDay ? Number(form.closingDay) : null,
         dueDay: Number(form.dueDay),
-      }),
-    });
-    setSaving(false);
-    setOpen(false);
-    router.refresh();
+      });
+      setOpen(false);
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
@@ -53,6 +58,7 @@ export function CreditCardSettings({ card }: { card: Card | null }) {
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
+      <ErrorNote message={error} />
       <input
         placeholder="Nome do cartão"
         value={form.name}

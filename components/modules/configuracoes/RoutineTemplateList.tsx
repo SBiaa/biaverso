@@ -17,7 +17,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Plus } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 
 type TemplateItem = { id: string; title: string };
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -92,6 +93,7 @@ export function RoutineTemplateList({
   const [items, setItems] = useState(initialItems);
   const [newTitle, setNewTitle] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [error, setError] = useState<string | null>(null);
   const originalIds = useRef(new Set(initialItems.map((i) => i.id)));
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -123,6 +125,7 @@ export function RoutineTemplateList({
 
   async function handleSave() {
     setSaveState("saving");
+    setError(null);
     try {
       const removedIds = [...originalIds.current].filter(
         (id) => !items.some((i) => i.id === id),
@@ -131,38 +134,30 @@ export function RoutineTemplateList({
       const savedItems = await Promise.all(
         items.map(async (item, index) => {
           if (isNewId(item.id)) {
-            const response = await fetch("/api/tasks/routines", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title: item.title, type, order: index }),
-            });
-            if (!response.ok) throw new Error("Falha ao criar item");
-            const created = await response.json();
+            const created = await api.post<{ id: string; title: string }>(
+              "/api/tasks/routines",
+              { title: item.title, type, order: index },
+            );
             return { id: created.id, title: created.title };
           }
 
-          const response = await fetch(`/api/tasks/routines/${item.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: item.title, order: index }),
+          await api.patch(`/api/tasks/routines/${item.id}`, {
+            title: item.title,
+            order: index,
           });
-          if (!response.ok) throw new Error("Falha ao atualizar item");
           return item;
         }),
       );
 
-      await Promise.all(
-        removedIds.map((id) =>
-          fetch(`/api/tasks/routines/${id}`, { method: "DELETE" }),
-        ),
-      );
+      await Promise.all(removedIds.map((id) => api.delete(`/api/tasks/routines/${id}`)));
 
       setItems(savedItems);
       originalIds.current = new Set(savedItems.map((i) => i.id));
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
-    } catch {
+    } catch (e) {
       setSaveState("error");
+      setError(errorMessage(e));
     }
   }
 
@@ -210,6 +205,8 @@ export function RoutineTemplateList({
           Adicionar
         </Button>
       </div>
+
+      <ErrorNote message={error} />
 
       <Button onClick={handleSave} disabled={saveState === "saving"}>
         {SAVE_LABEL[saveState]}

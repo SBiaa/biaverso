@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { measuredGoalStatusLabels } from "@/lib/labels";
 
 const statusOptions = Object.keys(measuredGoalStatusLabels);
@@ -35,6 +36,7 @@ export function MeasuredGoalFormModal({
   onSaved,
 }: MeasuredGoalFormModalProps) {
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: initial?.title ?? "",
     target: initial?.target ?? "",
@@ -50,27 +52,27 @@ export function MeasuredGoalFormModal({
   async function handleSubmit() {
     if (!form.title.trim()) return;
     setSaving(true);
+    setError(null);
     const payload = {
       ...form,
       deadline: form.deadline || null,
       progress: Number(form.progress),
     };
-    if (mode === "create") {
-      await fetch("/api/vision/goals/measured", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, conceptualGoalId }),
-      });
-    } else if (initial) {
-      await fetch(`/api/vision/goals/measured/${initial.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+
+    try {
+      if (mode === "create") {
+        await api.post("/api/vision/goals/measured", { ...payload, conceptualGoalId });
+      } else if (initial) {
+        await api.patch(`/api/vision/goals/measured/${initial.id}`, payload);
+      }
+      onSaved();
+      onClose();
+    } catch (e) {
+      // O modal fica aberto com o que foi digitado, para não perder o texto.
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    onSaved();
-    onClose();
   }
 
   return (
@@ -144,6 +146,8 @@ export function MeasuredGoalFormModal({
             className="w-full accent-accent"
           />
         </div>
+
+        <ErrorNote message={error} />
 
         <div className="mt-2 flex gap-2">
           <Button onClick={handleSubmit} disabled={saving}>

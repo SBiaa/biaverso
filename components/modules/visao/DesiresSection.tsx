@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { DesireFormModal } from "./DesireFormModal";
 
 type Desire = { id: string; title: string; description: string | null };
@@ -16,15 +17,29 @@ export function DesiresSection({
 }) {
   const [desires, setDesires] = useState(initialDesires);
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
-    const response = await fetch(`/api/vision/desires?pillarId=${pillarId}`);
-    setDesires(await response.json());
+    try {
+      setDesires(await api.get<Desire[]>(`/api/vision/desires?pillarId=${pillarId}`));
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
   }
 
   async function handleDelete(id: string) {
+    const previous = desires;
+    setError(null);
     setDesires((prev) => prev.filter((d) => d.id !== id));
-    await fetch(`/api/vision/desires/${id}`, { method: "DELETE" });
+
+    try {
+      await api.delete(`/api/vision/desires/${id}`);
+    } catch (e) {
+      // Devolve o desejo à lista: some da tela só se saiu mesmo do banco.
+      setDesires(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
@@ -36,6 +51,8 @@ export function DesiresSection({
           Novo desejo
         </Button>
       </div>
+
+      <ErrorNote message={error} />
 
       {desires.length === 0 ? (
         <p className="text-sm text-text-secondary">Nenhum desejo registrado ainda.</p>

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { productionTypeLabels, priorityLabels, productionStatusLabels } from "@/lib/labels";
 import type { ClientOption, ProjectOption } from "./ContentPostModal";
 
@@ -103,6 +104,7 @@ export function ProductionTaskModal({
   const isEdit = !!task;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(
     task ? formFromTask(task) : emptyForm(clients, projects, defaultClientId, defaultProjectId),
   );
@@ -125,30 +127,43 @@ export function ProductionTaskModal({
   async function handleSubmit() {
     if (!form.title.trim() || !form.clientId) return;
     setSaving(true);
-    await fetch(isEdit ? `/api/ace/tasks/${task!.id}` : "/api/ace/tasks", {
-      method: isEdit ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        businessId,
-        projectId: form.projectId || null,
-        dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : null,
-        completedAt: form.completedAt ? new Date(form.completedAt).toISOString() : null,
-      }),
-    });
-    setSaving(false);
-    router.refresh();
-    onClose();
+    setError(null);
+
+    const payload = {
+      ...form,
+      businessId,
+      projectId: form.projectId || null,
+      dueDate: form.dueDate || null,
+      completedAt: form.completedAt || null,
+    };
+
+    try {
+      if (isEdit) await api.patch(`/api/ace/tasks/${task!.id}`, payload);
+      else await api.post("/api/ace/tasks", payload);
+      router.refresh();
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete() {
     if (!isEdit) return;
     if (!confirm("Excluir esta tarefa de produção?")) return;
     setDeleting(true);
-    await fetch(`/api/ace/tasks/${task!.id}`, { method: "DELETE" });
-    setDeleting(false);
-    router.refresh();
-    onClose();
+    setError(null);
+
+    try {
+      await api.delete(`/api/ace/tasks/${task!.id}`);
+      router.refresh();
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -275,6 +290,8 @@ export function ProductionTaskModal({
           rows={2}
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
+
+        <ErrorNote message={error} />
 
         <div className="mt-2 flex items-center justify-between gap-2">
           <div className="flex gap-2">

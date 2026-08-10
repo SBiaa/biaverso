@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { PILLAR_COLORS, PILLAR_ICONS } from "@/lib/vision-visuals";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const iconOptions = Object.entries(PILLAR_ICONS);
 export function PillarFormModal({ mode, initial, onClose }: PillarFormModalProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: initial?.name ?? "",
     description: initial?.description ?? "",
@@ -34,22 +36,22 @@ export function PillarFormModal({ mode, initial, onClose }: PillarFormModalProps
   async function handleSubmit() {
     if (!form.name.trim()) return;
     setSaving(true);
-    if (mode === "create") {
-      await fetch("/api/vision/pillars", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    } else if (initial) {
-      await fetch(`/api/vision/pillars/${initial.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+    setError(null);
+
+    try {
+      if (mode === "create") {
+        await api.post("/api/vision/pillars", form);
+      } else if (initial) {
+        await api.patch(`/api/vision/pillars/${initial.id}`, form);
+      }
+      router.refresh();
+      onClose();
+    } catch (e) {
+      // O modal fica aberto com o que foi digitado, para não perder o texto.
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    router.refresh();
-    onClose();
   }
 
   return (
@@ -119,6 +121,8 @@ export function PillarFormModal({ mode, initial, onClose }: PillarFormModalProps
             ))}
           </div>
         </div>
+
+        <ErrorNote message={error} />
 
         <div className="mt-2 flex gap-2">
           <Button onClick={handleSubmit} disabled={saving}>

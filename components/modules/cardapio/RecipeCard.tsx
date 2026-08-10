@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { AddRecipeForm } from "./AddRecipeForm";
 import { recipeCategoryLabels } from "@/lib/labels";
 
@@ -22,6 +23,7 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete() {
     const message =
@@ -31,8 +33,16 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
     if (!confirm(message)) return;
 
     setDeleting(true);
-    await fetch(`/api/recipes/${recipe.id}`, { method: "DELETE" });
-    router.refresh();
+    setError(null);
+
+    try {
+      await api.delete(`/api/recipes/${recipe.id}`);
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+      // Sem isso o botão ficava desabilitado para sempre depois de uma falha.
+      setDeleting(false);
+    }
   }
 
   if (editing) {
@@ -41,6 +51,7 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
 
   return (
     <Card className="flex flex-col gap-2">
+      <ErrorNote message={error} />
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-text-primary">
           {recipe.title}

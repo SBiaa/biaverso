@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { RotateCcw, Trash2, Plus } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 
 type HabitItem = { id: string; name: string; active: boolean };
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -22,6 +23,7 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
   const [items, setItems] = useState(initialItems);
   const [newName, setNewName] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [error, setError] = useState<string | null>(null);
   const originalIds = useRef(new Set(initialItems.map((i) => i.id)));
   const isSaving = useRef(false);
 
@@ -49,6 +51,7 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
     if (isSaving.current) return;
     isSaving.current = true;
     setSaveState("saving");
+    setError(null);
     try {
       const removedIds = [...originalIds.current].filter(
         (id) => !items.some((i) => i.id === id),
@@ -57,36 +60,26 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
       const savedItems = await Promise.all(
         items.map(async (item) => {
           if (isNewId(item.id)) {
-            const response = await fetch("/api/habits", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: item.name }),
-            });
-            if (!response.ok) throw new Error("Falha ao criar hábito");
-            const created = await response.json();
-            return { id: created.id, name: created.name, active: created.active };
+            return await api.post<HabitItem>("/api/habits", { name: item.name });
           }
 
-          const response = await fetch(`/api/habits/${item.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: item.name, active: item.active }),
+          await api.patch(`/api/habits/${item.id}`, {
+            name: item.name,
+            active: item.active,
           });
-          if (!response.ok) throw new Error("Falha ao atualizar hábito");
           return item;
         }),
       );
 
-      await Promise.all(
-        removedIds.map((id) => fetch(`/api/habits/${id}`, { method: "DELETE" })),
-      );
+      await Promise.all(removedIds.map((id) => api.delete(`/api/habits/${id}`)));
 
       setItems(savedItems);
       originalIds.current = new Set(savedItems.map((i) => i.id));
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
-    } catch {
+    } catch (e) {
       setSaveState("error");
+      setError(errorMessage(e));
     } finally {
       isSaving.current = false;
     }
@@ -162,6 +155,8 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
           ))}
         </div>
       )}
+
+      <ErrorNote message={error} />
 
       <Button onClick={handleSave} disabled={saveState === "saving"}>
         {SAVE_LABEL[saveState]}

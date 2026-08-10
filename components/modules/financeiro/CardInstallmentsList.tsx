@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { formatCurrencyBRL } from "@/lib/utils";
 
 type PurchaseItem = {
@@ -19,6 +20,7 @@ type PurchaseItem = {
 export function CardInstallmentsList({ items }: { items: PurchaseItem[] }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(item: PurchaseItem) {
     if (
@@ -28,8 +30,15 @@ export function CardInstallmentsList({ items }: { items: PurchaseItem[] }) {
     )
       return;
     setDeletingId(item.id);
-    await fetch(`/api/credit-card-purchases/${item.id}`, { method: "DELETE" });
-    router.refresh();
+    setError(null);
+
+    try {
+      await api.delete(`/api/credit-card-purchases/${item.id}`);
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+      setDeletingId(null);
+    }
   }
 
   if (items.length === 0) {
@@ -43,6 +52,7 @@ export function CardInstallmentsList({ items }: { items: PurchaseItem[] }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <ErrorNote message={error} />
       {items.map((item) => {
         const progress =
           item.totalAmount === 0

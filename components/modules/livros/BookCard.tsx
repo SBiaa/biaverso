@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Card } from "@/components/ui";
+import { Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { StarRating } from "@/components/modules/avaliacao/StarRating";
 import { colorFromString } from "@/lib/utils";
 import { bookStatusLabels } from "@/lib/labels";
@@ -25,9 +26,12 @@ export function BookCard({ book: initialBook }: { book: Book }) {
   const [pageInput, setPageInput] = useState("");
   const [editingTotal, setEditingTotal] = useState(false);
   const [totalInput, setTotalInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function save(patch: Partial<Book>) {
+  async function save(patch: Partial<Book>) {
+    const previous = book;
+    setError(null);
     setBook((prev) => ({
       ...prev,
       ...patch,
@@ -36,22 +40,28 @@ export function BookCard({ book: initialBook }: { book: Book }) {
           ? (patch.totalPages ?? prev.totalPages)
           : (patch.currentPage ?? prev.currentPage),
     }));
-    fetch(`/api/books/${book.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
+
+    try {
+      // O servidor devolve o livro já com startedAt/finishedAt resolvidos,
+      // então a tela passa a refletir o que ficou gravado de fato.
+      setBook(await api.patch<Book>(`/api/books/${book.id}`, patch));
+    } catch (e) {
+      setBook(previous);
+      setError(errorMessage(e));
+    }
   }
 
   function saveNotesDebounced(notes: string) {
     setBook((prev) => ({ ...prev, notes }));
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      fetch(`/api/books/${book.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes }),
-      });
+    timeoutRef.current = setTimeout(async () => {
+      try {
+        await api.patch(`/api/books/${book.id}`, { notes });
+        setError(null);
+      } catch (e) {
+        // As notas continuam na tela; só o aviso aparece.
+        setError(errorMessage(e));
+      }
     }, 700);
   }
 
@@ -78,6 +88,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
 
   return (
     <Card className="flex flex-col gap-3">
+      <ErrorNote message={error} />
       <div className="flex gap-3">
         <div
           className="h-16 w-11 shrink-0 rounded-md"

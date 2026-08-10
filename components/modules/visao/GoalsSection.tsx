@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { measuredGoalStatusLabels } from "@/lib/labels";
 import { formatDateBR } from "@/lib/utils";
@@ -26,11 +27,7 @@ type ConceptualGoal = {
 };
 
 async function updateMeasuredGoal(id: string, patch: Record<string, unknown>) {
-  await fetch(`/api/vision/goals/measured/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
+  await api.patch(`/api/vision/goals/measured/${id}`, patch);
 }
 
 function MeasuredGoalRow({
@@ -100,6 +97,7 @@ export function GoalsSection({
 }) {
   const [goals, setGoals] = useState(initialGoals);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [creatingConceptual, setCreatingConceptual] = useState(false);
   const [editingConceptual, setEditingConceptual] = useState<ConceptualGoal | null>(null);
   const [creatingMeasuredFor, setCreatingMeasuredFor] = useState<string | null>(null);
@@ -109,16 +107,31 @@ export function GoalsSection({
   } | null>(null);
 
   async function refresh() {
-    const response = await fetch(`/api/vision/goals/conceptual?pillarId=${pillarId}`);
-    setGoals(await response.json());
+    try {
+      setGoals(await api.get<ConceptualGoal[]>(`/api/vision/goals/conceptual?pillarId=${pillarId}`));
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
   }
 
   async function handleDeleteConceptual(id: string) {
+    const previous = goals;
+    setError(null);
     setGoals((prev) => prev.filter((g) => g.id !== id));
-    await fetch(`/api/vision/goals/conceptual/${id}`, { method: "DELETE" });
+
+    try {
+      // Os objetivos metrificados abaixo dele somem junto (onDelete: Cascade).
+      await api.delete(`/api/vision/goals/conceptual/${id}`);
+    } catch (e) {
+      setGoals(previous);
+      setError(errorMessage(e));
+    }
   }
 
   async function handleDeleteMeasured(conceptualGoalId: string, id: string) {
+    const previous = goals;
+    setError(null);
     setGoals((prev) =>
       prev.map((g) =>
         g.id === conceptualGoalId
@@ -126,7 +139,13 @@ export function GoalsSection({
           : g,
       ),
     );
-    await fetch(`/api/vision/goals/measured/${id}`, { method: "DELETE" });
+
+    try {
+      await api.delete(`/api/vision/goals/measured/${id}`);
+    } catch (e) {
+      setGoals(previous);
+      setError(errorMessage(e));
+    }
   }
 
   function patchMeasuredLocal(conceptualGoalId: string, id: string, patch: Partial<MeasuredGoal>) {
@@ -151,6 +170,8 @@ export function GoalsSection({
           Novo objetivo conceitual
         </Button>
       </div>
+
+      <ErrorNote message={error} />
 
       {goals.length === 0 ? (
         <p className="text-sm text-text-secondary">Nenhum objetivo conceitual ainda.</p>

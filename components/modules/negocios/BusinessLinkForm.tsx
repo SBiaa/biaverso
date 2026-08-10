@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 
 type BusinessOption = { id: string; name: string };
 
@@ -21,22 +22,28 @@ export function BusinessLinkForm({
   const options = allBusinesses.filter((b) => !existingBusinessIds.includes(b.id));
   const [businessId, setBusinessId] = useState(options[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (options.length === 0) return null;
 
   async function handleSubmit() {
     setSaving(true);
-    await fetch(`/api/clients/${clientId}/business-links`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ businessId }),
-    });
-    setSaving(false);
-    router.refresh();
+    setError(null);
+
+    try {
+      // Vínculo repetido volta 409 com mensagem pronta do servidor.
+      await api.post(`/api/clients/${clientId}/business-links`, { businessId });
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-2">
       <select
         value={businessId}
         onChange={(e) => setBusinessId(e.target.value)}
@@ -51,6 +58,8 @@ export function BusinessLinkForm({
       <Button variant="secondary" onClick={handleSubmit} disabled={saving}>
         Vincular a este negócio
       </Button>
+      </div>
+      <ErrorNote message={error} />
     </div>
   );
 }

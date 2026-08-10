@@ -4,9 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type SyncState = "idle" | "syncing" | "done" | "error";
+
+type SyncResponse = {
+  fromGoogle: number;
+  toGoogle: number;
+  errors: string[];
+};
 
 export function SyncNowButton({
   variant = "primary",
@@ -24,27 +31,18 @@ export function SyncNowButton({
     setMessage(null);
 
     try {
-      const response = await fetch("/api/calendar/sync", { method: "POST" });
-      const result = await response.json();
-
-      if (!response.ok) {
-        setState("error");
-        setMessage(result.error ?? "Não foi possível sincronizar.");
-        return;
-      }
+      const result = await api.post<SyncResponse>("/api/calendar/sync", {});
 
       setState("done");
       setMessage(
         `${result.fromGoogle} ${result.fromGoogle === 1 ? "evento recebido" : "eventos recebidos"}, ` +
           `${result.toGoogle} ${result.toGoogle === 1 ? "enviado" : "enviados"}` +
-          (result.errors?.length > 0
-            ? ` — ${result.errors.length} com erro`
-            : ""),
+          (result.errors.length > 0 ? ` — ${result.errors.length} com erro` : ""),
       );
       router.refresh();
-    } catch {
+    } catch (error) {
       setState("error");
-      setMessage("Não foi possível sincronizar.");
+      setMessage(errorMessage(error));
     }
   }
 
