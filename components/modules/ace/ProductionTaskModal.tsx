@@ -6,7 +6,12 @@ import { X } from "lucide-react";
 import { Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productionTypeLabels, priorityLabels, productionStatusLabels } from "@/lib/labels";
-import type { ClientOption, ProjectOption } from "./ContentPostModal";
+import {
+  INTERNAL_CLIENT,
+  projectsForClient,
+  type ClientOption,
+  type ProjectOption,
+} from "./ContentPostModal";
 
 const typeOptions = Object.keys(productionTypeLabels);
 const priorityOptions = Object.keys(priorityLabels);
@@ -22,7 +27,8 @@ export type TaskRecord = {
   dueDate: string | null;
   completedAt: string | null;
   notes: string | null;
-  clientId: string;
+  /** Null = tarefa interna do próprio negócio. */
+  clientId: string | null;
   projectId: string | null;
 };
 type TaskInitial = TaskRecord;
@@ -41,9 +47,9 @@ function todayInputValue() {
 }
 
 function mostRecentProjectId(projects: ProjectOption[], clientId: string) {
-  const clientProjects = projects
-    .filter((p) => p.clientId === clientId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const clientProjects = projectsForClient(projects, clientId).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
   return clientProjects[0]?.id ?? "";
 }
 
@@ -53,7 +59,7 @@ function emptyForm(
   defaultClientId?: string,
   defaultProjectId?: string,
 ) {
-  const clientId = defaultClientId ?? clients[0]?.id ?? "";
+  const clientId = defaultClientId ?? clients[0]?.id ?? INTERNAL_CLIENT;
   return {
     title: "",
     type: typeOptions[0],
@@ -78,7 +84,7 @@ function formFromTask(task: TaskInitial) {
     dueDate: dateInputValue(task.dueDate),
     completedAt: dateInputValue(task.completedAt),
     notes: task.notes ?? "",
-    clientId: task.clientId,
+    clientId: task.clientId ?? INTERNAL_CLIENT,
     projectId: task.projectId ?? "",
   };
 }
@@ -122,16 +128,17 @@ export function ProductionTaskModal({
     });
   }
 
-  const clientProjects = projects.filter((p) => p.clientId === form.clientId);
+  const clientProjects = projectsForClient(projects, form.clientId);
 
   async function handleSubmit() {
-    if (!form.title.trim() || !form.clientId) return;
+    if (!form.title.trim()) return;
     setSaving(true);
     setError(null);
 
     const payload = {
       ...form,
       businessId,
+      clientId: form.clientId || null,
       projectId: form.projectId || null,
       dueDate: form.dueDate || null,
       completedAt: form.completedAt || null,
@@ -263,6 +270,7 @@ export function ProductionTaskModal({
             onChange={(e) => update("clientId", e.target.value)}
             className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
           >
+            <option value={INTERNAL_CLIENT}>Projeto interno</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}

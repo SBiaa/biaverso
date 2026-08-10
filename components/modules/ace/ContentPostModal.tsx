@@ -24,10 +24,14 @@ export type PostRecord = {
   completedAt: string | null;
   caption: string | null;
   notes: string | null;
-  clientId: string;
+  /** Null = post interno do próprio negócio. */
+  clientId: string | null;
   projectId: string | null;
 };
 type PostInitial = PostRecord;
+
+/** "" no form = projeto interno; no payload isso vira `null`. */
+export const INTERNAL_CLIENT = "";
 
 function dateInputValue(date: string | Date | null) {
   if (!date) return "";
@@ -42,10 +46,15 @@ function todayInputValue() {
   return dateInputValue(new Date());
 }
 
+/** Projetos de um cliente — ou os internos, quando `clientId` é "". */
+export function projectsForClient(projects: ProjectOption[], clientId: string) {
+  return projects.filter((p) => (p.clientId ?? INTERNAL_CLIENT) === clientId);
+}
+
 function mostRecentProjectId(projects: ProjectOption[], clientId: string) {
-  const clientProjects = projects
-    .filter((p) => p.clientId === clientId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const clientProjects = projectsForClient(projects, clientId).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
   return clientProjects[0]?.id ?? "";
 }
 
@@ -55,7 +64,7 @@ function emptyForm(
   defaultClientId?: string,
   defaultProjectId?: string,
 ) {
-  const clientId = defaultClientId ?? clients[0]?.id ?? "";
+  const clientId = defaultClientId ?? clients[0]?.id ?? INTERNAL_CLIENT;
   return {
     title: "",
     type: typeOptions[0],
@@ -80,7 +89,7 @@ function formFromPost(post: PostInitial) {
     completedAt: dateInputValue(post.completedAt),
     caption: post.caption ?? "",
     notes: post.notes ?? "",
-    clientId: post.clientId,
+    clientId: post.clientId ?? INTERNAL_CLIENT,
     projectId: post.projectId ?? "",
   };
 }
@@ -124,16 +133,17 @@ export function ContentPostModal({
     });
   }
 
-  const clientProjects = projects.filter((p) => p.clientId === form.clientId);
+  const clientProjects = projectsForClient(projects, form.clientId);
 
   async function handleSubmit() {
-    if (!form.title.trim() || !form.clientId) return;
+    if (!form.title.trim()) return;
     setSaving(true);
     setError(null);
 
     const payload = {
       ...form,
       businessId,
+      clientId: form.clientId || null,
       projectId: form.projectId || null,
       publishDate: form.publishDate || null,
       completedAt: form.completedAt || null,
@@ -257,6 +267,7 @@ export function ContentPostModal({
             onChange={(e) => update("clientId", e.target.value)}
             className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
           >
+            <option value={INTERNAL_CLIENT}>Projeto interno</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}

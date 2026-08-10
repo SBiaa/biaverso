@@ -199,9 +199,21 @@ export const businessCreateSchema = z.object({
   description: optionalText,
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "precisa ser uma cor #RRGGBB").optional(),
   icon: optionalText,
+  // Ausente = deixa como está (no create, cai nos módulos padrão).
+  modules: z.array(z.enum(E.ModuleType)).optional(),
 });
 export const businessPatchSchema = businessCreateSchema.partial().extend({
   active: z.boolean().optional(),
+});
+
+/** Lista inteira dos módulos do negócio: a ordem do array vira `order`. */
+export const businessModulesPatchSchema = z.object({
+  modules: z.array(
+    z.object({
+      module: z.enum(E.ModuleType),
+      active: z.boolean(),
+    }),
+  ),
 });
 
 export const clientCreateSchema = z.object({
@@ -225,6 +237,7 @@ export const projectCreateSchema = z.object({
   endDate: dateOnly.nullish(),
   businessId: id,
   clientId: optionalId,
+  isInternal: z.boolean().default(false),
 });
 export const projectPatchSchema = projectCreateSchema
   .omit({ businessId: true, clientId: true })
@@ -244,7 +257,8 @@ export const contentPostCreateSchema = z.object({
   publishDate: dateOnly.nullish(),
   completedAt: z.coerce.date().nullish(),
   businessId: id,
-  clientId: id,
+  // Sem cliente = conteúdo interno do próprio negócio.
+  clientId: optionalId,
   projectId: optionalId,
   caption: optionalText,
   notes: optionalText,
@@ -263,7 +277,8 @@ export const productionTaskCreateSchema = z.object({
   dueDate: dateOnly.nullish(),
   completedAt: z.coerce.date().nullish(),
   businessId: id,
-  clientId: id,
+  // Sem cliente = tarefa interna do próprio negócio.
+  clientId: optionalId,
   projectId: optionalId,
   notes: optionalText,
 });
@@ -282,6 +297,76 @@ export const aceListQuerySchema = z.object({
   priority: filter(z.enum(E.Priority)),
   from: filter(dateOnly),
   to: filter(dateOnly),
+  scope: filter(z.enum(["clientes", "interno"])),
+});
+
+// ------------------------------------------------------------------- loja
+export const orderCreateSchema = z.object({
+  orderNumber: optionalText,
+  customerName: text,
+  customerContact: optionalText,
+  items: text,
+  totalAmount: money,
+  status: z.enum(E.OrderStatus).default("PENDENTE"),
+  orderDate: dateOnly,
+  dueDate: dateOnly.nullish(),
+  completedAt: z.coerce.date().nullish(),
+  notes: optionalText,
+  businessId: id,
+  collectionId: optionalId,
+});
+export const orderPatchSchema = orderCreateSchema
+  .omit({ businessId: true, status: true, orderDate: true })
+  .partial()
+  .extend({
+    status: z.enum(E.OrderStatus).optional(),
+    orderDate: dateOnly.optional(),
+  });
+
+export const orderListQuerySchema = z.object({
+  businessId: filter(id),
+  collectionId: filter(id),
+  status: filter(z.enum(E.OrderStatus)),
+});
+
+export const collectionCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  season: optionalText,
+  status: z.enum(E.CollectionStatus).default("IDEIA"),
+  launchDate: dateOnly.nullish(),
+  businessId: id,
+});
+export const collectionPatchSchema = collectionCreateSchema
+  .omit({ businessId: true, status: true })
+  .partial()
+  .extend({ status: z.enum(E.CollectionStatus).optional() });
+
+export const collectionListQuerySchema = z.object({
+  businessId: filter(id),
+  status: filter(z.enum(E.CollectionStatus)),
+});
+
+export const collectionProductCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  price: money.nullish(),
+  cost: money.nullish(),
+  // Só http(s): um "javascript:" aqui viraria src executável no card do produto.
+  imageUrl: z
+    .union([z.url(), z.literal("")])
+    .nullish()
+    .transform((v) => v || null)
+    .refine((v) => !v || /^https?:\/\//i.test(v), "o link precisa começar com http:// ou https://"),
+  notes: optionalText,
+});
+export const collectionProductPatchSchema = collectionProductCreateSchema.partial();
+
+// ---------------------------------------------------------- configurações
+export const settingsPatchSchema = z.object({
+  // Tetos de sanidade: mais que isso é engano de digitação.
+  waterGoal: z.coerce.number().int().min(1).max(30).optional(),
+  waterUnitMl: z.coerce.number().int().min(50).max(2000).optional(),
 });
 
 // -------------------------------------------------------------- biblioteca

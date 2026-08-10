@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, BusinessBadge } from "@/components/ui";
 import { getInitials } from "@/lib/utils";
-import { getMonthlyHistory, getPendingItems } from "@/lib/ace";
-import { ClientProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ClientProjectsSection";
+import { getMonthlyHistory, getPendingItems, toPostRecord, toTaskRecord } from "@/lib/ace";
+import { ProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ProjectsSection";
 import { MonthlyHistorySection } from "@/components/modules/ace/MonthlyHistorySection";
 import { PendingItemsSection } from "@/components/modules/ace/PendingItemsSection";
 
@@ -56,32 +56,8 @@ export default async function AceClientProfilePage({
     status: p.status,
     startDate: p.startDate ? p.startDate.toISOString() : null,
     endDate: p.endDate ? p.endDate.toISOString() : null,
-    posts: p.contentPosts.map((post) => ({
-      id: post.id,
-      title: post.title,
-      type: post.type,
-      network: post.network,
-      status: post.status,
-      publishDate: post.publishDate ? post.publishDate.toISOString() : null,
-      completedAt: post.completedAt ? post.completedAt.toISOString() : null,
-      caption: post.caption,
-      notes: post.notes,
-      clientId: post.clientId,
-      projectId: post.projectId,
-    })),
-    tasks: p.productionTasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      type: task.type,
-      description: task.description,
-      priority: task.priority,
-      status: task.status,
-      dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-      completedAt: task.completedAt ? task.completedAt.toISOString() : null,
-      notes: task.notes,
-      clientId: task.clientId,
-      projectId: task.projectId,
-    })),
+    posts: p.contentPosts.map(toPostRecord),
+    tasks: p.productionTasks.map(toTaskRecord),
   }));
 
   const projectOptions = businessProjects.map((p) => ({
@@ -116,7 +92,7 @@ export default async function AceClientProfilePage({
           <p className="text-sm text-text-secondary">Instagram: {client.instagram ?? "—"}</p>
         </Card>
 
-        <ClientProjectsSection
+        <ProjectsSection
           businessId={businessId}
           clientId={clientId}
           projects={projectsWithItems}

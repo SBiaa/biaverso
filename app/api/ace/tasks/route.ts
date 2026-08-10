@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseBody, parseQuery, route } from "@/lib/api";
 import { aceListQuerySchema, productionTaskCreateSchema } from "@/lib/schemas";
-import { resolveTaskCompletedAt } from "@/lib/ace";
+import { resolveTaskCompletedAt, scopeClientFilter } from "@/lib/ace";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const GET = route(async (request: Request) => {
@@ -11,7 +11,8 @@ export const GET = route(async (request: Request) => {
   const tasks = await prisma.productionTask.findMany({
     where: {
       businessId: q.businessId,
-      clientId: q.clientId,
+      // Um cliente específico já é mais restrito que qualquer escopo.
+      clientId: q.clientId ?? scopeClientFilter(q.scope),
       projectId: q.projectId,
       status: q.status as Prisma.ProductionTaskWhereInput["status"],
       type: q.type as Prisma.ProductionTaskWhereInput["type"],

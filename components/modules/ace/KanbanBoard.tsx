@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card } from "@/components/ui";
-import { formatDateBR } from "@/lib/utils";
+import { cn, formatDateBR } from "@/lib/utils";
 import { KANBAN_COLUMNS } from "@/lib/ace-shared";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
 import { ProductionTaskModal, type TaskRecord } from "./ProductionTaskModal";
@@ -12,7 +12,8 @@ export type KanbanItem = {
   kind: "post" | "task";
   title: string;
   typeLabel: string;
-  clientName: string;
+  /** Null = item interno do negócio, sem cliente do outro lado. */
+  clientName: string | null;
   date: string | null;
   overdue: boolean;
   column: string;
@@ -55,8 +56,15 @@ export function KanbanBoard({
                     >
                       <p className="text-sm font-medium text-text-primary">{item.title}</p>
                       <div className="flex flex-wrap items-center gap-1">
-                        <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
-                          {item.clientName}
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                            item.clientName
+                              ? "bg-accent/10 text-accent"
+                              : "bg-violet-100 text-violet-700",
+                          )}
+                        >
+                          {item.clientName ?? "Interno"}
                         </span>
                         <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
                           {item.typeLabel}

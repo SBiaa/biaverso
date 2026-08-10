@@ -13,6 +13,8 @@ import { MealChecklist } from "@/components/modules/dia/MealChecklist";
 import { NotesField } from "@/components/modules/dia/NotesField";
 import { AceTasksToday } from "@/components/modules/dia/AceTasksToday";
 import { getUtcDayRange } from "@/lib/ace";
+import { getUserSettings } from "@/lib/settings";
+import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
 import type { BadgeOrigin } from "@/components/ui";
 import type { MealType } from "@/app/generated/prisma/client";
 
@@ -53,18 +55,29 @@ export default async function DiaPage({
   const day = await getDay(date);
 
   const { start: dueStart, end: dueEnd } = getUtcDayRange(date);
-  const aceTasks = await prisma.productionTask.findMany({
-    where: { dueDate: { gte: dueStart, lt: dueEnd }, status: { notIn: ["CONCLUIDO", "CANCELADO"] } },
-    orderBy: { createdAt: "asc" },
-  });
+  const [aceTasks, settings, mealPlans] = await Promise.all([
+    prisma.productionTask.findMany({
+      where: {
+        dueDate: { gte: dueStart, lt: dueEnd },
+        status: { notIn: ["CONCLUIDO", "CANCELADO"] },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    getUserSettings(),
+    prisma.mealPlan.findMany({
+      where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
+      include: { recipe: true },
+    }),
+  ]);
 
   const meals = (["CAFE_DA_MANHA", "ALMOCO", "JANTAR"] as MealType[]).map(
     (mealType) => {
       const log = day.mealLogs.find((m) => m.mealType === mealType);
+      const plan = mealPlans.find((p) => p.mealType === mealType);
       return {
         mealType,
         label: mealTypeLabels[mealType],
-        recipeTitle: log?.recipe?.title ?? null,
+        recipeTitle: log?.recipe?.title ?? plan?.recipe?.title ?? null,
         logId: log?.id ?? null,
         eaten: log?.eaten ?? false,
       };
@@ -128,7 +141,11 @@ export default async function DiaPage({
           <h2 className="mb-3 text-sm font-semibold text-text-primary">
             Água
           </h2>
-          <WaterTracker dayId={day.id} initialCount={day.waterLogs.length} />
+          <WaterTracker
+            dayId={day.id}
+            initialCount={day.waterLogs.length}
+            settings={settings}
+          />
         </Card>
 
         <Card>

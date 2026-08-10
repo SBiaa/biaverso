@@ -7,6 +7,7 @@ import { Pencil, Power, Users } from "lucide-react";
 import { Card, Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { getBusinessIcon } from "@/lib/business-visuals";
+import { moduleLabels, type BusinessModuleState } from "@/lib/business-modules";
 import { cn } from "@/lib/utils";
 import { BusinessFormModal } from "./BusinessFormModal";
 
@@ -18,6 +19,8 @@ type BusinessItem = {
   icon: string | null;
   active: boolean;
   activeClientCount: number;
+  /** Só os ligados, na ordem das abas. */
+  modules: BusinessModuleState["module"][];
 };
 
 export function BusinessGrid({ businesses }: { businesses: BusinessItem[] }) {
@@ -79,6 +82,19 @@ export function BusinessGrid({ businesses }: { businesses: BusinessItem[] }) {
                 <Users size={14} />
                 {business.activeClientCount} cliente(s) ativo(s)
               </div>
+
+              {business.modules.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {business.modules.map((module) => (
+                    <span
+                      key={module}
+                      className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary"
+                    >
+                      {moduleLabels[module]}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <Button variant="secondary" onClick={() => setEditing(business)}>

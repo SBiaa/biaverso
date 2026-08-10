@@ -12,10 +12,17 @@ const statusOptions = Object.keys(projectStatusLabels);
 type ProjectFormModalProps = {
   businessId: string;
   clientId?: string;
+  /** Projeto do próprio negócio, sem cliente do outro lado. */
+  isInternal?: boolean;
   onClose: () => void;
 };
 
-export function ProjectFormModal({ businessId, clientId, onClose }: ProjectFormModalProps) {
+export function ProjectFormModal({
+  businessId,
+  clientId,
+  isInternal = false,
+  onClose,
+}: ProjectFormModalProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +44,7 @@ export function ProjectFormModal({ businessId, clientId, onClose }: ProjectFormM
     setError(null);
 
     try {
-      await api.post("/api/projects", { ...form, businessId, clientId });
+      await api.post("/api/projects", { ...form, businessId, clientId, isInternal });
       router.refresh();
       onClose();
     } catch (e) {
@@ -58,7 +65,7 @@ export function ProjectFormModal({ businessId, clientId, onClose }: ProjectFormM
       >
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-text-primary">
-            Novo projeto
+            {isInternal ? "Novo projeto interno" : "Novo projeto"}
           </h3>
           <button type="button" onClick={onClose}>
             <X size={18} className="text-text-secondary" />

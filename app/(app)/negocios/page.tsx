@@ -9,6 +9,7 @@ export default async function NegociosPage() {
     orderBy: [{ active: "desc" }, { name: "asc" }],
     include: {
       clients: { where: { status: "ATIVO" } },
+      modules: { where: { active: true }, orderBy: { order: "asc" } },
     },
   });
 
@@ -20,6 +21,7 @@ export default async function NegociosPage() {
     icon: b.icon,
     active: b.active,
     activeClientCount: b.clients.length,
+    modules: b.modules.map((m) => m.module),
   }));
 
   return (

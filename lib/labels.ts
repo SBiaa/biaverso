@@ -179,6 +179,23 @@ export const productionStatusLabels: Record<string, string> = {
   CANCELADO: "Cancelado",
 };
 
+export const orderStatusLabels: Record<string, string> = {
+  PENDENTE: "Pendente",
+  EM_PRODUCAO: "Em produção",
+  PRONTO: "Pronto",
+  ENVIADO: "Enviado",
+  ENTREGUE: "Entregue",
+  CANCELADO: "Cancelado",
+};
+
+export const collectionStatusLabels: Record<string, string> = {
+  IDEIA: "Ideia",
+  EM_DESENVOLVIMENTO: "Em desenvolvimento",
+  PRONTA: "Pronta",
+  LANCADA: "Lançada",
+  ENCERRADA: "Encerrada",
+};
+
 export const passwordCategoryLabels: Record<string, string> = {
   REDES_SOCIAIS: "Redes sociais",
   TRABALHO: "Trabalho",

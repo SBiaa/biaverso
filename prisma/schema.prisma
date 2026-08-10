@@ -557,6 +557,35 @@ model Business {
   ideas               Idea[]
   contentPosts        ContentPost[]
   productionTasks     ProductionTask[]
+  modules             BusinessModule[]
+  orders              Order[]
+  collections         Collection[]
+}
+
+// Funcionalidades ligadas por negócio: as abas da página do negócio saem daqui,
+// na ordem gravada. Desativar um módulo só esconde a aba — nenhum dado é apagado.
+model BusinessModule {
+  id        String     @id @default(cuid())
+  module    ModuleType
+  active    Boolean    @default(true)
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, module])
+  @@index([businessId, order])
+}
+
+enum ModuleType {
+  CRONOGRAMA // posts, stories, reels
+  PRODUCAO // tarefas de edição, arte, site
+  CLIENTES // gestão de clientes
+  PROJETOS // projetos internos e de cliente
+  PEDIDOS // controle de pedidos (loja)
+  COLECOES // coleções sazonais de produtos
+  FINANCEIRO // visão financeira do negócio
 }
 
 model Project {
@@ -566,6 +595,8 @@ model Project {
   status      ProjectStatus @default(EM_ANDAMENTO)
   startDate   DateTime?
   endDate     DateTime?
+  // Projeto do próprio negócio, sem cliente do outro lado.
+  isInternal  Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -625,7 +656,8 @@ enum ClientStatus {
   INATIVO
 }
 
-// ACE — CRONOGRAMA DE CONTEÚDO E PRODUÇÃO
+// CRONOGRAMA DE CONTEÚDO E PRODUÇÃO
+// Sempre de um negócio; `clientId` nulo = conteúdo interno do próprio negócio.
 model ContentPost {
   id          String        @id @default(cuid())
   title       String
@@ -641,8 +673,8 @@ model ContentPost {
 
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  clientId   String
-  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   projectId  String?
   project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
@@ -677,6 +709,7 @@ enum ContentStatus {
   CANCELADO
 }
 
+// `clientId` nulo = tarefa interna do próprio negócio.
 model ProductionTask {
   id          String           @id @default(cuid())
   title       String
@@ -692,8 +725,8 @@ model ProductionTask {
 
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  clientId   String
-  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   projectId  String?
   project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
@@ -724,6 +757,86 @@ enum ProductionStatus {
   AGUARDANDO_APROVACAO
   CONCLUIDO
   CANCELADO
+}
+
+// LOJA — PEDIDOS E COLEÇÕES (módulos PEDIDOS e COLECOES)
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String?
+  customerName    String
+  customerContact String?
+  // Descrição livre dos itens — sem catálogo de produtos por enquanto.
+  items           String
+  totalAmount     Float
+  status          OrderStatus @default(PENDENTE)
+  orderDate       DateTime    @default(now())
+  dueDate         DateTime?
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status])
+  @@index([businessId, dueDate])
+  @@index([collectionId])
+}
+
+enum OrderStatus {
+  PENDENTE
+  EM_PRODUCAO
+  PRONTO
+  ENVIADO
+  ENTREGUE
+  CANCELADO
+}
+
+model Collection {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  season      String?
+  status      CollectionStatus @default(IDEIA)
+  launchDate  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  products CollectionProduct[]
+  orders   Order[]
+
+  @@index([businessId, status])
+}
+
+enum CollectionStatus {
+  IDEIA
+  EM_DESENVOLVIMENTO
+  PRONTA
+  LANCADA
+  ENCERRADA
+}
+
+model CollectionProduct {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float?
+  cost        Float?
+  imageUrl    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
 }
 
 // BIBLIOTECA DE LIVROS
@@ -935,4 +1048,14 @@ enum MoodboardType {
   IMAGEM
   PALAVRA
   FRASE
+}
+
+// PREFERÊNCIAS DO APP — registro único (id fixo USER_SETTINGS_ID).
+model UserSettings {
+  id          String   @id
+  // Quantas garrafas/copos por dia e quantos ml cada um tem.
+  waterGoal   Int      @default(8)
+  waterUnitMl Int      @default(300)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

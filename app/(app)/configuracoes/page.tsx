@@ -3,7 +3,9 @@ import { Topbar } from "@/components/layout/Topbar";
 import { RoutineTemplateList } from "@/components/modules/configuracoes/RoutineTemplateList";
 import { HabitList } from "@/components/modules/configuracoes/HabitList";
 import { GoogleCalendarCard } from "@/components/modules/agenda/GoogleCalendarCard";
+import { WaterSettingsForm } from "@/components/modules/configuracoes/WaterSettingsForm";
 import { getGoogleSyncStatus } from "@/lib/agenda";
+import { getUserSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +16,9 @@ export default async function ConfiguracoesPage({
 }) {
   const { google } = await searchParams;
 
-  const [googleStatus, templates, habits] = await Promise.all([
+  const [googleStatus, settings, templates, habits] = await Promise.all([
     getGoogleSyncStatus(),
+    getUserSettings(),
     prisma.task.findMany({
       where: { dayId: null, type: { in: ["ROTINA_NORMAL", "ROTINA_FAXINA"] } },
       orderBy: { order: "asc" },
@@ -46,6 +49,7 @@ export default async function ConfiguracoesPage({
             initialItems={faxina}
           />
           <HabitList initialItems={habits} />
+          <WaterSettingsForm initial={settings} />
           <GoogleCalendarCard status={googleStatus} feedback={google} />
         </div>
       </main>

@@ -6,7 +6,15 @@ import { X } from "lucide-react";
 import { Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { BUSINESS_COLORS, BUSINESS_ICONS } from "@/lib/business-visuals";
+import {
+  DEFAULT_MODULES,
+  MODULE_TYPES,
+  moduleLabels,
+  type BusinessModuleState,
+} from "@/lib/business-modules";
 import { cn } from "@/lib/utils";
+
+type ModuleType = BusinessModuleState["module"];
 
 type BusinessFormModalProps = {
   mode: "create" | "edit";
@@ -16,6 +24,7 @@ type BusinessFormModalProps = {
     description: string | null;
     color: string;
     icon: string | null;
+    modules: ModuleType[];
   };
   onClose: () => void;
 };
@@ -32,6 +41,13 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
     color: initial?.color ?? BUSINESS_COLORS[0],
     icon: initial?.icon ?? "briefcase",
   });
+  const [modules, setModules] = useState<ModuleType[]>(initial?.modules ?? DEFAULT_MODULES);
+
+  function toggleModule(module: ModuleType) {
+    setModules((prev) =>
+      prev.includes(module) ? prev.filter((m) => m !== module) : [...prev, module],
+    );
+  }
 
   async function handleSubmit() {
     if (!form.name.trim()) return;
@@ -40,9 +56,9 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
 
     try {
       if (mode === "create") {
-        await api.post("/api/businesses", form);
+        await api.post("/api/businesses", { ...form, modules });
       } else if (initial) {
-        await api.patch(`/api/businesses/${initial.id}`, form);
+        await api.patch(`/api/businesses/${initial.id}`, { ...form, modules });
       }
       router.refresh();
       onClose();
@@ -60,7 +76,7 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-surface p-4"
+        className="flex max-h-[90vh] w-full max-w-sm flex-col gap-3 overflow-y-auto rounded-lg bg-surface p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -120,6 +136,32 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-text-secondary">
+            Módulos que este negócio usa
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {MODULE_TYPES.map((module) => (
+              <button
+                key={module}
+                type="button"
+                onClick={() => toggleModule(module)}
+                className={cn(
+                  "rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors",
+                  modules.includes(module)
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "text-text-secondary hover:bg-black/[0.03]",
+                )}
+              >
+                {moduleLabels[module]}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] text-text-secondary">
+            Desmarcar só esconde a aba — nada é apagado.
+          </p>
         </div>
 
         <ErrorNote message={error} />

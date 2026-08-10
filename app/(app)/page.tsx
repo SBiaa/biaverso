@@ -1,19 +1,20 @@
 import Link from "next/link";
 import {
   CalendarDays,
-  CheckCircle2,
-  Circle,
   Droplets,
   ListChecks,
   Wallet,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, Badge, StatCard, type BadgeOrigin } from "@/components/ui";
+import { Card, StatCard, type BadgeOrigin } from "@/components/ui";
 import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightCard";
 import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
+import { HomeHabitList } from "@/components/modules/home/HomeHabitList";
+import { HomeTaskList } from "@/components/modules/home/HomeTaskList";
+import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
+import { formatWaterProgress, getUserSettings } from "@/lib/settings";
 import {
-  cn,
   dayOfYear,
   formatCurrencyBRL,
   formatDateBR,
@@ -52,6 +53,11 @@ async function getDashboardData() {
     },
   });
 
+  const mealPlans = await prisma.mealPlan.findMany({
+    where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
+    include: { recipe: true },
+  });
+
   const { start: monthStart, end: monthEnd } = getMonthRange(date);
 
   const [entradas, saidas] = await Promise.all([
@@ -75,6 +81,8 @@ async function getDashboardData() {
     },
   });
 
+  const settings = await getUserSettings();
+
   const pillarHighlight = pillars
     .map((pillar) => {
       const inProgress = pillar.conceptualGoals.flatMap((g) => g.measuredGoals);
@@ -92,23 +100,30 @@ async function getDashboardData() {
     .filter((pillar) => pillar.inProgressCount > 0)
     .sort((a, b) => b.inProgressCount - a.inProgressCount)[0] ?? null;
 
-  return { day, saldo, date, pillarHighlight };
+  return { day, saldo, date, pillarHighlight, settings, mealPlans };
 }
 
 export default async function HomePage() {
-  const { day, saldo, date, pillarHighlight } = await getDashboardData();
+  const { day, saldo, date, pillarHighlight, settings, mealPlans } = await getDashboardData();
 
   const events = day?.events ?? [];
-  const tasks = day?.tasks ?? [];
-  const habits = day?.habits ?? [];
+  const tasks = day?.tasks.map((t) => ({ ...t, origin: t.origin as BadgeOrigin })) ?? [];
+  const habits = day?.habits.map((h) => ({ id: h.id, name: h.habit.name, done: h.done })) ?? [];
   const waterCount = day?.waterLogs.length ?? 0;
+  // Quem bebeu mais que a meta continua vendo tudo que marcou.
+  const waterSlots = Math.max(settings.waterGoal, waterCount);
   const mealLogs = day?.mealLogs ?? [];
 
   const habitsDone = habits.filter((h) => h.done).length;
-  const tasksByOrigin = tasks.reduce<Record<string, typeof tasks>>((acc, task) => {
-    (acc[task.origin] ??= []).push(task);
-    return acc;
-  }, {});
+
+  const meals = (["CAFE_DA_MANHA", "ALMOCO", "JANTAR"] as const).map((type) => {
+    const log = mealLogs.find((m) => m.mealType === type);
+    const plan = mealPlans.find((p) => p.mealType === type);
+    return {
+      type,
+      title: log?.recipe?.title ?? plan?.recipe?.title ?? "—",
+    };
+  });
 
   const phrase =
     motivationalPhrases[dayOfYear(date) % motivationalPhrases.length];
@@ -132,7 +147,7 @@ export default async function HomePage() {
           />
           <StatCard
             label="Água"
-            value={`${waterCount}/8`}
+            value={`${waterCount}/${settings.waterGoal}`}
             icon={<Droplets size={16} className="text-text-secondary" />}
           />
           <StatCard
@@ -175,39 +190,7 @@ export default async function HomePage() {
               <h2 className="mb-3 text-sm font-semibold text-text-primary">
                 Tarefas de hoje
               </h2>
-              {tasks.length === 0 ? (
-                <p className="text-sm text-text-secondary">
-                  Nenhuma tarefa para hoje.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {Object.entries(tasksByOrigin).map(([origin, items]) => (
-                    <div key={origin} className="flex flex-col gap-1.5">
-                      <Badge origin={origin as BadgeOrigin} />
-                      {items.map((task) => (
-                        <div
-                          key={task.id}
-                          className="flex items-center gap-2 pl-1 text-sm"
-                        >
-                          {task.done ? (
-                            <CheckCircle2 size={16} className="text-accent" />
-                          ) : (
-                            <Circle size={16} className="text-text-secondary" />
-                          )}
-                          <span
-                            className={cn(
-                              "text-text-primary",
-                              task.done && "text-text-secondary line-through",
-                            )}
-                          >
-                            {task.title}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <HomeTaskList items={tasks} />
             </Card>
           </div>
 
@@ -216,27 +199,11 @@ export default async function HomePage() {
               <h2 className="mb-3 text-sm font-semibold text-text-primary">
                 Hábitos do dia
               </h2>
-              <ul className="mb-4 flex flex-col gap-2">
-                {habits.map((h) => (
-                  <li key={h.id} className="flex items-center gap-2 text-sm">
-                    {h.done ? (
-                      <CheckCircle2 size={16} className="text-accent" />
-                    ) : (
-                      <Circle size={16} className="text-text-secondary" />
-                    )}
-                    <span
-                      className={cn(
-                        "text-text-primary",
-                        h.done && "text-text-secondary line-through",
-                      )}
-                    >
-                      {h.habit.name}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex items-center gap-1.5">
-                {Array.from({ length: 8 }, (_, i) => (
+              <div className="mb-4">
+                <HomeHabitList items={habits} />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {Array.from({ length: waterSlots }, (_, i) => (
                   <Droplets
                     key={i}
                     size={16}
@@ -252,19 +219,14 @@ export default async function HomePage() {
                 Cardápio de hoje
               </h2>
               <div className="grid grid-cols-3 gap-3">
-                {["CAFE_DA_MANHA", "ALMOCO", "JANTAR"].map((type) => {
-                  const log = mealLogs.find((m) => m.mealType === type);
-                  return (
-                    <div key={type} className="flex flex-col gap-1">
-                      <span className="text-xs font-medium uppercase tracking-wide text-text-secondary">
-                        {mealTypeLabels[type]}
-                      </span>
-                      <span className="text-sm text-text-primary">
-                        {log?.recipe?.title ?? "—"}
-                      </span>
-                    </div>
-                  );
-                })}
+                {meals.map((meal) => (
+                  <div key={meal.type} className="flex flex-col gap-1">
+                    <span className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+                      {mealTypeLabels[meal.type]}
+                    </span>
+                    <span className="text-sm text-text-primary">{meal.title}</span>
+                  </div>
+                ))}
               </div>
             </Card>
 
@@ -309,42 +271,25 @@ export default async function HomePage() {
               {habitsDone}/{habits.length}
             </span>
           </div>
-          {habits.length === 0 ? (
-            <p className="text-sm text-text-secondary">
-              Nenhum hábito cadastrado.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {habits.map((h) => (
-                <li key={h.id} className="flex items-center gap-2 text-sm">
-                  {h.done ? (
-                    <CheckCircle2 size={16} className="text-accent" />
-                  ) : (
-                    <Circle size={16} className="text-text-secondary" />
-                  )}
-                  <span
-                    className={cn(
-                      "text-text-primary",
-                      h.done && "text-text-secondary line-through",
-                    )}
-                  >
-                    {h.habit.name}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <HomeHabitList items={habits} />
+        </Card>
+
+        <Card>
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">
+            Tarefas de hoje
+          </h2>
+          <HomeTaskList items={tasks} />
         </Card>
 
         <Card>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-text-primary">Água</h2>
             <span className="text-sm text-text-secondary">
-              {waterCount}/8
+              {formatWaterProgress(waterCount, settings)}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: 8 }, (_, i) => (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {Array.from({ length: waterSlots }, (_, i) => (
               <Droplets
                 key={i}
                 size={16}
@@ -367,22 +312,12 @@ export default async function HomePage() {
             Cardápio de hoje
           </h2>
           <div className="flex flex-col gap-2">
-            {["CAFE_DA_MANHA", "ALMOCO", "JANTAR"].map((type) => {
-              const log = mealLogs.find((m) => m.mealType === type);
-              return (
-                <div
-                  key={type}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="text-text-secondary">
-                    {mealTypeLabels[type]}
-                  </span>
-                  <span className="text-text-primary">
-                    {log?.recipe?.title ?? "—"}
-                  </span>
-                </div>
-              );
-            })}
+            {meals.map((meal) => (
+              <div key={meal.type} className="flex items-center justify-between text-sm">
+                <span className="text-text-secondary">{mealTypeLabels[meal.type]}</span>
+                <span className="text-text-primary">{meal.title}</span>
+              </div>
+            ))}
           </div>
         </Card>
 

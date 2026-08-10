@@ -14,7 +14,8 @@ export type CalendarItem = {
   day: number;
   statusLabel: string;
   statusColor: string;
-  clientName: string;
+  /** Null = item interno do negócio, sem cliente do outro lado. */
+  clientName: string | null;
   overdue: boolean;
   record: PostRecord | TaskRecord;
 };
@@ -98,7 +99,13 @@ export function CalendarBoard({
                         )}
                       >
                         <span className="line-clamp-2 font-medium">{item.title}</span>
-                        <span className="opacity-80">{item.clientName}</span>
+                        {item.clientName ? (
+                          <span className="opacity-80">{item.clientName}</span>
+                        ) : (
+                          <span className="rounded-sm bg-black/10 px-1 text-[10px] font-semibold uppercase tracking-wide">
+                            Interno
+                          </span>
+                        )}
                         {item.overdue && (
                           <span className="mt-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
                             Atrasado

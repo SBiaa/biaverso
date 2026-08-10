@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { KANBAN_COLUMNS } from "@/lib/ace-shared";
+import { KANBAN_COLUMNS, SCOPE_OPTIONS } from "@/lib/ace-shared";
 
 type ClientOption = { id: string; name: string };
 
@@ -22,11 +22,27 @@ export function AceFilterBar({
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set(key, value);
     else params.delete(key);
+    // Escolher um cliente já implica "de cliente": deixar o escopo antigo
+    // colado poderia zerar a lista (cliente X + escopo interno = nada).
+    if (key === "clientId" && value) params.delete("scope");
+    if (key === "scope" && value) params.delete("clientId");
     router.push(`${pathname}?${params.toString()}`);
   }
 
   return (
     <div className="flex flex-wrap gap-2">
+      <select
+        value={searchParams.get("scope") ?? ""}
+        onChange={(e) => setParam("scope", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      >
+        {SCOPE_OPTIONS.map((s) => (
+          <option key={s.key} value={s.key}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+
       <select
         value={searchParams.get("clientId") ?? ""}
         onChange={(e) => setParam("clientId", e.target.value)}

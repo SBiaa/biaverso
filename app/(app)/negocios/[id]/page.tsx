@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
@@ -6,17 +7,34 @@ import { ClientesTab } from "@/components/modules/negocios/ClientesTab";
 import { AceFilterBar } from "@/components/modules/ace/AceFilterBar";
 import { CalendarBoard, type CalendarItem } from "@/components/modules/ace/CalendarBoard";
 import { KanbanBoard, type KanbanItem } from "@/components/modules/ace/KanbanBoard";
-import { MonthPicker } from "@/components/ui";
+import { ProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ProjectsSection";
+import { Card, MonthPicker, StatCard } from "@/components/ui";
 import {
   getClientsOverview,
   getKanbanColumn,
   isPostOverdue,
   isTaskOverdue,
+  scopeClientFilter,
+  toPostRecord,
+  toTaskRecord,
   contentStatusColors,
   productionStatusColors,
 } from "@/lib/ace";
-import { contentStatusLabels, productionStatusLabels, postTypeLabels, productionTypeLabels } from "@/lib/labels";
-import { todayUtc, getMonthRange, parseIntParam } from "@/lib/utils";
+import { buildBusinessTabs, resolveTab } from "@/lib/business-modules";
+import {
+  contentStatusLabels,
+  productionStatusLabels,
+  postTypeLabels,
+  productionTypeLabels,
+  transactionCategoryLabels,
+} from "@/lib/labels";
+import {
+  formatCurrencyBRL,
+  formatDateBR,
+  todayUtc,
+  getMonthRange,
+  parseIntParam,
+} from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +42,7 @@ type SearchParams = Promise<{
   tab?: string;
   status?: string;
   clientId?: string;
+  scope?: string;
   itemType?: string;
   itemStatus?: string;
   month?: string;
@@ -39,10 +58,15 @@ export default async function BusinessDetailPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const tab = sp.tab === "calendario" || sp.tab === "kanban" ? sp.tab : "clientes";
 
-  const business = await prisma.business.findUnique({ where: { id } });
+  const business = await prisma.business.findUnique({
+    where: { id },
+    include: { modules: { orderBy: { order: "asc" } } },
+  });
   if (!business) notFound();
+
+  const tabs = buildBusinessTabs(id, business.modules);
+  const tab = resolveTab(tabs, sp.tab);
 
   const [clients, projects] = await Promise.all([
     prisma.client.findMany({
@@ -64,18 +88,58 @@ export default async function BusinessDetailPage({
     createdAt: p.createdAt.toISOString(),
   }));
 
-  let clientesContent = null;
-  let calendarContent = null;
-  let kanbanContent = null;
+  let content = null;
 
   if (tab === "clientes") {
     const overview = await getClientsOverview(id, sp.status);
-    clientesContent = <ClientesTab businessId={id} clients={overview} />;
+    content = <ClientesTab businessId={id} clients={overview} />;
+  } else if (tab === "interno") {
+    const [internalProjects, loosePosts, looseTasks] = await Promise.all([
+      prisma.project.findMany({
+        where: { businessId: id, isInternal: true },
+        include: {
+          contentPosts: { orderBy: { publishDate: "asc" } },
+          productionTasks: { orderBy: { dueDate: "asc" } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.contentPost.findMany({
+        where: { businessId: id, clientId: null, projectId: null },
+        orderBy: { publishDate: "asc" },
+      }),
+      prisma.productionTask.findMany({
+        where: { businessId: id, clientId: null, projectId: null },
+        orderBy: { dueDate: "asc" },
+      }),
+    ]);
+
+    const projectsWithItems: ProjectWithItems[] = internalProjects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      status: p.status,
+      startDate: p.startDate ? p.startDate.toISOString() : null,
+      endDate: p.endDate ? p.endDate.toISOString() : null,
+      posts: p.contentPosts.map(toPostRecord),
+      tasks: p.productionTasks.map(toTaskRecord),
+    }));
+
+    content = (
+      <ProjectsSection
+        businessId={id}
+        projects={projectsWithItems}
+        clients={clients}
+        projectOptions={projectOptions}
+        loosePosts={loosePosts.map(toPostRecord)}
+        looseTasks={looseTasks.map(toTaskRecord)}
+      />
+    );
   } else if (tab === "calendario") {
     const today = todayUtc();
     const month = parseIntParam(sp.month, 1, 12) ?? today.getUTCMonth() + 1;
     const year = parseIntParam(sp.year, 1970, 2999) ?? today.getUTCFullYear();
     const { start, end } = getMonthRange(new Date(Date.UTC(year, month - 1, 1)));
+    const clientFilter = sp.clientId || scopeClientFilter(sp.scope);
 
     const [posts, tasks] = await Promise.all([
       sp.itemType === "task"
@@ -83,7 +147,7 @@ export default async function BusinessDetailPage({
         : prisma.contentPost.findMany({
             where: {
               businessId: id,
-              clientId: sp.clientId || undefined,
+              clientId: clientFilter,
               publishDate: { gte: start, lt: end },
             },
             include: { client: true },
@@ -93,7 +157,7 @@ export default async function BusinessDetailPage({
         : prisma.productionTask.findMany({
             where: {
               businessId: id,
-              clientId: sp.clientId || undefined,
+              clientId: clientFilter,
               dueDate: { gte: start, lt: end },
             },
             include: { client: true },
@@ -110,21 +174,9 @@ export default async function BusinessDetailPage({
           day: p.publishDate!.getUTCDate(),
           statusLabel: contentStatusLabels[p.status],
           statusColor: contentStatusColors[p.status],
-          clientName: p.client.name,
+          clientName: p.client?.name ?? null,
           overdue: isPostOverdue(p),
-          record: {
-            id: p.id,
-            title: p.title,
-            type: p.type,
-            network: p.network,
-            status: p.status,
-            publishDate: p.publishDate ? p.publishDate.toISOString() : null,
-            completedAt: p.completedAt ? p.completedAt.toISOString() : null,
-            caption: p.caption,
-            notes: p.notes,
-            clientId: p.clientId,
-            projectId: p.projectId,
-          },
+          record: toPostRecord(p),
         })),
       ...tasks
         .filter((t) => !sp.itemStatus || getKanbanColumn("task", t.status) === sp.itemStatus)
@@ -135,25 +187,13 @@ export default async function BusinessDetailPage({
           day: t.dueDate!.getUTCDate(),
           statusLabel: productionStatusLabels[t.status],
           statusColor: productionStatusColors[t.status],
-          clientName: t.client.name,
+          clientName: t.client?.name ?? null,
           overdue: isTaskOverdue(t),
-          record: {
-            id: t.id,
-            title: t.title,
-            type: t.type,
-            description: t.description,
-            priority: t.priority,
-            status: t.status,
-            dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-            completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-            notes: t.notes,
-            clientId: t.clientId,
-            projectId: t.projectId,
-          },
+          record: toTaskRecord(t),
         })),
     ];
 
-    calendarContent = (
+    content = (
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <MonthPicker month={month} year={year} />
@@ -170,13 +210,15 @@ export default async function BusinessDetailPage({
       </div>
     );
   } else if (tab === "kanban") {
+    const clientFilter = sp.clientId || scopeClientFilter(sp.scope);
+
     const [posts, tasks] = await Promise.all([
       prisma.contentPost.findMany({
-        where: { businessId: id, clientId: sp.clientId || undefined },
+        where: { businessId: id, clientId: clientFilter },
         include: { client: true },
       }),
       prisma.productionTask.findMany({
-        where: { businessId: id, clientId: sp.clientId || undefined },
+        where: { businessId: id, clientId: clientFilter },
         include: { client: true },
       }),
     ]);
@@ -190,23 +232,11 @@ export default async function BusinessDetailPage({
           kind: "post" as const,
           title: p.title,
           typeLabel: postTypeLabels[p.type],
-          clientName: p.client.name,
+          clientName: p.client?.name ?? null,
           date: p.publishDate ? p.publishDate.toISOString() : null,
           overdue: isPostOverdue(p),
           column,
-          record: {
-            id: p.id,
-            title: p.title,
-            type: p.type,
-            network: p.network,
-            status: p.status,
-            publishDate: p.publishDate ? p.publishDate.toISOString() : null,
-            completedAt: p.completedAt ? p.completedAt.toISOString() : null,
-            caption: p.caption,
-            notes: p.notes,
-            clientId: p.clientId,
-            projectId: p.projectId,
-          },
+          record: toPostRecord(p),
         }];
       }),
       ...tasks.flatMap((t) => {
@@ -217,31 +247,92 @@ export default async function BusinessDetailPage({
           kind: "task" as const,
           title: t.title,
           typeLabel: productionTypeLabels[t.type],
-          clientName: t.client.name,
+          clientName: t.client?.name ?? null,
           date: t.dueDate ? t.dueDate.toISOString() : null,
           overdue: isTaskOverdue(t),
           column,
-          record: {
-            id: t.id,
-            title: t.title,
-            type: t.type,
-            description: t.description,
-            priority: t.priority,
-            status: t.status,
-            dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-            completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-            notes: t.notes,
-            clientId: t.clientId,
-            projectId: t.projectId,
-          },
+          record: toTaskRecord(t),
         }];
       }),
     ];
 
-    kanbanContent = (
+    content = (
       <div className="flex flex-col gap-4">
         <AceFilterBar clients={clients} showType={false} showStatus={false} />
         <KanbanBoard businessId={id} items={items} clients={clients} projects={projectOptions} />
+      </div>
+    );
+  } else if (tab === "financeiro") {
+    const { start, end } = getMonthRange(todayUtc());
+
+    const [entradas, saidas, recent] = await Promise.all([
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { businessId: id, type: "ENTRADA", date: { gte: start, lt: end } },
+      }),
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { businessId: id, type: "SAIDA", date: { gte: start, lt: end } },
+      }),
+      prisma.transaction.findMany({
+        where: { businessId: id },
+        orderBy: { date: "desc" },
+        take: 10,
+      }),
+    ]);
+
+    const totalIn = entradas._sum.amount ?? 0;
+    const totalOut = saidas._sum.amount ?? 0;
+    const saldo = totalIn - totalOut;
+
+    content = (
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatCard label="Entradas do mês" value={formatCurrencyBRL(totalIn)} />
+          <StatCard label="Saídas do mês" value={formatCurrencyBRL(totalOut)} />
+          <StatCard
+            label="Saldo do mês"
+            value={formatCurrencyBRL(saldo)}
+            valueClassName={saldo >= 0 ? "text-emerald-600" : "text-red-600"}
+          />
+        </div>
+
+        <Card className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-text-primary">Últimas transações</h2>
+            <Link href="/financeiro/transacoes" className="text-xs font-medium text-accent">
+              Ver todas
+            </Link>
+          </div>
+          {recent.length === 0 ? (
+            <p className="text-sm text-text-secondary">
+              Nenhuma transação vinculada a este negócio.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {recent.map((t) => (
+                <li key={t.id} className="flex items-center justify-between gap-2 text-sm">
+                  <div>
+                    <p className="text-text-primary">{t.name}</p>
+                    <p className="text-xs text-text-secondary">
+                      {formatDateBR(t.date)} · {transactionCategoryLabels[t.category]}
+                    </p>
+                  </div>
+                  <span
+                    className={
+                      t.type === "ENTRADA"
+                        ? "font-medium text-emerald-600"
+                        : "font-medium text-red-600"
+                    }
+                  >
+                    {t.type === "ENTRADA" ? "+" : "−"}
+                    {formatCurrencyBRL(t.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </div>
     );
   }
@@ -250,10 +341,16 @@ export default async function BusinessDetailPage({
     <>
       <Topbar title={business.name} />
       <main className="flex-1 space-y-4 p-4 md:p-6">
-        <BusinessTabs active={tab} />
-        {tab === "clientes" && clientesContent}
-        {tab === "calendario" && calendarContent}
-        {tab === "kanban" && kanbanContent}
+        <BusinessTabs businessId={id} tabs={tabs} active={tab} />
+        {content ?? (
+          <p className="text-sm text-text-secondary">
+            Nenhum módulo ligado neste negócio.{" "}
+            <Link href={`/negocios/${id}/configuracoes`} className="font-medium text-accent">
+              Escolher os módulos
+            </Link>
+            .
+          </p>
+        )}
       </main>
     </>
   );

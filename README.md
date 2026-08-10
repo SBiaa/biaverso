@@ -66,15 +66,32 @@ No [Google Cloud Console](https://console.cloud.google.com):
 2. **Ativar a Google Calendar API** — _APIs e serviços_ → _Biblioteca_ → busque
    por **Google Calendar API** → _Ativar_.
 3. **Configurar a tela de consentimento** — _APIs e serviços_ → _Tela de permissão
-   OAuth_ → tipo **Externo** → preencha nome do app e e-mail de contato. Enquanto
-   o app estiver em modo **Teste**, adicione a sua conta Google em
-   _Usuários de teste_, senão o Google recusa o login.
+   OAuth_ → tipo **Externo** → preencha nome do app e e-mail de contato. Em
+   seguida clique em **Publicar app**, para o status sair de _Teste_ e ir para
+   _Em produção_ (veja o porquê logo abaixo).
 4. **Criar as credenciais OAuth 2.0** — _APIs e serviços_ → _Credenciais_ →
    _Criar credenciais_ → _ID do cliente OAuth_ → tipo **Aplicativo da Web**.
 5. **Adicionar os URIs de redirecionamento autorizados**:
    - `http://localhost:3000/api/auth/callback/google` (desenvolvimento)
    - `https://SEU-DOMINIO/api/auth/callback/google` (produção)
 6. **Copiar o Client ID e o Client Secret** para o `.env`.
+
+#### Por que publicar em vez de deixar em "Teste"
+
+Com a tela de consentimento em **Teste**, o Google emite refresh tokens que
+**expiram em 7 dias**. Na prática a sincronização pararia toda semana e você
+teria que reconectar. (O app não quebra quando isso acontece: o refresh falha,
+a conexão é apagada e a tela de Configurações volta a mostrar
+_Conectar Google Calendar_ — mas é chato refazer isso a cada 7 dias.)
+
+Publicando em produção o token deixa de expirar. Em compensação, como os escopos
+de Calendar são classificados pelo Google como **sensíveis**, na hora de conectar
+aparece uma tela dizendo que o app não foi verificado: clique em **Avançado** →
+**Acessar biaVerso (não seguro)**. Esse "não seguro" só quer dizer que o Google
+não auditou o app — que é seu, roda na sua máquina e acessa só a sua conta.
+
+Mandar o app para verificação só faria sentido se outras pessoas fossem usá-lo.
+Sem verificação, o limite é de 100 usuários.
 
 ### 2. Variáveis de ambiente
 
