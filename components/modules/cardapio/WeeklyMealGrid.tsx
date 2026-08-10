@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { WEEKDAY_LABELS } from "@/lib/cardapio";
 import { mealTypeLabels } from "@/lib/labels";
 import { RecipePickerModal } from "./RecipePickerModal";
@@ -45,30 +47,37 @@ export function WeeklyMealGrid({
   const [active, setActive] = useState<{ dayOfWeek: number; mealType: string } | null>(
     null,
   );
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSelect(recipeId: string | null) {
     if (!active) return;
     const key = planKey(active.dayOfWeek, active.mealType);
     const recipe = recipeId ? recipes.find((r) => r.id === recipeId) ?? null : null;
+    const previous = plan;
     setPlan((prev) => ({
       ...prev,
       [key]: recipe ? { id: recipe.id, title: recipe.title } : null,
     }));
+    const slot = active;
     setActive(null);
-    await fetch("/api/meal-plans", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    setError(null);
+
+    try {
+      await api.put("/api/meal-plans", {
         weekStart,
-        dayOfWeek: active.dayOfWeek,
-        mealType: active.mealType,
+        dayOfWeek: slot.dayOfWeek,
+        mealType: slot.mealType,
         recipeId,
-      }),
-    });
+      });
+    } catch (e) {
+      setPlan(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
     <div className="overflow-x-auto">
+      <ErrorNote message={error} />
       <div className="grid min-w-[720px] grid-cols-7 gap-2">
         {WEEKDAY_LABELS.map((label, dayOfWeek) => (
           <div key={label} className="flex flex-col gap-2">

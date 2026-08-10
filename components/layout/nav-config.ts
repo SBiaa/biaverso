@@ -2,6 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
   CalendarCheck,
+  CalendarDays,
+  Compass,
   GraduationCap,
   Home,
   KeyRound,
@@ -30,11 +32,13 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/", label: "Home", icon: Home },
       { href: "/dia", label: "Dia a dia", icon: CalendarCheck },
+      { href: "/agenda", label: "Agenda", icon: CalendarDays },
     ],
   },
   {
     title: "Vida",
     items: [
+      { href: "/visao", label: "Central de Visão", icon: Compass },
       { href: "/financeiro", label: "Financeiro", icon: Wallet },
       { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
       { href: "/avaliacao", label: "Avaliação", icon: LineChart },

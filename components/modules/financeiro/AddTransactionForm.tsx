@@ -2,25 +2,30 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { payMethodLabels, transactionCategoryLabels } from "@/lib/labels";
+import { toDateInputValue, todayInputValue } from "@/lib/utils";
 
 const categoryOptions = Object.keys(transactionCategoryLabels);
 const payMethodOptions = Object.keys(payMethodLabels);
 
 type Business = { id: string; name: string };
 
-function todayInputValue() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString().slice(0, 10);
-}
+type TransactionInitial = {
+  id: string;
+  name: string;
+  type: string;
+  amount: number;
+  date: string | Date;
+  businessId: string | null;
+  category: string;
+  payMethod: string | null;
+  notes: string | null;
+};
 
-export function AddTransactionForm({ businesses }: { businesses: Business[] }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
+function emptyForm() {
+  return {
     name: "",
     type: "SAIDA",
     amount: "",
@@ -29,29 +34,74 @@ export function AddTransactionForm({ businesses }: { businesses: Business[] }) {
     category: categoryOptions[0],
     payMethod: "",
     notes: "",
-  });
+  };
+}
+
+function formFromTransaction(transaction: TransactionInitial) {
+  return {
+    name: transaction.name,
+    type: transaction.type,
+    amount: String(transaction.amount),
+    date: toDateInputValue(transaction.date),
+    businessId: transaction.businessId ?? "",
+    category: transaction.category,
+    payMethod: transaction.payMethod ?? "",
+    notes: transaction.notes ?? "",
+  };
+}
+
+export function AddTransactionForm({
+  businesses,
+  transaction,
+  onClose,
+}: {
+  businesses: Business[];
+  transaction?: TransactionInitial;
+  onClose?: () => void;
+}) {
+  const router = useRouter();
+  const isEdit = !!transaction;
+  const [open, setOpen] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState(
+    transaction ? formFromTransaction(transaction) : emptyForm(),
+  );
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function cancel() {
+    setOpen(false);
+    onClose?.();
+  }
+
   async function handleSubmit() {
     if (!form.name.trim() || !form.amount) return;
     setSaving(true);
-    await fetch("/api/transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        businessId: form.businessId || null,
-        amount: Number(form.amount),
-        date: new Date(form.date).toISOString(),
-      }),
-    });
-    setSaving(false);
-    setOpen(false);
-    setForm((prev) => ({ ...prev, name: "", amount: "", notes: "" }));
-    router.refresh();
+    setError(null);
+
+    const payload = {
+      ...form,
+      businessId: form.businessId || null,
+      payMethod: form.payMethod || null,
+      amount: Number(form.amount),
+      date: form.date,
+    };
+
+    try {
+      if (isEdit) await api.patch(`/api/transactions/${transaction!.id}`, payload);
+      else await api.post("/api/transactions", payload);
+      setOpen(false);
+      if (!isEdit) setForm((prev) => ({ ...prev, name: "", amount: "", notes: "" }));
+      onClose?.();
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
@@ -60,6 +110,7 @@ export function AddTransactionForm({ businesses }: { businesses: Business[] }) {
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
+      <ErrorNote message={error} />
       <div className="grid grid-cols-2 gap-2">
         <input
           placeholder="Nome"
@@ -135,7 +186,7 @@ export function AddTransactionForm({ businesses }: { businesses: Business[] }) {
         <Button onClick={handleSubmit} disabled={saving}>
           Salvar
         </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
+        <Button variant="ghost" onClick={cancel}>
           Cancelar
         </Button>
       </div>

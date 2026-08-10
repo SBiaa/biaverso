@@ -10,12 +10,15 @@ import {
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Badge, StatCard, type BadgeOrigin } from "@/components/ui";
+import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightCard";
+import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
 import {
   cn,
   dayOfYear,
   formatCurrencyBRL,
   formatDateBR,
-  startOfToday,
+  getMonthRange,
+  todayUtc,
 } from "@/lib/utils";
 
 const motivationalPhrases = [
@@ -36,7 +39,7 @@ const mealTypeLabels: Record<string, string> = {
 export const dynamic = "force-dynamic";
 
 async function getDashboardData() {
-  const date = startOfToday();
+  const date = todayUtc();
 
   const day = await prisma.day.findUnique({
     where: { date },
@@ -49,8 +52,7 @@ async function getDashboardData() {
     },
   });
 
-  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-  const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  const { start: monthStart, end: monthEnd } = getMonthRange(date);
 
   const [entradas, saidas] = await Promise.all([
     prisma.transaction.aggregate({
@@ -65,11 +67,36 @@ async function getDashboardData() {
 
   const saldo = (entradas._sum.amount ?? 0) - (saidas._sum.amount ?? 0);
 
-  return { day, saldo, date };
+  const pillars = await prisma.pillar.findMany({
+    include: {
+      conceptualGoals: {
+        include: { measuredGoals: { where: { status: "EM_ANDAMENTO" }, orderBy: { deadline: "asc" } } },
+      },
+    },
+  });
+
+  const pillarHighlight = pillars
+    .map((pillar) => {
+      const inProgress = pillar.conceptualGoals.flatMap((g) => g.measuredGoals);
+      return {
+        id: pillar.id,
+        name: pillar.name,
+        color: pillar.color,
+        icon: pillar.icon,
+        inProgressCount: inProgress.length,
+        highlightGoal: inProgress[0]
+          ? { title: inProgress[0].title, progress: inProgress[0].progress }
+          : null,
+      };
+    })
+    .filter((pillar) => pillar.inProgressCount > 0)
+    .sort((a, b) => b.inProgressCount - a.inProgressCount)[0] ?? null;
+
+  return { day, saldo, date, pillarHighlight };
 }
 
 export default async function HomePage() {
-  const { day, saldo, date } = await getDashboardData();
+  const { day, saldo, date, pillarHighlight } = await getDashboardData();
 
   const events = day?.events ?? [];
   const tasks = day?.tasks ?? [];
@@ -136,6 +163,7 @@ export default async function HomePage() {
                       <span className="w-12 shrink-0 text-text-secondary">
                         {event.time ?? "—"}
                       </span>
+                      <SyncStatusIcon status={event.syncStatus} />
                       <span className="text-text-primary">{event.title}</span>
                     </li>
                   ))}
@@ -239,6 +267,8 @@ export default async function HomePage() {
                 })}
               </div>
             </Card>
+
+            <PillarHighlightCard pillar={pillarHighlight} />
           </div>
         </div>
       </main>
@@ -264,6 +294,7 @@ export default async function HomePage() {
                   <span className="w-12 shrink-0 text-text-secondary">
                     {event.time ?? "—"}
                   </span>
+                  <SyncStatusIcon status={event.syncStatus} />
                   <span className="text-text-primary">{event.title}</span>
                 </li>
               ))}
@@ -276,6 +307,40 @@ export default async function HomePage() {
             <h2 className="text-sm font-semibold text-text-primary">Hábitos</h2>
             <span className="text-sm text-text-secondary">
               {habitsDone}/{habits.length}
+            </span>
+          </div>
+          {habits.length === 0 ? (
+            <p className="text-sm text-text-secondary">
+              Nenhum hábito cadastrado.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {habits.map((h) => (
+                <li key={h.id} className="flex items-center gap-2 text-sm">
+                  {h.done ? (
+                    <CheckCircle2 size={16} className="text-accent" />
+                  ) : (
+                    <Circle size={16} className="text-text-secondary" />
+                  )}
+                  <span
+                    className={cn(
+                      "text-text-primary",
+                      h.done && "text-text-secondary line-through",
+                    )}
+                  >
+                    {h.habit.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-text-primary">Água</h2>
+            <span className="text-sm text-text-secondary">
+              {waterCount}/8
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -320,6 +385,8 @@ export default async function HomePage() {
             })}
           </div>
         </Card>
+
+        <PillarHighlightCard pillar={pillarHighlight} />
       </main>
     </>
   );

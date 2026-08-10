@@ -1,22 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { businessLinkSchema } from "@/lib/schemas";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const POST = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { businessId } = await request.json();
+  const { businessId } = await parseBody(request, businessLinkSchema);
 
-  try {
-    const link = await prisma.clientBusiness.create({
-      data: { clientId: id, businessId },
-    });
-    return NextResponse.json(link);
-  } catch {
-    return NextResponse.json(
-      { error: "Cliente já vinculado a este negócio." },
-      { status: 409 },
-    );
-  }
-}
+  // Vinculo repetido bate na unique e o wrapper devolve 409.
+  const link = await prisma.clientBusiness.create({ data: { clientId: id, businessId } });
+  return NextResponse.json(link);
+});

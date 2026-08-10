@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { habitLogPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { done } = await request.json();
-
-  const log = await prisma.habitLog.update({
-    where: { id },
-    data: { done },
-  });
-
-  return NextResponse.json(log);
-}
+  const { done } = await parseBody(request, habitLogPatchSchema);
+  return NextResponse.json(await prisma.habitLog.update({ where: { id }, data: { done } }));
+});

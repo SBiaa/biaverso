@@ -132,6 +132,53 @@ export const ideaStatusLabels: Record<string, string> = {
   ARQUIVADA: "Arquivada",
 };
 
+export const postTypeLabels: Record<string, string> = {
+  STORY: "Story",
+  REELS: "Reels",
+  FEED_FOTO: "Feed foto",
+  FEED_VIDEO: "Feed vídeo",
+  CARROSSEL: "Carrossel",
+};
+
+export const socialNetworkLabels: Record<string, string> = {
+  INSTAGRAM: "Instagram",
+  TIKTOK: "TikTok",
+  YOUTUBE: "YouTube",
+  LINKEDIN: "LinkedIn",
+  FACEBOOK: "Facebook",
+  OUTRO: "Outro",
+};
+
+export const contentStatusLabels: Record<string, string> = {
+  PLANEJADO: "Planejado",
+  EM_CRIACAO: "Em criação",
+  APROVADO: "Aprovado",
+  PUBLICADO: "Publicado",
+  CANCELADO: "Cancelado",
+};
+
+export const productionTypeLabels: Record<string, string> = {
+  EDICAO_VIDEO: "Edição de vídeo",
+  CRIACAO_ARTE: "Criação de arte",
+  SITE: "Site",
+  FOTOGRAFIA: "Fotografia",
+  COPY: "Copy",
+  OUTRO: "Outro",
+};
+
+export const priorityLabels: Record<string, string> = {
+  NORMAL: "Normal",
+  URGENTE: "Urgente",
+};
+
+export const productionStatusLabels: Record<string, string> = {
+  A_FAZER: "A fazer",
+  EM_ANDAMENTO: "Em andamento",
+  AGUARDANDO_APROVACAO: "Aguardando aprovação",
+  CONCLUIDO: "Concluído",
+  CANCELADO: "Cancelado",
+};
+
 export const passwordCategoryLabels: Record<string, string> = {
   REDES_SOCIAIS: "Redes sociais",
   TRABALHO: "Trabalho",
@@ -139,4 +186,32 @@ export const passwordCategoryLabels: Record<string, string> = {
   STREAMING: "Streaming",
   FERRAMENTAS: "Ferramentas",
   OUTRO: "Outro",
+};
+
+export const measuredGoalStatusLabels: Record<string, string> = {
+  EM_ANDAMENTO: "Em andamento",
+  CONCLUIDO: "Concluído",
+  PAUSADO: "Pausado",
+  CANCELADO: "Cancelado",
+};
+
+export const moodboardTypeLabels: Record<string, string> = {
+  IMAGEM: "Imagem",
+  PALAVRA: "Palavra",
+  FRASE: "Frase",
+};
+
+export const eventCategoryLabels: Record<string, string> = {
+  PESSOAL: "Pessoal",
+  TAROT: "Tarot",
+  ACE: "Ace",
+  CREATIVE: "Creative",
+  SAUDE: "Saúde",
+  OUTRO: "Outro",
+};
+
+export const syncStatusLabels: Record<string, string> = {
+  PENDENTE: "Aguardando sincronização",
+  SINCRONIZADO: "Sincronizado com o Google",
+  ERRO: "Erro ao sincronizar",
 };

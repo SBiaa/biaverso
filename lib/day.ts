@@ -1,14 +1,17 @@
 import { prisma } from "@/lib/prisma";
-import { startOfToday } from "@/lib/utils";
+import { todayUtc } from "@/lib/utils";
 import type { Day } from "@/app/generated/prisma/client";
 
-export async function getOrCreateToday(): Promise<Day> {
-  const date = startOfToday();
+export async function getOrCreateDay(date: Date): Promise<Day> {
   return prisma.day.upsert({
     where: { date },
     update: {},
     create: { date },
   });
+}
+
+export async function getOrCreateToday(): Promise<Day> {
+  return getOrCreateDay(todayUtc());
 }
 
 function routineTypeFor(day: Day) {
@@ -25,12 +28,19 @@ export async function materializeRoutineTasks(day: Day) {
     }),
     prisma.task.findMany({
       where: { dayId: day.id, type },
-      select: { title: true },
+      select: { title: true, templateId: true },
     }),
   ]);
 
-  const existingTitles = new Set(existing.map((t) => t.title));
-  const missing = templates.filter((t) => !existingTitles.has(t.title));
+  // O vínculo por `templateId` é o que vale: renomear um template não recria a
+  // tarefa. O título continua sendo aceito como chave para as cópias antigas,
+  // criadas antes de o campo existir.
+  const materialized = new Set(
+    existing.flatMap((t) => (t.templateId ? [t.templateId] : [t.title])),
+  );
+  const missing = templates.filter(
+    (t) => !materialized.has(t.id) && !materialized.has(t.title),
+  );
 
   if (missing.length > 0) {
     await prisma.task.createMany({
@@ -41,7 +51,27 @@ export async function materializeRoutineTasks(day: Day) {
         order: t.order,
         dueDate: day.date,
         dayId: day.id,
+        templateId: t.id,
       })),
+    });
+  }
+}
+
+export async function materializeHabits(day: Day) {
+  const [habits, existing] = await Promise.all([
+    prisma.habit.findMany({ where: { active: true } }),
+    prisma.habitLog.findMany({
+      where: { dayId: day.id },
+      select: { habitId: true },
+    }),
+  ]);
+
+  const existingIds = new Set(existing.map((l) => l.habitId));
+  const missing = habits.filter((h) => !existingIds.has(h.id));
+
+  if (missing.length > 0) {
+    await prisma.habitLog.createMany({
+      data: missing.map((h) => ({ habitId: h.id, dayId: day.id })),
     });
   }
 }

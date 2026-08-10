@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { projectCreateSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
-  const { name, description, status, startDate, endDate, businessId } =
-    await request.json();
+export const POST = route(async (request: Request) => {
+  const data = await parseBody(request, projectCreateSchema);
 
   const project = await prisma.project.create({
     data: {
-      name,
-      description: description || null,
-      status: status || "EM_ANDAMENTO",
-      startDate: startDate ? new Date(startDate) : null,
-      endDate: endDate ? new Date(endDate) : null,
-      businessId,
+      ...data,
+      startDate: data.startDate ?? null,
+      endDate: data.endDate ?? null,
+      clientId: data.clientId ?? null,
     },
   });
 
   return NextResponse.json(project);
-}
+});

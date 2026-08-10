@@ -2,66 +2,76 @@
 
 import { useState } from "react";
 import { CheckCircle2, Circle, Plus } from "lucide-react";
-import { Badge, Button, originLabels, type BadgeOrigin } from "@/components/ui";
+import { Badge, Button, ErrorNote, originLabels, type BadgeOrigin } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type TaskItem = { id: string; title: string; done: boolean; origin: BadgeOrigin };
 
 type TaskListByOriginProps = {
   dayId: string;
+  /** Data do dia aberto (YYYY-MM-DD) — a tarefa vence no dia que está na tela, não em "hoje". */
+  dayDate: string;
   initialTasks: TaskItem[];
 };
 
 const originOptions = Object.keys(originLabels) as BadgeOrigin[];
 
-export function TaskListByOrigin({ dayId, initialTasks }: TaskListByOriginProps) {
+export function TaskListByOrigin({ dayId, dayDate, initialTasks }: TaskListByOriginProps) {
   const [tasks, setTasks] = useState(initialTasks);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [origin, setOrigin] = useState<BadgeOrigin>("PESSOAL");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const tasksByOrigin = tasks.reduce<Record<string, TaskItem[]>>((acc, task) => {
     (acc[task.origin] ??= []).push(task);
     return acc;
   }, {});
 
-  function toggle(id: string) {
+  async function toggle(id: string) {
+    const previous = tasks;
     const nextDone = !tasks.find((t) => t.id === id)?.done;
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, done: nextDone } : t)),
-    );
-    fetch(`/api/tasks/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ done: nextDone }),
-    });
+
+    setError(null);
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: nextDone } : t)));
+
+    try {
+      await api.patch(`/api/tasks/${id}`, { done: nextDone });
+    } catch (e) {
+      setTasks(previous);
+      setError(errorMessage(e));
+    }
   }
 
   async function addTask() {
     if (!title.trim()) return;
     setSaving(true);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const response = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    setError(null);
+
+    try {
+      const task = await api.post<{ id: string; title: string }>("/api/tasks", {
         title: title.trim(),
         origin,
         dayId,
-        dueDate: today.toISOString(),
-      }),
-    });
-    const task = await response.json();
-    setTasks((prev) => [...prev, { id: task.id, title: task.title, done: false, origin }]);
-    setTitle("");
-    setSaving(false);
-    setShowForm(false);
+        dueDate: dayDate,
+      });
+      setTasks((prev) => [...prev, { id: task.id, title: task.title, done: false, origin }]);
+      setTitle("");
+      setShowForm(false);
+    } catch (e) {
+      // A tarefa não entra na lista se não foi gravada.
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="flex flex-col gap-3">
+      <ErrorNote message={error} />
+
       {tasks.length === 0 ? (
         <p className="text-sm text-text-secondary">Nenhuma tarefa para hoje.</p>
       ) : (

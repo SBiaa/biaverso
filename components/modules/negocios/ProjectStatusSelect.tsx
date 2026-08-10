@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { projectStatusLabels } from "@/lib/labels";
 
 const statusOptions = Object.keys(projectStatusLabels);
@@ -13,17 +15,23 @@ export function ProjectStatusSelect({
   initialStatus: string;
 }) {
   const [status, setStatus] = useState(initialStatus);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleChange(value: string) {
+  async function handleChange(value: string) {
+    const previous = status;
+    setError(null);
     setStatus(value);
-    fetch(`/api/projects/${projectId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: value }),
-    });
+
+    try {
+      await api.patch(`/api/projects/${projectId}`, { status: value });
+    } catch (e) {
+      setStatus(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
+    <div className="flex flex-col items-end gap-1" onClick={(e) => e.stopPropagation()}>
     <select
       value={status}
       onChange={(e) => {
@@ -39,5 +47,7 @@ export function ProjectStatusSelect({
         </option>
       ))}
     </select>
+      <ErrorNote message={error} />
+    </div>
   );
 }

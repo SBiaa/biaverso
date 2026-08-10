@@ -1,35 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { weekReviewPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const {
-    effectiveness,
-    energy,
-    biggestBlock,
-    executedPlan,
-    foodHydration,
-    houseUpToDate,
-    notes,
-    nextWeekFocus,
-  } = await request.json();
-
-  const review = await prisma.weekReview.update({
-    where: { id },
-    data: {
-      effectiveness,
-      energy,
-      biggestBlock,
-      executedPlan,
-      foodHydration,
-      houseUpToDate,
-      notes,
-      nextWeekFocus,
-    },
-  });
-
-  return NextResponse.json(review);
-}
+  const data = await parseBody(request, weekReviewPatchSchema);
+  return NextResponse.json(await prisma.weekReview.update({ where: { id }, data }));
+});

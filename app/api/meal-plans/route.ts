@@ -1,26 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { mealPlanSchema } from "@/lib/schemas";
 
-export async function PUT(request: Request) {
-  const { weekStart, dayOfWeek, mealType, recipeId } = await request.json();
+export const PUT = route(async (request: Request) => {
+  const { weekStart, dayOfWeek, mealType, recipeId } = await parseBody(request, mealPlanSchema);
 
-  const existing = await prisma.mealPlan.findFirst({
-    where: { weekStart: new Date(weekStart), dayOfWeek, mealType },
+  // Upsert na unique composta — o findFirst + create anterior deixava duas abas
+  // criarem dois planos para o mesmo horario.
+  const plan = await prisma.mealPlan.upsert({
+    where: { weekStart_dayOfWeek_mealType: { weekStart, dayOfWeek, mealType } },
+    create: { weekStart, dayOfWeek, mealType, recipeId: recipeId ?? null },
+    update: { recipeId: recipeId ?? null },
   });
 
-  const plan = existing
-    ? await prisma.mealPlan.update({
-        where: { id: existing.id },
-        data: { recipeId },
-      })
-    : await prisma.mealPlan.create({
-        data: {
-          weekStart: new Date(weekStart),
-          dayOfWeek,
-          mealType,
-          recipeId,
-        },
-      });
-
   return NextResponse.json(plan);
-}
+});

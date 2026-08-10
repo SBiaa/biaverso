@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { ideaPatchSchema } from "@/lib/schemas";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { status } = await request.json();
+  const data = await parseBody(request, ideaPatchSchema);
+  return NextResponse.json(await prisma.idea.update({ where: { id }, data }));
+});
 
-  const idea = await prisma.idea.update({
-    where: { id },
-    data: { status },
-  });
-
-  return NextResponse.json(idea);
-}
+export const DELETE = route(async (_request: Request, { params }: Params) => {
+  const { id } = await params;
+  await prisma.idea.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+});

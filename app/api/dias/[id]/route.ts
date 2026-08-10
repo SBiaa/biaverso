@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { dayPatchSchema } from "@/lib/schemas";
 import { materializeRoutineTasks, replaceRoutineTasksForDay } from "@/lib/day";
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { mood, energy, notes, type } = await request.json();
+  const { mood, energy, notes, type } = await parseBody(request, dayPatchSchema);
 
   const current = type
-    ? await prisma.day.findUnique({ where: { id }, select: { type: true } })
+    ? await prisma.day.findUniqueOrThrow({ where: { id }, select: { type: true } })
     : null;
 
   const day = await prisma.day.update({
@@ -25,4 +26,4 @@ export async function PATCH(
   }
 
   return NextResponse.json(day);
-}
+});

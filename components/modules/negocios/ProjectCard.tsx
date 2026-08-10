@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, CheckCircle2, Circle, Plus } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR } from "@/lib/utils";
 import { ProjectStatusSelect } from "./ProjectStatusSelect";
 
@@ -30,36 +31,44 @@ export function ProjectCard({ project }: { project: Project }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function toggleDone(task: TaskItem) {
+  async function toggleDone(task: TaskItem) {
+    const previous = tasks;
     const nextDone = !task.done;
+
+    setError(null);
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, done: nextDone } : t)),
     );
-    fetch(`/api/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ done: nextDone }),
-    });
+
+    try {
+      await api.patch(`/api/tasks/${task.id}`, { done: nextDone });
+    } catch (e) {
+      setTasks(previous);
+      setError(errorMessage(e));
+    }
   }
 
   async function addTask() {
     if (!title.trim()) return;
     setSaving(true);
-    const response = await fetch(`/api/projects/${project.id}/tasks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    setError(null);
+
+    try {
+      const task = await api.post<TaskItem>(`/api/projects/${project.id}/tasks`, {
         title: title.trim(),
-        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-      }),
-    });
-    const task = await response.json();
-    setTasks((prev) => [...prev, task]);
-    setTitle("");
-    setDueDate("");
-    setSaving(false);
-    setShowAddTask(false);
+        dueDate: dueDate || null,
+      });
+      setTasks((prev) => [...prev, task]);
+      setTitle("");
+      setDueDate("");
+      setShowAddTask(false);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -91,6 +100,8 @@ export function ProjectCard({ project }: { project: Project }) {
 
       {expanded && (
         <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <ErrorNote message={error} />
+
           {tasks.length === 0 ? (
             <p className="text-sm text-text-secondary">
               Nenhuma tarefa neste projeto.

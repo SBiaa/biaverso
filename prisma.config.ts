@@ -5,11 +5,20 @@ import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
+  // Sem `seed`: o banco guarda só dados reais, nenhum dado de exemplo é recriado.
   migrations: {
     path: "prisma/migrations",
-    seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Migration precisa de conexão direta, sem passar pelo pooler do Neon.
+    // O Prisma protege a migration com um advisory lock, que é de sessão; o
+    // pgbouncer reaproveita o backend entre clientes, então o lock fica órfão
+    // e a migration seguinte trava com P1002. Sem a variável definida, cai no
+    // DATABASE_URL e o comportamento é o de antes.
+    //
+    // Vai em `url` porque este datasource só é lido pelo CLI (migrate/studio):
+    // o app conecta por lib/prisma.ts, que usa DATABASE_URL no adapter. O campo
+    // `directUrl` não existe neste tipo — era ignorado em runtime.
+    url: process.env["DIRECT_DATABASE_URL"] ?? process.env["DATABASE_URL"],
   },
 });

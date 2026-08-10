@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { projectTaskCreateSchema } from "@/lib/schemas";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+type Params = { params: Promise<{ id: string }> };
+
+export const POST = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { title, dueDate } = await request.json();
+  const { title, dueDate } = await parseBody(request, projectTaskCreateSchema);
 
   const project = await prisma.project.findUniqueOrThrow({ where: { id } });
 
@@ -14,11 +15,11 @@ export async function POST(
     data: {
       title,
       type: "AVULSA",
-      dueDate: dueDate ? new Date(dueDate) : null,
+      dueDate: dueDate ?? null,
       projectId: project.id,
       businessId: project.businessId,
     },
   });
 
   return NextResponse.json(task);
-}
+});

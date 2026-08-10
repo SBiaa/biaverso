@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { ideaCreateSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
-  const { title, description, businessId } = await request.json();
-
-  const idea = await prisma.idea.create({
-    data: {
-      title,
-      description: description || null,
-      businessId: businessId || null,
-    },
-  });
-
-  return NextResponse.json(idea);
-}
+export const POST = route(async (request: Request) => {
+  const data = await parseBody(request, ideaCreateSchema);
+  return NextResponse.json(
+    await prisma.idea.create({ data: { ...data, businessId: data.businessId ?? null } }),
+  );
+});

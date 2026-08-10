@@ -2,55 +2,98 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { recipeCategoryLabels } from "@/lib/labels";
 
 const categoryOptions = Object.keys(recipeCategoryLabels);
 
-export function AddRecipeForm() {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
+type RecipeInitial = {
+  id: string;
+  title: string;
+  category: string;
+  description: string | null;
+  ingredients: string;
+  steps: string;
+  prepTime: number | null;
+};
+
+function emptyForm() {
+  return {
     title: "",
     category: categoryOptions[0],
     prepTime: "",
     description: "",
     ingredients: "",
     steps: "",
-  });
+  };
+}
+
+function formFromRecipe(recipe: RecipeInitial) {
+  return {
+    title: recipe.title,
+    category: recipe.category,
+    prepTime: recipe.prepTime ? String(recipe.prepTime) : "",
+    description: recipe.description ?? "",
+    ingredients: recipe.ingredients,
+    steps: recipe.steps,
+  };
+}
+
+export function AddRecipeForm({
+  recipe,
+  onClose,
+}: {
+  recipe?: RecipeInitial;
+  onClose?: () => void;
+}) {
+  const router = useRouter();
+  const isEdit = !!recipe;
+  const [open, setOpen] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState(recipe ? formFromRecipe(recipe) : emptyForm());
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function openForm() {
+    setForm(recipe ? formFromRecipe(recipe) : emptyForm());
+    setOpen(true);
+  }
+
+  function cancel() {
+    setOpen(false);
+    onClose?.();
+  }
+
   async function handleSubmit() {
     if (!form.title.trim() || !form.ingredients.trim() || !form.steps.trim()) return;
     setSaving(true);
-    await fetch("/api/recipes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setSaving(false);
-    setOpen(false);
-    setForm({
-      title: "",
-      category: categoryOptions[0],
-      prepTime: "",
-      description: "",
-      ingredients: "",
-      steps: "",
-    });
-    router.refresh();
+    setError(null);
+
+    try {
+      if (isEdit) await api.patch(`/api/recipes/${recipe!.id}`, form);
+      else await api.post("/api/recipes", form);
+      setOpen(false);
+      if (!isEdit) setForm(emptyForm());
+      onClose?.();
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Nova receita</Button>;
+    return <Button onClick={openForm}>+ Nova receita</Button>;
   }
 
   return (
     <Card className="flex flex-col gap-2">
+      <ErrorNote message={error} />
       <input
         placeholder="Título"
         value={form.title}
@@ -101,7 +144,7 @@ export function AddRecipeForm() {
         <Button onClick={handleSubmit} disabled={saving}>
           Salvar
         </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
+        <Button variant="ghost" onClick={cancel}>
           Cancelar
         </Button>
       </div>

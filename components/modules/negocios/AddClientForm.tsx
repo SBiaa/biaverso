@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 
 type AddClientFormProps = {
   businessId: string;
@@ -12,6 +13,7 @@ export function AddClientForm({ businessId }: AddClientFormProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -27,15 +29,18 @@ export function AddClientForm({ businessId }: AddClientFormProps) {
   async function handleSubmit() {
     if (!form.name.trim()) return;
     setSaving(true);
-    await fetch("/api/clients", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, businessId }),
-    });
-    setSaving(false);
-    setOpen(false);
-    setForm({ name: "", email: "", phone: "", instagram: "", notes: "" });
-    router.refresh();
+    setError(null);
+
+    try {
+      await api.post("/api/clients", { ...form, businessId });
+      setOpen(false);
+      setForm({ name: "", email: "", phone: "", instagram: "", notes: "" });
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
@@ -44,6 +49,7 @@ export function AddClientForm({ businessId }: AddClientFormProps) {
 
   return (
     <Card className="flex flex-col gap-2">
+      <ErrorNote message={error} />
       <input
         placeholder="Nome"
         value={form.name}

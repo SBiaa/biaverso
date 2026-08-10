@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import type { DayType } from "@/app/generated/prisma/client";
 
@@ -18,6 +20,7 @@ const OPTIONS: { value: DayType; label: string }[] = [
 export function DayTypeToggle({ dayId, initialType }: DayTypeToggleProps) {
   const [type, setType] = useState(initialType);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleChange(value: DayType) {
@@ -29,19 +32,25 @@ export function DayTypeToggle({ dayId, initialType }: DayTypeToggleProps) {
     );
     if (!confirmed) return;
 
+    const previous = type;
+    setError(null);
     setType(value);
-    await fetch(`/api/dias/${dayId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: value }),
-    });
-    startTransition(() => {
-      router.refresh();
-    });
+
+    try {
+      await api.patch(`/api/dias/${dayId}`, { type: value });
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (e) {
+      // As tarefas de rotina não foram trocadas, então o botão volta ao que era.
+      setType(previous);
+      setError(errorMessage(e));
+    }
   }
 
   return (
-    <div className="inline-flex rounded-lg border border-border p-1">
+    <div className="flex flex-col gap-1">
+      <div className="inline-flex self-start rounded-lg border border-border p-1">
       {OPTIONS.map((option) => (
         <button
           key={option.value}
@@ -58,6 +67,8 @@ export function DayTypeToggle({ dayId, initialType }: DayTypeToggleProps) {
           {option.label}
         </button>
       ))}
+      </div>
+      <ErrorNote message={error} />
     </div>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { passwordCategoryLabels } from "@/lib/labels";
 
 const categoryOptions = Object.keys(passwordCategoryLabels);
@@ -11,6 +12,7 @@ export function AddPasswordForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     login: "",
@@ -26,15 +28,19 @@ export function AddPasswordForm() {
   async function handleSubmit() {
     if (!form.name.trim() || !form.password) return;
     setSaving(true);
-    await fetch("/api/passwords", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setSaving(false);
-    setOpen(false);
-    setForm({ name: "", login: "", password: "", url: "", category: categoryOptions[0] });
-    router.refresh();
+    setError(null);
+
+    try {
+      await api.post("/api/passwords", form);
+      // Só limpa depois de gravar: uma senha digitada e perdida é irrecuperável.
+      setOpen(false);
+      setForm({ name: "", login: "", password: "", url: "", category: categoryOptions[0] });
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) {
@@ -43,6 +49,7 @@ export function AddPasswordForm() {
 
   return (
     <Card className="flex flex-col gap-2">
+      <ErrorNote message={error} />
       <div className="flex gap-2">
         <input
           placeholder="Nome"
@@ -69,6 +76,7 @@ export function AddPasswordForm() {
         className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       />
       <input
+        type="password"
         placeholder="Senha"
         value={form.password}
         onChange={(e) => update("password", e.target.value)}

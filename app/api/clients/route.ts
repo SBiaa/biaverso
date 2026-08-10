@@ -1,23 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { clientCreateSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
-  const { name, email, phone, instagram, notes, businessId } =
-    await request.json();
+export const POST = route(async (request: Request) => {
+  const { businessId, ...data } = await parseBody(request, clientCreateSchema);
 
   const client = await prisma.client.create({
-    data: {
-      name,
-      email: email || null,
-      phone: phone || null,
-      instagram: instagram || null,
-      notes: notes || null,
-      businessLinks: {
-        create: { businessId },
-      },
-    },
+    data: { ...data, businessLinks: { create: { businessId } } },
     include: { businessLinks: true },
   });
 
   return NextResponse.json(client);
-}
+});

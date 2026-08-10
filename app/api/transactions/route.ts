@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { transactionSchema } from "@/lib/schemas";
 
-export async function POST(request: Request) {
-  const { name, type, amount, date, businessId, category, payMethod, notes } =
-    await request.json();
+export const POST = route(async (request: Request) => {
+  const data = await parseBody(request, transactionSchema);
 
   const transaction = await prisma.transaction.create({
     data: {
-      name,
-      type,
-      amount,
-      date: new Date(date),
-      businessId: businessId || null,
-      category,
-      payMethod: payMethod || null,
-      notes: notes || null,
+      ...data,
+      payMethod: data.payMethod ?? null,
+      businessId: data.businessId ?? null,
     },
   });
 
   return NextResponse.json(transaction);
-}
+});

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
 import { BUSINESS_COLORS, BUSINESS_ICONS } from "@/lib/business-visuals";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const iconOptions = Object.entries(BUSINESS_ICONS);
 export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: initial?.name ?? "",
     description: initial?.description ?? "",
@@ -34,22 +36,22 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
   async function handleSubmit() {
     if (!form.name.trim()) return;
     setSaving(true);
-    if (mode === "create") {
-      await fetch("/api/businesses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    } else if (initial) {
-      await fetch(`/api/businesses/${initial.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+    setError(null);
+
+    try {
+      if (mode === "create") {
+        await api.post("/api/businesses", form);
+      } else if (initial) {
+        await api.patch(`/api/businesses/${initial.id}`, form);
+      }
+      router.refresh();
+      onClose();
+    } catch (e) {
+      // O modal fica aberto com o que foi digitado, para não perder o texto.
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    router.refresh();
-    onClose();
   }
 
   return (
@@ -119,6 +121,8 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
             ))}
           </div>
         </div>
+
+        <ErrorNote message={error} />
 
         <div className="mt-2 flex gap-2">
           <Button onClick={handleSubmit} disabled={saving}>

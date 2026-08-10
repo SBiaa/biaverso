@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getWeekStart } from "@/lib/cardapio";
-import { startOfToday } from "@/lib/utils";
+import { todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { WeeklyMealGrid } from "@/components/modules/cardapio/WeeklyMealGrid";
 
 export const dynamic = "force-dynamic";
 
 export default async function CardapioPage() {
-  const weekStart = getWeekStart(startOfToday());
+  const weekStart = getWeekStart(todayUtc());
 
   const [recipes, mealPlans] = await Promise.all([
     prisma.recipe.findMany({ orderBy: { title: "asc" } }),

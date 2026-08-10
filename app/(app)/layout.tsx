@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { CalendarSyncPoller } from "@/components/modules/agenda/CalendarSyncPoller";
 import { prisma } from "@/lib/prisma";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -12,6 +13,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full">
+      <CalendarSyncPoller />
       <Sidebar businesses={businesses} />
       <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
         {children}
