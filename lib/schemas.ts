@@ -260,9 +260,15 @@ export const clientCreateSchema = z.object({
   phone: optionalText,
   instagram: optionalText,
   notes: optionalText,
-  businessId: id,
+  // O cadastro global cria o cliente solto ou já ligado a vários negócios; o
+  // form de dentro do negócio continua mandando um `businessId` só. Os dois
+  // caminhos são aceitos e a rota junta tudo.
+  businessId: optionalId,
+  businessIds: z.array(id).optional(),
 });
-export const clientPatchSchema = clientCreateSchema.omit({ businessId: true }).partial();
+export const clientPatchSchema = clientCreateSchema
+  .omit({ businessId: true, businessIds: true })
+  .partial();
 
 export const businessLinkSchema = z.object({ businessId: id });
 export const clientBusinessPatchSchema = z.object({ status: z.enum(E.ClientStatus) });

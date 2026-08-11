@@ -14,6 +14,7 @@ import {
   Settings,
   Sparkles,
   UtensilsCrossed,
+  Users,
   Wallet,
 } from "lucide-react";
 
@@ -35,8 +36,9 @@ export const navGroups: NavGroup[] = [
       { href: "/", label: "Home", icon: Home },
       { href: "/dia", label: "Dia a dia", icon: CalendarCheck },
       { href: "/agenda", label: "Agenda", icon: CalendarDays },
-      // Projetos de todos os negócios num lugar só.
+      // Projetos e clientes de todos os negócios num lugar só.
       { href: "/projetos", label: "Projetos", icon: FolderKanban },
+      { href: "/clientes", label: "Clientes", icon: Users },
     ],
   },
   {
