@@ -25,6 +25,9 @@ export async function materializeRoutineTasks(day: Day) {
     prisma.task.findMany({
       where: { dayId: null, type },
       orderBy: { order: "asc" },
+      include: {
+        subtasks: { orderBy: { order: "asc" }, select: { title: true, order: true } },
+      },
     }),
     prisma.task.findMany({
       where: { dayId: day.id, type },
@@ -43,7 +46,9 @@ export async function materializeRoutineTasks(day: Day) {
   );
 
   if (missing.length > 0) {
-    await prisma.task.createMany({
+    // `createManyAndReturn` para saber o id de cada cópia: sem ele não dá para
+    // pendurar os passos do template na tarefa recém-criada.
+    const copies = await prisma.task.createManyAndReturn({
       data: missing.map((t) => ({
         title: t.title,
         origin: t.origin,
@@ -53,7 +58,23 @@ export async function materializeRoutineTasks(day: Day) {
         dayId: day.id,
         templateId: t.id,
       })),
+      select: { id: true, templateId: true },
     });
+
+    // A quebra em passos é cadastrada uma vez no template e copiada para o dia,
+    // sempre zerada — o que foi marcado ontem não vem marcado hoje.
+    const subtasks = copies.flatMap((copy) => {
+      const template = missing.find((t) => t.id === copy.templateId);
+      return (template?.subtasks ?? []).map((s) => ({
+        taskId: copy.id,
+        title: s.title,
+        order: s.order,
+      }));
+    });
+
+    if (subtasks.length > 0) {
+      await prisma.subtask.createMany({ data: subtasks });
+    }
   }
 }
 

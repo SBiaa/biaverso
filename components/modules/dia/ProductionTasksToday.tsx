@@ -5,7 +5,7 @@ import { AlertTriangle, CheckCircle2, Circle } from "lucide-react";
 import { Card, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR } from "@/lib/utils";
-import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "./Subtasks";
+import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
 
 type Item = {
   id: string;

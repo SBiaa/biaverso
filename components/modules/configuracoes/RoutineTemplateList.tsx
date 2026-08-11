@@ -19,8 +19,14 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Plus } from "lucide-react";
 import { Card, Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
+import {
+  SubtaskList,
+  SubtaskToggle,
+  useSubtasks,
+  type SubtaskItem,
+} from "@/components/modules/tarefas/Subtasks";
 
-type TemplateItem = { id: string; title: string };
+type TemplateItem = { id: string; title: string; subtasks: SubtaskItem[] };
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 function isNewId(id: string) {
@@ -44,32 +50,58 @@ function SortableRow({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Os passos são gravados na hora, direto no template; só o título e a ordem
+  // esperam o "Salvar". Por isso a rotina ainda não gravada não os mostra —
+  // sem id no banco não há onde pendurá-los.
+  const saved = !isNewId(item.id);
+  const subtasks = useSubtasks({ kind: "task", id: item.id }, item.subtasks);
+  const [open, setOpen] = useState(false);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5"
+      className="flex flex-col gap-1.5 rounded-md border border-border px-2 py-1.5"
     >
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="cursor-grab text-text-secondary"
-      >
-        <GripVertical size={16} />
-      </button>
-      <input
-        value={item.title}
-        onChange={(e) => onEdit(item.id, e.target.value)}
-        className="flex-1 bg-transparent text-sm text-text-primary outline-none"
-      />
-      <button
-        type="button"
-        onClick={() => onDelete(item.id)}
-        className="text-text-secondary hover:text-red-600"
-      >
-        <Trash2 size={14} />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="cursor-grab text-text-secondary"
+        >
+          <GripVertical size={16} />
+        </button>
+        <input
+          value={item.title}
+          onChange={(e) => onEdit(item.id, e.target.value)}
+          className="flex-1 bg-transparent text-sm text-text-primary outline-none"
+        />
+        {saved && (
+          <SubtaskToggle
+            open={open}
+            onClick={() => setOpen((v) => !v)}
+            doneCount={subtasks.doneCount}
+            total={subtasks.subtasks.length}
+          />
+        )}
+        <button
+          type="button"
+          onClick={() => onDelete(item.id)}
+          className="text-text-secondary hover:text-red-600"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+
+      {saved && open && (
+        <div className="pl-6">
+          <p className="mb-1 text-xs text-text-secondary">
+            Estes passos aparecem em toda cópia diária desta rotina.
+          </p>
+          <SubtaskList {...subtasks} checkable={false} />
+        </div>
+      )}
     </div>
   );
 }
@@ -109,7 +141,10 @@ export function RoutineTemplateList({
 
   function handleAdd() {
     if (!newTitle.trim()) return;
-    setItems((prev) => [...prev, { id: `new-${crypto.randomUUID()}`, title: newTitle.trim() }]);
+    setItems((prev) => [
+      ...prev,
+      { id: `new-${crypto.randomUUID()}`, title: newTitle.trim(), subtasks: [] },
+    ]);
     setNewTitle("");
   }
 
@@ -138,7 +173,9 @@ export function RoutineTemplateList({
               "/api/tasks/routines",
               { title: item.title, type, order: index },
             );
-            return { id: created.id, title: created.title };
+            // Rotina nova nasce sem passos: só depois de salva ela tem id para
+            // pendurá-los, e a linha remonta com o id do banco.
+            return { id: created.id, title: created.title, subtasks: [] };
           }
 
           await api.patch(`/api/tasks/routines/${item.id}`, {

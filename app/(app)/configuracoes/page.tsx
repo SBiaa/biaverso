@@ -22,7 +22,15 @@ export default async function ConfiguracoesPage({
     prisma.task.findMany({
       where: { dayId: null, type: { in: ["ROTINA_NORMAL", "ROTINA_FAXINA"] } },
       orderBy: { order: "asc" },
-      select: { id: true, title: true, type: true },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        subtasks: {
+          orderBy: { order: "asc" },
+          select: { id: true, title: true, done: true },
+        },
+      },
     }),
     prisma.habit.findMany({
       orderBy: { createdAt: "asc" },

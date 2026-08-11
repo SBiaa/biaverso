@@ -89,10 +89,21 @@ export function useSubtasks(parent: SubtaskParent, initial: SubtaskItem[]) {
   };
 }
 
-type SubtasksProps = Omit<ReturnType<typeof useSubtasks>, "doneCount">;
+type SubtasksProps = Omit<ReturnType<typeof useSubtasks>, "doneCount"> & {
+  /** No template de rotina não há o que marcar: quem é feito é o passo do dia. */
+  checkable?: boolean;
+};
 
 /** Passos de uma tarefa + campo para quebrar em mais um. */
-export function SubtaskList({ subtasks, error, saving, add, toggle, remove }: SubtasksProps) {
+export function SubtaskList({
+  subtasks,
+  error,
+  saving,
+  add,
+  toggle,
+  remove,
+  checkable = true,
+}: SubtasksProps) {
   const [title, setTitle] = useState("");
 
   async function submit() {
@@ -103,25 +114,32 @@ export function SubtaskList({ subtasks, error, saving, add, toggle, remove }: Su
     <div className="flex flex-col gap-1 border-l border-border pl-3">
       {subtasks.map((subtask) => (
         <div key={subtask.id} className="group flex items-center gap-2 text-sm">
-          <button
-            type="button"
-            onClick={() => toggle(subtask.id)}
-            className="flex flex-1 items-center gap-2 text-left"
-          >
-            {subtask.done ? (
-              <CheckCircle2 size={14} className="shrink-0 text-accent" />
-            ) : (
-              <Circle size={14} className="shrink-0 text-text-secondary" />
-            )}
-            <span
-              className={cn(
-                "text-text-primary",
-                subtask.done && "text-text-secondary line-through",
-              )}
+          {checkable ? (
+            <button
+              type="button"
+              onClick={() => toggle(subtask.id)}
+              className="flex flex-1 items-center gap-2 text-left"
             >
-              {subtask.title}
+              {subtask.done ? (
+                <CheckCircle2 size={14} className="shrink-0 text-accent" />
+              ) : (
+                <Circle size={14} className="shrink-0 text-text-secondary" />
+              )}
+              <span
+                className={cn(
+                  "text-text-primary",
+                  subtask.done && "text-text-secondary line-through",
+                )}
+              >
+                {subtask.title}
+              </span>
+            </button>
+          ) : (
+            <span className="flex flex-1 items-center gap-2">
+              <Circle size={14} className="shrink-0 text-text-secondary/50" />
+              <span className="text-text-primary">{subtask.title}</span>
             </span>
-          </button>
+          )}
           <button
             type="button"
             title="Apagar passo"
