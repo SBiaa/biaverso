@@ -150,8 +150,13 @@ export default async function PlanejamentoPage({
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
                 Cartão de crédito — projeção
+                {plan.invoice.status === "PAGA" && (
+                  <Badge className="bg-emerald-500/10 text-emerald-600">
+                    Fatura paga
+                  </Badge>
+                )}
               </h2>
               {plan.invoice.items.length === 0 ? (
                 <p className="text-sm text-text-secondary">

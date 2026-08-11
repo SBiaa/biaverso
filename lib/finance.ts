@@ -8,7 +8,7 @@ import {
   unpaidStatus,
   utcDate,
 } from "@/lib/finance-calc";
-import { getMonthRange, todayUtc } from "@/lib/utils";
+import { formatMonthYearBR, getMonthRange, todayUtc } from "@/lib/utils";
 
 // Só existe um cartão — a configuração fica sempre nesta linha.
 export const CREDIT_CARD_ID = "single";
@@ -200,6 +200,12 @@ export type Invoice = {
   /** Só assinaturas cobradas no cartão. */
   subscriptionsTotal: number;
   total: number;
+  status: "ABERTA" | "PAGA";
+  paidAt: string | null;
+  /** O quanto saiu de fato — pode diferir do total (pagamento parcial). */
+  paidAmount: number | null;
+  /** Id da transação de saída lançada junto com o pagamento, se houve. */
+  paymentTransactionId: string | null;
 };
 
 /**
@@ -212,7 +218,7 @@ export async function getInvoice(month: number, year: number): Promise<Invoice> 
   // cadastrada depois passa a valer para os meses já visitados também.
   await ensureFixedBillLogsForMonth(month, year);
 
-  const [entries, subscriptionLogs] = await Promise.all([
+  const [entries, subscriptionLogs, record] = await Promise.all([
     prisma.creditCardEntry.findMany({
       where: { invoiceMonth: month, invoiceYear: year },
       include: { business: true },
@@ -225,7 +231,12 @@ export async function getInvoice(month: number, year: number): Promise<Invoice> 
       },
       include: { fixedBill: true },
     }),
+    // Fatura sem linha nenhuma nunca foi paga — não vale criar a linha só para
+    // gravar "aberta".
+    prisma.creditCardInvoice.findUnique({ where: { month_year: { month, year } } }),
   ]);
+
+  const paid = record?.status === "PAGA";
 
   const entryItems: InvoiceItem[] = entries.map((entry) => ({
     kind: "AVULSO",
@@ -268,7 +279,10 @@ export async function getInvoice(month: number, year: number): Promise<Invoice> 
     dueDay: log.fixedBill.dueDay,
     defaultAmount: log.fixedBill.amount,
     amountOverride: log.amountOverride,
-    status: log.status,
+    // Assinatura no cartão não é paga sozinha: quem manda é a fatura, e só ela.
+    // O status do próprio log é ignorado de propósito — contas que já foram
+    // marcadas na mão antes de virarem "cartão" ficariam pagas para sempre.
+    status: paid ? "PAGO" : unpaidStatus(log.dueDate),
   }));
 
   const items = [...entryItems, ...subscriptionItems].sort(
@@ -286,7 +300,78 @@ export async function getInvoice(month: number, year: number): Promise<Invoice> 
     entriesTotal,
     subscriptionsTotal,
     total: entriesTotal + subscriptionsTotal,
+    status: paid ? "PAGA" : "ABERTA",
+    paidAt: record?.paidAt?.toISOString() ?? null,
+    paidAmount: record?.paidAmount ?? null,
+    paymentTransactionId: record?.paymentTransactionId ?? null,
   };
+}
+
+/**
+ * Marca a fatura do mês como paga. `paymentTransaction` lança junto a saída no
+ * caixa — ela fica ligada à fatura para o "desmarcar" conseguir desfazer.
+ *
+ * A saída não entra nos totais do mês (quem conta é a fatura, não a
+ * transferência para o banco); ela existe para o extrato de transações bater
+ * com o que saiu da conta de verdade.
+ */
+export async function payInvoice(
+  month: number,
+  year: number,
+  options: { paidAmount: number; paidAt: Date; createTransaction: boolean },
+) {
+  return prisma.$transaction(async (tx) => {
+    const payment = options.createTransaction
+      ? await tx.transaction.create({
+          data: {
+            name: `Fatura do cartão — ${formatMonthYearBR(month, year)}`,
+            type: "SAIDA",
+            amount: options.paidAmount,
+            date: options.paidAt,
+            category: "CARTAO_CREDITO",
+          },
+        })
+      : null;
+
+    const data = {
+      status: "PAGA" as const,
+      paidAt: options.paidAt,
+      paidAmount: options.paidAmount,
+      paymentTransactionId: payment?.id ?? null,
+    };
+
+    return tx.creditCardInvoice.upsert({
+      where: { month_year: { month, year } },
+      create: { month, year, ...data },
+      update: data,
+    });
+  });
+}
+
+/** Desfaz o pagamento — inclusive a transação lançada junto, se houve. */
+export async function reopenInvoice(month: number, year: number) {
+  const record = await prisma.creditCardInvoice.findUnique({
+    where: { month_year: { month, year } },
+  });
+  if (!record) return null;
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.creditCardInvoice.update({
+      where: { id: record.id },
+      data: {
+        status: "ABERTA",
+        paidAt: null,
+        paidAmount: null,
+        paymentTransactionId: null,
+      },
+    });
+
+    if (record.paymentTransactionId) {
+      await tx.transaction.delete({ where: { id: record.paymentTransactionId } });
+    }
+
+    return updated;
+  });
 }
 
 // --------------------------------------------------------------- planejamento
@@ -396,7 +481,13 @@ export async function getMonthPlan(
     dueDate: log.dueDate.toISOString(),
     type: log.fixedBill.type,
     paymentMethod: log.fixedBill.paymentMethod,
-    status: log.status,
+    // Assinatura no cartão segue a fatura; o resto tem status próprio.
+    status:
+      log.fixedBill.paymentMethod === "CARTAO_CREDITO"
+        ? invoice.status === "PAGA"
+          ? "PAGO"
+          : unpaidStatus(log.dueDate)
+        : log.status,
   }));
 
   const total = (list: { amount: number }[]) =>

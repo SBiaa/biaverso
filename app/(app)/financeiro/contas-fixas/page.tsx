@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ensureFixedBillLogsForMonth } from "@/lib/finance";
-import { billAmountForMonth } from "@/lib/finance-calc";
+import { billAmountForMonth, unpaidStatus } from "@/lib/finance-calc";
 import { Topbar } from "@/components/layout/Topbar";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { FixedBillList } from "@/components/modules/financeiro/FixedBillList";
@@ -15,11 +15,19 @@ export default async function ContasFixasPage() {
 
   await ensureFixedBillLogsForMonth(month, year);
 
-  const logs = await prisma.fixedBillLog.findMany({
-    where: { month, year },
-    include: { fixedBill: true },
-    orderBy: { dueDate: "asc" },
-  });
+  const [logs, invoice] = await Promise.all([
+    prisma.fixedBillLog.findMany({
+      where: { month, year },
+      include: { fixedBill: true },
+      orderBy: { dueDate: "asc" },
+    }),
+    // Assinatura no cartão não é paga sozinha — o status dela é o da fatura.
+    prisma.creditCardInvoice.findUnique({
+      where: { month_year: { month, year } },
+    }),
+  ]);
+
+  const invoicePaid = invoice?.status === "PAGA";
 
   const items = logs.map((log) => ({
     logId: log.id,
@@ -32,7 +40,13 @@ export default async function ContasFixasPage() {
     type: log.fixedBill.type,
     paymentMethod: log.fixedBill.paymentMethod,
     notes: log.fixedBill.notes,
-    status: log.status,
+    // No cartão, quem manda é a fatura — o status do log é ignorado.
+    status:
+      log.fixedBill.paymentMethod === "CARTAO_CREDITO"
+        ? invoicePaid
+          ? ("PAGO" as const)
+          : unpaidStatus(log.dueDate)
+        : log.status,
   }));
 
   return (

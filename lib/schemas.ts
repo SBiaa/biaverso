@@ -148,6 +148,17 @@ export const invoiceMonthQuerySchema = z.object({
   year: yearNumber,
 });
 
+/** Marcar/desmarcar a fatura do mês como paga. */
+export const invoicePaymentSchema = z.object({
+  month: monthNumber,
+  year: yearNumber,
+  status: z.enum(E.InvoiceStatus),
+  paidAt: dateOnly.optional(),
+  paidAmount: money.optional(),
+  /** Lança junto a saída no caixa, ligada a esta fatura. */
+  createTransaction: z.boolean().default(false),
+});
+
 export const creditCardSchema = z.object({
   name: optionalText,
   closingDay: dayOfMonth.nullish(),

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { CreditCard, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { getCreditCard, getInvoice } from "@/lib/finance";
-import { billAmountForMonth, invoiceDueDate } from "@/lib/finance-calc";
+import { getCreditCard, getMonthPlan } from "@/lib/finance";
+import { invoiceDueDate } from "@/lib/finance-calc";
 import { Topbar } from "@/components/layout/Topbar";
 import { Badge, Card, BusinessBadge, StatCard } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
@@ -24,50 +24,35 @@ async function getFinanceData() {
   const month = date.getUTCMonth() + 1;
   const year = date.getUTCFullYear();
 
-  // A fatura unificada soma os lançamentos avulsos e as assinaturas no cartão.
-  // Ela também materializa os logs das contas fixas do mês, então tem que vir
-  // antes da busca das contas pendentes.
-  const fatura = await getInvoice(month, year);
+  // Os totais saem do mesmo lugar que a tela de planejamento, para as duas não
+  // darem números diferentes para o mesmo mês. O plano também materializa os
+  // logs das contas fixas, então tem que vir antes das contas pendentes.
+  const plano = await getMonthPlan(month, year);
+  const fatura = plano.invoice;
 
-  const [
-    entradas,
-    saidas,
-    receitaPorNegocioRaw,
-    ultimasTransacoes,
-    contasPendentes,
-    businesses,
-    card,
-  ] = await Promise.all([
-    prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: { type: "ENTRADA", date: { gte: start, lt: end } },
-    }),
-    prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: { type: "SAIDA", date: { gte: start, lt: end } },
-    }),
-    prisma.transaction.groupBy({
-      by: ["businessId"],
-      _sum: { amount: true },
-      where: {
-        type: "ENTRADA",
-        date: { gte: start, lt: end },
-        businessId: { not: null },
-      },
-    }),
-    prisma.transaction.findMany({
-      orderBy: { date: "desc" },
-      take: 8,
-      include: { business: true },
-    }),
-    prisma.fixedBillLog.findMany({
-      where: { month, year, status: { in: ["PENDENTE", "ATRASADO"] } },
-      include: { fixedBill: true },
-      orderBy: { dueDate: "asc" },
-    }),
-    prisma.business.findMany({ where: { active: true } }),
-    getCreditCard(),
-  ]);
+  const [receitaPorNegocioRaw, ultimasTransacoes, businesses, card] =
+    await Promise.all([
+      prisma.transaction.groupBy({
+        by: ["businessId"],
+        _sum: { amount: true },
+        where: {
+          type: "ENTRADA",
+          date: { gte: start, lt: end },
+          businessId: { not: null },
+        },
+      }),
+      prisma.transaction.findMany({
+        orderBy: { date: "desc" },
+        take: 8,
+        include: { business: true },
+      }),
+      prisma.business.findMany({ where: { active: true } }),
+      getCreditCard(),
+    ]);
+
+  // Vem do plano, e não de uma busca própria, porque assinatura no cartão já
+  // conta como paga quando a fatura foi paga.
+  const contasPendentes = plano.fixedBills.filter((b) => b.status !== "PAGO");
 
   const businessMap = new Map(businesses.map((b) => [b.id, b]));
   const receitaPorNegocio = receitaPorNegocioRaw
@@ -77,13 +62,12 @@ async function getFinanceData() {
       total: item._sum.amount ?? 0,
     }));
 
-  const saldo = (entradas._sum.amount ?? 0) - (saidas._sum.amount ?? 0);
-
   return {
-    entradas: entradas._sum.amount ?? 0,
-    saidas: saidas._sum.amount ?? 0,
-    saldo,
+    entradas: plano.incomeTotal,
+    saidas: plano.expenseTotal,
+    saldo: plano.balance,
     fatura: fatura.total,
+    faturaPaga: fatura.status === "PAGA",
     receitaPorNegocio,
     ultimasTransacoes,
     contasPendentes,
@@ -122,9 +106,16 @@ export default async function FinanceiroPage() {
             valueClassName={data.saldo >= 0 ? "text-emerald-600" : "text-red-600"}
           />
           <StatCard
-            label="Fatura do cartão"
+            label={data.faturaPaga ? "Fatura do cartão (paga)" : "Fatura do cartão"}
             value={formatCurrencyBRL(data.fatura)}
-            icon={<CreditCard size={16} className="text-text-secondary" />}
+            icon={
+              <CreditCard
+                size={16}
+                className={
+                  data.faturaPaga ? "text-emerald-600" : "text-text-secondary"
+                }
+              />
+            }
           />
         </div>
 
@@ -193,35 +184,32 @@ export default async function FinanceiroPage() {
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2">
-                  {data.contasPendentes.map((log) => (
+                  {data.contasPendentes.map((bill) => (
                     <li
-                      key={log.id}
+                      key={bill.logId}
                       className="flex items-center justify-between text-sm"
                     >
                       <div>
-                        <p className="text-text-primary">{log.fixedBill.name}</p>
+                        <p className="text-text-primary">{bill.name}</p>
                         <p className="text-xs text-text-secondary">
-                          vence em {formatDateBR(log.dueDate)}
+                          vence em {formatDateBR(new Date(bill.dueDate))}
+                          {bill.paymentMethod === "CARTAO_CREDITO" &&
+                            " · na fatura"}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
                             "rounded-full px-2 py-0.5 text-xs font-medium",
-                            log.status === "ATRASADO"
+                            bill.status === "ATRASADO"
                               ? "bg-badge-ace-bg text-badge-ace-text"
                               : "bg-badge-casa-bg text-badge-casa-text",
                           )}
                         >
-                          {billStatusLabels[log.status]}
+                          {billStatusLabels[bill.status]}
                         </span>
                         <span className="font-medium text-text-primary">
-                          {formatCurrencyBRL(
-                            billAmountForMonth(
-                              log.amountOverride,
-                              log.fixedBill.amount,
-                            ),
-                          )}
+                          {formatCurrencyBRL(bill.amount)}
                         </span>
                       </div>
                     </li>

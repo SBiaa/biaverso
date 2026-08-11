@@ -6,6 +6,7 @@ import { Card, MonthPicker } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { InvoiceItemsList } from "@/components/modules/financeiro/InvoiceItemsList";
 import { CreditCardSettings } from "@/components/modules/financeiro/CreditCardSettings";
+import { InvoicePaymentPanel } from "@/components/modules/financeiro/InvoicePaymentPanel";
 import { AddCreditCardEntryForm } from "@/components/modules/financeiro/AddCreditCardEntryForm";
 import { formatCurrencyBRL, formatDateBR, parseIntParam, todayUtc } from "@/lib/utils";
 
@@ -70,6 +71,10 @@ export default async function CartaoPage({
             </p>
           )}
           <CreditCardSettings card={card} />
+        </Card>
+
+        <Card>
+          <InvoicePaymentPanel invoice={invoice} />
         </Card>
 
         {invoice.subscriptionsTotal > 0 && (

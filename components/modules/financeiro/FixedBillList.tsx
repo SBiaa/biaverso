@@ -177,7 +177,8 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
 
   async function toggle(logId: string) {
     const item = items.find((i) => i.logId === logId);
-    if (!item) return;
+    // Conta no cartão é paga junto da fatura, não uma a uma.
+    if (!item || item.paymentMethod === "CARTAO_CREDITO") return;
 
     const previous = items;
     const nextStatus = item.status === "PAGO" ? "PENDENTE" : "PAGO";
@@ -243,31 +244,51 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
 
         return (
           <Card key={item.logId} className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => toggle(item.logId)}
-              className="flex items-center gap-3 text-left"
-            >
-              {item.status === "PAGO" ? (
-                <CheckCircle2 size={18} className="text-accent" />
-              ) : (
-                <Circle size={18} className="text-text-secondary" />
-              )}
-              <div>
-                <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                  {item.name}
-                  {item.paymentMethod === "CARTAO_CREDITO" && (
-                    <Badge className="bg-badge-tarot-bg text-badge-tarot-text">
-                      Cartão
-                    </Badge>
+            {(() => {
+              const onCard = item.paymentMethod === "CARTAO_CREDITO";
+              const content = (
+                <>
+                  {item.status === "PAGO" ? (
+                    <CheckCircle2 size={18} className="text-accent" />
+                  ) : (
+                    <Circle size={18} className="text-text-secondary" />
                   )}
-                </p>
-                <p className="text-xs text-text-secondary">
-                  {fixedBillTypeLabels[item.type]} · vence em{" "}
-                  {formatDateBR(new Date(item.dueDate))}
-                </p>
-              </div>
-            </button>
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                      {item.name}
+                      {onCard && (
+                        <Badge className="bg-badge-tarot-bg text-badge-tarot-text">
+                          Cartão
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      {fixedBillTypeLabels[item.type]} · vence em{" "}
+                      {formatDateBR(new Date(item.dueDate))}
+                      {onCard && " · paga com a fatura"}
+                    </p>
+                  </div>
+                </>
+              );
+
+              // Assinatura no cartão não se marca sozinha: quem paga é a fatura.
+              return onCard ? (
+                <div
+                  title="Essa conta é paga junto com a fatura do cartão."
+                  className="flex items-center gap-3 text-left"
+                >
+                  {content}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggle(item.logId)}
+                  className="flex items-center gap-3 text-left"
+                >
+                  {content}
+                </button>
+              );
+            })()}
             <div className="flex items-center gap-3">
               <span
                 className={cn(

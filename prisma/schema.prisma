@@ -385,6 +385,10 @@ model Transaction {
   businessId String?
   business   Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
 
+  // Preenchida quando a transação é o pagamento de uma fatura (lançado junto
+  // com o "marcar como paga"), para desmarcar conseguir desfazer o lançamento.
+  paidInvoice CreditCardInvoice?
+
   @@index([date])
   @@index([type, date])
   @@index([businessId])
@@ -481,6 +485,35 @@ model CreditCard {
   dueDay     Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+/// Fatura de um mês. Só existe a partir do momento em que é paga — mês sem
+/// linha aqui é fatura em aberto. É ela que responde "essa fatura foi paga?":
+/// as assinaturas cobradas no cartão não têm status próprio, elas seguem o
+/// status da fatura, porque não são pagas separadamente.
+model CreditCardInvoice {
+  id         String        @id @default(cuid())
+  month      Int
+  year       Int
+  status     InvoiceStatus @default(ABERTA)
+  paidAt     DateTime?
+  /// O quanto de fato saiu — pode diferir do total da fatura (pagamento
+  /// parcial, valor mínimo).
+  paidAmount Float?
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  paymentTransactionId String?      @unique
+  paymentTransaction   Transaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
+
+  @@unique([month, year])
+  @@index([status])
+}
+
+enum InvoiceStatus {
+  ABERTA
+  PAGA
 }
 
 // Compra parcelada: agrupa as parcelas espalhadas pelas faturas.
