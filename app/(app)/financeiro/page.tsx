@@ -38,13 +38,13 @@ async function getFinanceData() {
 
   const [receitaPorNegocioRaw, ultimasTransacoes, businesses, card] =
     await Promise.all([
+      // Separado por `received` para a linha do negócio mostrar o que caiu e o
+      // que ainda está previsto, sem misturar os dois num número só.
       prisma.transaction.groupBy({
-        by: ["businessId"],
+        by: ["businessId", "received"],
         _sum: { amount: true },
         where: {
           type: "ENTRADA",
-          // Receita é o que caiu; previsão ainda não é receita do negócio.
-          received: true,
           date: { gte: start, lt: end },
           businessId: { not: null },
         },
@@ -63,12 +63,23 @@ async function getFinanceData() {
   const contasPendentes = plano.fixedBills.filter((b) => b.status !== "PAGO");
 
   const businessMap = new Map(businesses.map((b) => [b.id, b]));
-  const receitaPorNegocio = receitaPorNegocioRaw
-    .filter((item) => item.businessId && businessMap.has(item.businessId))
-    .map((item) => ({
-      business: businessMap.get(item.businessId as string)!,
-      total: item._sum.amount ?? 0,
-    }));
+  const receitaPorNegocio = [
+    ...receitaPorNegocioRaw
+      .filter((item) => item.businessId && businessMap.has(item.businessId))
+      .reduce((acc, item) => {
+        const id = item.businessId as string;
+        const linha = acc.get(id) ?? {
+          business: businessMap.get(id)!,
+          recebido: 0,
+          previsto: 0,
+        };
+        if (item.received) linha.recebido += item._sum.amount ?? 0;
+        else linha.previsto += item._sum.amount ?? 0;
+        acc.set(id, linha);
+        return acc;
+      }, new Map<string, { business: (typeof businesses)[number]; recebido: number; previsto: number }>())
+      .values(),
+  ].sort((a, b) => b.recebido + b.previsto - (a.recebido + a.previsto));
 
   return {
     entradas: plano.incomeReceivedTotal,
@@ -149,11 +160,18 @@ export default async function FinanceiroPage() {
                   {data.receitaPorNegocio.map((item) => (
                     <li
                       key={item.business.id}
-                      className="flex items-center justify-between text-sm"
+                      className="flex items-center justify-between gap-3 text-sm"
                     >
                       <BusinessBadge business={item.business} />
-                      <span className="font-medium text-text-primary">
-                        {formatCurrencyBRL(item.total)}
+                      <span className="text-right">
+                        <span className="font-medium text-emerald-600">
+                          {formatCurrencyBRL(item.recebido)}
+                        </span>
+                        {item.previsto > 0 && (
+                          <span className="block text-xs text-text-secondary">
+                            + {formatCurrencyBRL(item.previsto)} previsto
+                          </span>
+                        )}
                       </span>
                     </li>
                   ))}

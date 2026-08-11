@@ -231,6 +231,33 @@ export const financialRecordPatchSchema = z.object({
   notes: z.string().nullish(),
 });
 
+// ------------------------------------------------------ lista de desejos
+export const wishlistItemCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  url: optionalText,
+  imageUrl: optionalText,
+  price: money.nullish(),
+  priority: z.enum(E.WishPriority).default("QUERO"),
+  category: z.enum(E.WishCategory).default("OUTRO"),
+  targetDate: dateOnly.nullish(),
+  notes: optionalText,
+  // Nulo = pessoal/casa, como no resto do app.
+  businessId: optionalId,
+});
+
+export const wishlistItemPatchSchema = wishlistItemCreateSchema.partial().extend({
+  status: z.enum(E.WishStatus).optional(),
+});
+
+/** Marcar como comprado, com o preço que de fato saiu. */
+export const wishlistPurchaseSchema = z.object({
+  boughtPrice: money.optional(),
+  boughtAt: dateOnly.optional(),
+  /** Lança a saída no financeiro junto. */
+  createTransaction: z.boolean().default(false),
+});
+
 // -------------------------------------------------------------- negócios
 export const businessCreateSchema = z.object({
   name: text,

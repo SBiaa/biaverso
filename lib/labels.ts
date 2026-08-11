@@ -139,6 +139,31 @@ export const ideaStatusLabels: Record<string, string> = {
   ARQUIVADA: "Arquivada",
 };
 
+export const wishPriorityLabels: Record<string, string> = {
+  ESSENCIAL: "Essencial",
+  QUERO: "Quero muito",
+  ALGUM_DIA: "Algum dia",
+};
+
+export const wishStatusLabels: Record<string, string> = {
+  DESEJADO: "Desejado",
+  COMPRADO: "Comprado",
+  DESCARTADO: "Descartado",
+};
+
+export const wishCategoryLabels: Record<string, string> = {
+  EQUIPAMENTO: "Equipamento",
+  SOFTWARE: "Software e assinatura",
+  CASA: "Casa",
+  ROUPA: "Roupa e acessório",
+  BELEZA: "Beleza",
+  LIVRO_CURSO: "Livro e curso",
+  PRESENTE: "Presente",
+  VIAGEM: "Viagem",
+  SAUDE: "Saúde",
+  OUTRO: "Outro",
+};
+
 export const postTypeLabels: Record<string, string> = {
   STORY: "Story",
   REELS: "Reels",

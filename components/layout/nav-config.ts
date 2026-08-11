@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Compass,
   FolderKanban,
+  Gift,
   GraduationCap,
   Home,
   KeyRound,
@@ -57,6 +58,7 @@ export const navGroups: NavGroup[] = [
       { href: "/livros", label: "Livros", icon: BookOpen },
       { href: "/conhecimento", label: "Conhecimento", icon: GraduationCap },
       { href: "/ideias", label: "Ideias", icon: Lightbulb },
+      { href: "/desejos", label: "Lista de desejos", icon: Gift },
     ],
   },
   {

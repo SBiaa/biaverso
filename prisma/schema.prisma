@@ -615,6 +615,7 @@ model Business {
   modules             BusinessModule[]
   orders              Order[]
   collections         Collection[]
+  wishlistItems       WishlistItem[]
 }
 
 // Funcionalidades ligadas por negócio: as abas da página do negócio saem daqui,
@@ -1033,6 +1034,67 @@ enum KnowledgeArea {
   ESPIRITUALIDADE
   DESIGN
   NEGOCIOS
+  SAUDE
+  OUTRO
+}
+
+// LISTA DE DESEJOS
+//
+// "Para o que é" tem dois eixos, porque uma coisa só não responde: `businessId`
+// diz de quem é a vontade (nulo = pessoal/casa, o mesmo padrão do resto do app)
+// e `category` diz que tipo de coisa é. Um notebook da Ace e um notebook seu
+// são o mesmo tipo de item com destinos diferentes.
+model WishlistItem {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  /// Link da loja onde viu.
+  url         String?
+  imageUrl    String?
+  /// Quanto custa, para saber o tamanho da lista. Nem todo desejo tem preço.
+  price       Float?
+  priority    WishPriority @default(QUERO)
+  status      WishStatus   @default(DESEJADO)
+  category    WishCategory @default(OUTRO)
+  /// Quando quer ter (aniversário, viagem, prazo de um projeto).
+  targetDate  DateTime?
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  /// Preenchidos ao marcar como comprado — o preço pago pode não ser o previsto.
+  boughtAt    DateTime?
+  boughtPrice Float?
+
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([status, priority])
+  @@index([businessId])
+  @@index([category])
+}
+
+enum WishPriority {
+  ESSENCIAL
+  QUERO
+  ALGUM_DIA
+}
+
+enum WishStatus {
+  DESEJADO
+  COMPRADO
+  DESCARTADO
+}
+
+enum WishCategory {
+  EQUIPAMENTO
+  SOFTWARE
+  CASA
+  ROUPA
+  BELEZA
+  LIVRO_CURSO
+  PRESENTE
+  VIAGEM
   SAUDE
   OUTRO
 }
