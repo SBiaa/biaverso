@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
 import { BusinessTabs } from "@/components/modules/negocios/BusinessTabs";
@@ -27,6 +28,7 @@ import {
 import { buildBusinessTabs, resolveTab, OVERVIEW_TAB } from "@/lib/business-modules";
 import { BusinessOverviewTab } from "@/components/modules/negocios/BusinessOverviewTab";
 import { getBusinessOverview } from "@/lib/business-overview";
+import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
 import { ProjectGrid } from "@/components/modules/projetos/ProjectGrid";
 import { ProjectFilterBar } from "@/components/modules/projetos/ProjectFilterBar";
 import { getProjectsOverview } from "@/lib/projects";
@@ -340,6 +342,52 @@ export default async function BusinessDetailPage({
         <AceFilterBar clients={clients} showType={false} showStatus={false} />
         <KanbanBoard businessId={id} items={items} clients={clients} projects={projectOptions} />
       </div>
+    );
+  } else if (tab === "senhas") {
+    const [credentials, passwordOptions] = await Promise.all([
+      prisma.businessCredential.findMany({
+        where: { businessId: id },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          passwordEntry: {
+            select: {
+              id: true,
+              name: true,
+              login: true,
+              password: true,
+              url: true,
+              category: true,
+            },
+          },
+        },
+      }),
+      prisma.passwordEntry.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, category: true },
+      }),
+    ]);
+
+    content = (
+      <Card className="flex flex-col gap-3">
+        <div className="flex items-start gap-2 rounded-lg border border-badge-ace-text/20 bg-badge-ace-bg p-3 text-xs text-badge-ace-text">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <span>
+            As senhas são as mesmas do cofre em{" "}
+            <Link href="/senhas" className="font-medium underline">
+              Senhas
+            </Link>
+            . Nesta v1 elas ficam salvas em texto simples, sem criptografia.
+          </span>
+        </div>
+        <CredentialsPanel
+          endpoint={`/api/businesses/${id}/credentials`}
+          initialCredentials={credentials}
+          passwordOptions={passwordOptions}
+          emptyLabel="Nenhuma credencial vinculada a este negócio."
+          unlinkLabel="Desvincular do negócio"
+        />
+      </Card>
     );
   } else if (tab === "financeiro") {
     const { start, end } = getMonthRange(todayUtc());

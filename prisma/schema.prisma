@@ -643,6 +643,24 @@ model Business {
   orders              Order[]
   collections         Collection[]
   wishlistItems       WishlistItem[]
+  credentials         BusinessCredential[]
+}
+
+// Mesma ponte do ProjectCredential, um nível acima: senhas do negócio inteiro
+// (Instagram da marca, banco, ferramentas) que não são de um projeto só.
+model BusinessCredential {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  passwordEntryId String
+  passwordEntry   PasswordEntry @relation(fields: [passwordEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, passwordEntryId])
+  @@index([businessId])
+  @@index([passwordEntryId])
 }
 
 // Funcionalidades ligadas por negócio: as abas da página do negócio saem daqui,
@@ -669,6 +687,7 @@ enum ModuleType {
   PEDIDOS // controle de pedidos (loja)
   COLECOES // coleções sazonais de produtos
   FINANCEIRO // visão financeira do negócio
+  SENHAS // credenciais do negócio, vindas do cofre
 }
 
 model Project {
@@ -1165,7 +1184,8 @@ model PasswordEntry {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
-  projectLinks ProjectCredential[]
+  projectLinks  ProjectCredential[]
+  businessLinks BusinessCredential[]
 }
 
 enum PasswordCategory {

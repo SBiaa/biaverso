@@ -49,10 +49,12 @@ export default async function SenhasPage() {
                 {group.items.map((item) => (
                   <PasswordRow
                     key={item.id}
+                    id={item.id}
                     name={item.name}
                     login={item.login}
                     password={item.password}
                     url={item.url}
+                    category={item.category}
                   />
                 ))}
               </div>

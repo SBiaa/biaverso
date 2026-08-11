@@ -350,10 +350,12 @@ export const projectDocumentCreateSchema = z.object({
 });
 export const projectDocumentPatchSchema = projectDocumentCreateSchema.partial();
 
-// ------------------------------------------------ credenciais do projeto
-export const projectCredentialCreateSchema = z.object({
+// -------------------------------- credenciais (projeto e negócio) do cofre
+export const credentialLinkSchema = z.object({
   passwordEntryId: id,
 });
+export const projectCredentialCreateSchema = credentialLinkSchema;
+export const businessCredentialCreateSchema = credentialLinkSchema;
 
 // -------------------------------------------- tabela de preços do projeto
 export const projectPriceCreateSchema = z.object({

@@ -17,6 +17,7 @@ export const MODULE_TYPES: ModuleType[] = [
   "PEDIDOS",
   "COLECOES",
   "FINANCEIRO",
+  "SENHAS",
 ];
 
 /** O que um negócio novo ganha quando nenhum módulo é escolhido. */
@@ -30,6 +31,7 @@ export const moduleLabels: Record<ModuleType, string> = {
   PEDIDOS: "Pedidos",
   COLECOES: "Coleções",
   FINANCEIRO: "Financeiro",
+  SENHAS: "Senhas",
 };
 
 export const moduleDescriptions: Record<ModuleType, string> = {
@@ -40,6 +42,7 @@ export const moduleDescriptions: Record<ModuleType, string> = {
   PEDIDOS: "Controle de pedidos da loja",
   COLECOES: "Coleções sazonais de produtos",
   FINANCEIRO: "Entradas e saídas do negócio",
+  SENHAS: "Credenciais do negócio, guardadas no cofre",
 };
 
 /**
@@ -54,6 +57,7 @@ const MODULE_TABS: Record<ModuleType, { key: string; label: string; path?: strin
   PEDIDOS: { key: "pedidos", label: "Pedidos", path: "pedidos" },
   COLECOES: { key: "colecoes", label: "Coleções", path: "colecoes" },
   FINANCEIRO: { key: "financeiro", label: "Financeiro" },
+  SENHAS: { key: "senhas", label: "Senhas" },
 };
 
 export type BusinessTab = {

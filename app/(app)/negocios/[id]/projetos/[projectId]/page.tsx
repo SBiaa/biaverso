@@ -6,7 +6,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card, BusinessBadge } from "@/components/ui";
 import { ProjectDocumentation } from "@/components/modules/projetos/ProjectDocumentation";
 import { ProjectDocuments } from "@/components/modules/projetos/ProjectDocuments";
-import { ProjectCredentials } from "@/components/modules/projetos/ProjectCredentials";
+import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
 import { ProjectPriceTable } from "@/components/modules/projetos/ProjectPriceTable";
 import { ProjectItems } from "@/components/modules/projetos/ProjectItems";
 import {
@@ -196,10 +196,12 @@ export default async function ProjectDetailPage({
 
         <Card>
           <h2 className="mb-3 text-sm font-semibold text-text-primary">Credenciais</h2>
-          <ProjectCredentials
-            projectId={project.id}
+          <CredentialsPanel
+            endpoint={`/api/projects/${project.id}/credentials`}
             initialCredentials={project.credentials}
             passwordOptions={passwordOptions}
+            emptyLabel="Nenhuma credencial vinculada a este projeto."
+            unlinkLabel="Desvincular do projeto"
           />
         </Card>
 
