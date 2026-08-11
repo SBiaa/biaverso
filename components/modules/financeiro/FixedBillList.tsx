@@ -3,26 +3,35 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, Pencil, Trash2 } from "lucide-react";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import { BillAmountOverride } from "@/components/modules/financeiro/BillAmountOverride";
 import { api, errorMessage } from "@/lib/client-api";
 import {
   cn,
-  formatCurrencyBRL,
   formatDateBR,
   toDateInputValue,
   todayInputValue,
 } from "@/lib/utils";
-import { billStatusLabels, fixedBillTypeLabels } from "@/lib/labels";
+import {
+  billStatusLabels,
+  fixedBillTypeLabels,
+  payMethodLabels,
+} from "@/lib/labels";
 
 const typeOptions = Object.keys(fixedBillTypeLabels);
+const payMethodOptions = Object.keys(payMethodLabels);
 
 type BillItem = {
   logId: string;
   fixedBillId: string;
   name: string;
+  /** Valor que vale neste mês: o ajuste do mês, ou o padrão da conta. */
   amount: number;
+  defaultAmount: number;
+  amountOverride: number | null;
   dueDate: string;
   type: string;
+  paymentMethod: string;
   notes: string | null;
   status: "PAGO" | "PENDENTE" | "ATRASADO";
 };
@@ -44,9 +53,11 @@ function FixedBillForm({
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: item?.name ?? "",
-    amount: item ? String(item.amount) : "",
+    // O formulário edita a conta, não o mês — por isso o valor padrão dela.
+    amount: item ? String(item.defaultAmount) : "",
     dueDate: item ? toDateInputValue(item.dueDate) : todayInputValue(),
     type: item?.type ?? typeOptions[0],
+    paymentMethod: item?.paymentMethod ?? "PIX_DEBITO",
     notes: item?.notes ?? "",
   });
 
@@ -69,6 +80,7 @@ function FixedBillForm({
           amount: Number(form.amount),
           dueDay,
           type: form.type,
+          paymentMethod: form.paymentMethod,
           notes: form.notes || null,
         }),
       },
@@ -107,17 +119,36 @@ function FixedBillForm({
           />
         </label>
       </div>
-      <select
-        value={form.type}
-        onChange={(e) => update("type", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      >
-        {typeOptions.map((t) => (
-          <option key={t} value={t}>
-            {fixedBillTypeLabels[t]}
-          </option>
-        ))}
-      </select>
+      <div className="flex gap-2">
+        <select
+          value={form.type}
+          onChange={(e) => update("type", e.target.value)}
+          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          {typeOptions.map((t) => (
+            <option key={t} value={t}>
+              {fixedBillTypeLabels[t]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.paymentMethod}
+          onChange={(e) => update("paymentMethod", e.target.value)}
+          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          {payMethodOptions.map((p) => (
+            <option key={p} value={p}>
+              {payMethodLabels[p]}
+            </option>
+          ))}
+        </select>
+      </div>
+      {form.paymentMethod === "CARTAO_CREDITO" && (
+        <p className="text-xs text-text-secondary">
+          Entra sozinha na fatura do cartão todo mês — não lance ela de novo na
+          tela do cartão.
+        </p>
+      )}
       <input
         placeholder="Notas (opcional)"
         value={form.notes}
@@ -223,8 +254,13 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
                 <Circle size={18} className="text-text-secondary" />
               )}
               <div>
-                <p className="text-sm font-medium text-text-primary">
+                <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
                   {item.name}
+                  {item.paymentMethod === "CARTAO_CREDITO" && (
+                    <Badge className="bg-badge-tarot-bg text-badge-tarot-text">
+                      Cartão
+                    </Badge>
+                  )}
                 </p>
                 <p className="text-xs text-text-secondary">
                   {fixedBillTypeLabels[item.type]} · vence em{" "}
@@ -241,9 +277,12 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
               >
                 {billStatusLabels[item.status]}
               </span>
-              <span className="text-sm font-semibold text-text-primary">
-                {formatCurrencyBRL(item.amount)}
-              </span>
+              <BillAmountOverride
+                logId={item.logId}
+                amount={item.amount}
+                defaultAmount={item.defaultAmount}
+                amountOverride={item.amountOverride}
+              />
               <div className="flex items-center gap-1">
                 <button
                   type="button"

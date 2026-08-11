@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ensureFixedBillLogsForMonth } from "@/lib/finance";
+import { billAmountForMonth } from "@/lib/finance-calc";
 import { Topbar } from "@/components/layout/Topbar";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { FixedBillList } from "@/components/modules/financeiro/FixedBillList";
@@ -24,9 +25,12 @@ export default async function ContasFixasPage() {
     logId: log.id,
     fixedBillId: log.fixedBillId,
     name: log.fixedBill.name,
-    amount: log.fixedBill.amount,
+    amount: billAmountForMonth(log.amountOverride, log.fixedBill.amount),
+    defaultAmount: log.fixedBill.amount,
+    amountOverride: log.amountOverride,
     dueDate: log.dueDate.toISOString(),
     type: log.fixedBill.type,
+    paymentMethod: log.fixedBill.paymentMethod,
     notes: log.fixedBill.notes,
     status: log.status,
   }));

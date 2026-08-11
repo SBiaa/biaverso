@@ -70,12 +70,21 @@ export type BusinessModuleState = {
   order: number;
 };
 
-/** Abas visíveis de um negócio, na ordem em que os módulos foram salvos. */
+/** Chave da home do negócio — não vem de módulo nenhum, existe sempre. */
+export const OVERVIEW_TAB = "visao-geral";
+
+/**
+ * Abas visíveis de um negócio, na ordem em que os módulos foram salvos.
+ *
+ * A "Visão geral" vem sempre na frente: é o painel do negócio e não depende de
+ * módulo ligado — abrir um negócio sem ela caía direto numa aba de trabalho,
+ * sem nenhum resumo do todo.
+ */
 export function buildBusinessTabs(
   businessId: string,
   modules: BusinessModuleState[],
 ): BusinessTab[] {
-  return modules
+  const moduleTabs = modules
     .filter((m) => m.active)
     .slice()
     .sort((a, b) => a.order - b.order)
@@ -90,6 +99,16 @@ export function buildBusinessTabs(
         ownPage: Boolean(tab.path),
       };
     });
+
+  return [
+    {
+      key: OVERVIEW_TAB,
+      label: "Visão geral",
+      href: `/negocios/${businessId}`,
+      ownPage: false,
+    },
+    ...moduleTabs,
+  ];
 }
 
 /**

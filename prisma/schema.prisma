@@ -426,15 +426,20 @@ enum PayMethod {
 }
 
 model FixedBill {
-  id          String         @id @default(cuid())
-  name        String
-  amount      Float
-  dueDay      Int
-  type        FixedBillType
-  active      Boolean        @default(true)
-  notes       String?
-  createdAt   DateTime       @default(now())
-  monthlyLogs FixedBillLog[]
+  id     String        @id @default(cuid())
+  name   String
+  amount Float
+  dueDay Int
+  type   FixedBillType
+  // Conta paga no cartão entra sozinha na fatura do mês — não precisa (nem deve)
+  // ter um CreditCardEntry manual, senão o valor conta duas vezes.
+  paymentMethod PayMethod @default(PIX_DEBITO)
+  active        Boolean   @default(true)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  monthlyLogs   FixedBillLog[]
+
+  @@index([active, paymentMethod])
 }
 
 enum FixedBillType {
@@ -450,6 +455,9 @@ model FixedBillLog {
   // Data real do vencimento naquele mês (gerada a partir de FixedBill.dueDay).
   dueDate     DateTime
   status      BillStatus @default(PENDENTE)
+  // Valor só daquele mês, quando difere do padrão da conta (reajuste, consumo
+  // variável). Nulo = usa FixedBill.amount.
+  amountOverride Float?
   paidAt      DateTime?
   fixedBillId String
   fixedBill   FixedBill  @relation(fields: [fixedBillId], references: [id], onDelete: Cascade)
@@ -508,9 +516,17 @@ model CreditCardEntry {
   purchaseId   String?
   purchase     CreditCardPurchase? @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
 
+  // Parcelamento em campos próprios: `installment` é só o rótulo "2/6", que a
+  // projeção não consegue somar nem ordenar. Preenchidos junto com `purchaseId`
+  // (o grupo é o id da compra), então uma parcela se identifica sem JOIN.
+  installmentGroupId String?
+  installmentNumber  Int?
+  installmentTotal   Int?
+
   @@index([invoiceYear, invoiceMonth])
   @@index([businessId])
   @@index([purchaseId])
+  @@index([installmentGroupId])
 }
 
 model FinancialRecord {

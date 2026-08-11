@@ -131,12 +131,21 @@ export const fixedBillSchema = z.object({
   amount: money,
   dueDay: dayOfMonth,
   type: z.enum(E.FixedBillType),
+  paymentMethod: z.enum(E.PayMethod).default("PIX_DEBITO"),
   notes: optionalText,
 });
 
 export const fixedBillLogPatchSchema = z.object({
   status: z.enum(E.BillStatus).optional(),
   dueDate: dateOnly.optional(),
+  // `null` explícito volta a valer o valor padrão da conta.
+  amountOverride: money.nullish(),
+});
+
+/** Mês/ano de fatura vindos da query string das telas do financeiro. */
+export const invoiceMonthQuerySchema = z.object({
+  month: monthNumber,
+  year: yearNumber,
 });
 
 export const creditCardSchema = z.object({
@@ -165,6 +174,19 @@ export const creditCardEntryPatchSchema = z.object({
   invoiceMonth: monthNumber,
   invoiceYear: yearNumber,
   installment: optionalText,
+  category: z.enum(E.TransactionCategory),
+  businessId: optionalId,
+  notes: optionalText,
+});
+
+/** Compra parcelada: uma chamada gera a parcela de cada fatura futura. */
+export const installmentPurchaseSchema = z.object({
+  description: text,
+  totalAmount: money.positive(),
+  installments: z.coerce.number().int().min(2).max(72),
+  firstInvoiceMonth: monthNumber,
+  firstInvoiceYear: yearNumber,
+  purchaseDate: dateOnly.optional(),
   category: z.enum(E.TransactionCategory),
   businessId: optionalId,
   notes: optionalText,

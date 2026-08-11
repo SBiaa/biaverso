@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { CreditCard, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { ensureFixedBillLogsForMonth, getCreditCard } from "@/lib/finance";
-import { invoiceDueDate } from "@/lib/finance-calc";
+import { getCreditCard, getInvoice } from "@/lib/finance";
+import { billAmountForMonth, invoiceDueDate } from "@/lib/finance-calc";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge, StatCard } from "@/components/ui";
+import { Badge, Card, BusinessBadge, StatCard } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { TransactionsList } from "@/components/modules/financeiro/TransactionsList";
 import {
@@ -24,16 +24,17 @@ async function getFinanceData() {
   const month = date.getUTCMonth() + 1;
   const year = date.getUTCFullYear();
 
-  await ensureFixedBillLogsForMonth(month, year);
+  // A fatura unificada soma os lançamentos avulsos e as assinaturas no cartão.
+  // Ela também materializa os logs das contas fixas do mês, então tem que vir
+  // antes da busca das contas pendentes.
+  const fatura = await getInvoice(month, year);
 
   const [
     entradas,
     saidas,
-    fatura,
     receitaPorNegocioRaw,
     ultimasTransacoes,
     contasPendentes,
-    lancamentosCartao,
     businesses,
     card,
   ] = await Promise.all([
@@ -44,10 +45,6 @@ async function getFinanceData() {
     prisma.transaction.aggregate({
       _sum: { amount: true },
       where: { type: "SAIDA", date: { gte: start, lt: end } },
-    }),
-    prisma.creditCardEntry.aggregate({
-      _sum: { amount: true },
-      where: { invoiceMonth: month, invoiceYear: year },
     }),
     prisma.transaction.groupBy({
       by: ["businessId"],
@@ -68,11 +65,6 @@ async function getFinanceData() {
       include: { fixedBill: true },
       orderBy: { dueDate: "asc" },
     }),
-    prisma.creditCardEntry.findMany({
-      where: { invoiceMonth: month, invoiceYear: year },
-      orderBy: { purchaseDate: "desc" },
-      include: { business: true },
-    }),
     prisma.business.findMany({ where: { active: true } }),
     getCreditCard(),
   ]);
@@ -91,11 +83,11 @@ async function getFinanceData() {
     entradas: entradas._sum.amount ?? 0,
     saidas: saidas._sum.amount ?? 0,
     saldo,
-    fatura: fatura._sum.amount ?? 0,
+    fatura: fatura.total,
     receitaPorNegocio,
     ultimasTransacoes,
     contasPendentes,
-    lancamentosCartao,
+    lancamentosCartao: fatura.items,
     businesses,
     faturaVenceEm: card ? invoiceDueDate(month, year, card.dueDay) : null,
   };
@@ -224,7 +216,12 @@ export default async function FinanceiroPage() {
                           {billStatusLabels[log.status]}
                         </span>
                         <span className="font-medium text-text-primary">
-                          {formatCurrencyBRL(log.fixedBill.amount)}
+                          {formatCurrencyBRL(
+                            billAmountForMonth(
+                              log.amountOverride,
+                              log.fixedBill.amount,
+                            ),
+                          )}
                         </span>
                       </div>
                     </li>
@@ -263,7 +260,13 @@ export default async function FinanceiroPage() {
                       className="flex items-center justify-between text-sm"
                     >
                       <div className="flex items-center gap-2">
-                        <BusinessBadge business={entry.business} />
+                        {entry.kind === "ASSINATURA" ? (
+                          <Badge className="bg-badge-tarot-bg text-badge-tarot-text">
+                            Assinatura
+                          </Badge>
+                        ) : (
+                          <BusinessBadge business={entry.business} />
+                        )}
                         <span className="text-text-primary">
                           {entry.description}
                         </span>

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/financeiro", label: "Visão geral" },
+  { href: "/financeiro/planejamento", label: "Planejamento" },
   { href: "/financeiro/transacoes", label: "Transações" },
   { href: "/financeiro/contas-fixas", label: "Contas fixas" },
   { href: "/financeiro/cartao", label: "Cartão" },

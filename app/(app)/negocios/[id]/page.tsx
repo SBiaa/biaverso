@@ -24,7 +24,9 @@ import {
   postWithClientSelect,
   taskWithClientSelect,
 } from "@/lib/ace";
-import { buildBusinessTabs, resolveTab } from "@/lib/business-modules";
+import { buildBusinessTabs, resolveTab, OVERVIEW_TAB } from "@/lib/business-modules";
+import { BusinessOverviewTab } from "@/components/modules/negocios/BusinessOverviewTab";
+import { getBusinessOverview } from "@/lib/business-overview";
 import { ProjectGrid } from "@/components/modules/projetos/ProjectGrid";
 import { ProjectFilterBar } from "@/components/modules/projetos/ProjectFilterBar";
 import { getProjectsOverview } from "@/lib/projects";
@@ -111,7 +113,26 @@ export default async function BusinessDetailPage({
 
   let content = null;
 
-  if (tab === "clientes") {
+  if (tab === OVERVIEW_TAB) {
+    const activeModules = business.modules
+      .filter((m) => m.active)
+      .map((m) => m.module);
+
+    const [overview, { projects: projectCards }] = await Promise.all([
+      getBusinessOverview(id, activeModules),
+      getProjectsOverview(id),
+    ]);
+
+    content = (
+      <BusinessOverviewTab
+        businessId={id}
+        overview={overview}
+        // Só os que estão rolando — concluído e cancelado enchem a home.
+        projects={projectCards.filter((p) => p.status === "EM_ANDAMENTO")}
+        tabs={tabs.filter((t) => t.key !== OVERVIEW_TAB)}
+      />
+    );
+  } else if (tab === "clientes") {
     const overview = await getClientsOverview(id, sp.status);
     content = <ClientesTab businessId={id} clients={overview} />;
   } else if (tab === "interno") {

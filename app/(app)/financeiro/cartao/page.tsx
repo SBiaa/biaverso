@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { getCreditCard } from "@/lib/finance";
+import { getCreditCard, getInvoice } from "@/lib/finance";
 import { daysUntil, invoiceDueDate } from "@/lib/finance-calc";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, MonthPicker } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
-import { CreditCardEntriesList } from "@/components/modules/financeiro/CreditCardEntriesList";
+import { InvoiceItemsList } from "@/components/modules/financeiro/InvoiceItemsList";
 import { CreditCardSettings } from "@/components/modules/financeiro/CreditCardSettings";
 import { AddCreditCardEntryForm } from "@/components/modules/financeiro/AddCreditCardEntryForm";
 import { formatCurrencyBRL, formatDateBR, parseIntParam, todayUtc } from "@/lib/utils";
@@ -32,17 +32,14 @@ export default async function CartaoPage({
   const month = parseIntParam(params.month, 1, 12) ?? today.getUTCMonth() + 1;
   const year = parseIntParam(params.year, 1970, 2999) ?? today.getUTCFullYear();
 
-  const [entries, businesses, card] = await Promise.all([
-    prisma.creditCardEntry.findMany({
-      where: { invoiceMonth: month, invoiceYear: year },
-      orderBy: { purchaseDate: "desc" },
-      include: { business: true },
-    }),
+  // A fatura já materializa os logs das contas fixas do mês, então precisa vir
+  // antes das outras leituras para as assinaturas do mês existirem.
+  const invoice = await getInvoice(month, year);
+  const [businesses, card] = await Promise.all([
     prisma.business.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     getCreditCard(),
   ]);
 
-  const total = entries.reduce((sum, e) => sum + e.amount, 0);
   const dueDate = card ? invoiceDueDate(month, year, card.dueDay) : null;
 
   return (
@@ -54,7 +51,7 @@ export default async function CartaoPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <MonthPicker month={month} year={year} />
           <span className="text-sm font-semibold text-text-primary">
-            Total da fatura: {formatCurrencyBRL(total)}
+            Total da fatura: {formatCurrencyBRL(invoice.total)}
           </span>
         </div>
 
@@ -75,6 +72,15 @@ export default async function CartaoPage({
           <CreditCardSettings card={card} />
         </Card>
 
+        {invoice.subscriptionsTotal > 0 && (
+          <p className="text-xs text-text-secondary">
+            {formatCurrencyBRL(invoice.entriesTotal)} em compras +{" "}
+            {formatCurrencyBRL(invoice.subscriptionsTotal)} em assinaturas — as
+            assinaturas vêm das contas fixas marcadas como pagas no cartão e não
+            precisam de lançamento manual.
+          </p>
+        )}
+
         <AddCreditCardEntryForm
           businesses={businesses}
           closingDay={card?.closingDay ?? null}
@@ -83,7 +89,12 @@ export default async function CartaoPage({
         />
 
         <Card>
-          <CreditCardEntriesList entries={entries} businesses={businesses} />
+          <InvoiceItemsList
+            items={invoice.items}
+            businesses={businesses}
+            invoiceMonth={month}
+            invoiceYear={year}
+          />
         </Card>
       </main>
     </>
