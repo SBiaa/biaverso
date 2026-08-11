@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { CreditCard, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import {
+  CreditCard,
+  Hourglass,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCreditCard, getMonthPlan } from "@/lib/finance";
 import { invoiceDueDate } from "@/lib/finance-calc";
@@ -37,6 +43,8 @@ async function getFinanceData() {
         _sum: { amount: true },
         where: {
           type: "ENTRADA",
+          // Receita é o que caiu; previsão ainda não é receita do negócio.
+          received: true,
           date: { gte: start, lt: end },
           businessId: { not: null },
         },
@@ -63,7 +71,8 @@ async function getFinanceData() {
     }));
 
   return {
-    entradas: plano.incomeTotal,
+    entradas: plano.incomeReceivedTotal,
+    previstoParaCair: plano.incomePendingTotal,
     saidas: plano.expenseTotal,
     saldo: plano.balance,
     fatura: fatura.total,
@@ -86,12 +95,18 @@ export default async function FinanceiroPage() {
       <main className="flex-1 space-y-4 p-4 md:p-6">
         <FinanceSubNav />
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           <StatCard
-            label="Total entrou"
+            label="Já caiu na conta"
             value={formatCurrencyBRL(data.entradas)}
             icon={<TrendingUp size={16} className="text-emerald-600" />}
             valueClassName="text-emerald-600"
+          />
+          <StatCard
+            label="Previsto para cair"
+            value={formatCurrencyBRL(data.previstoParaCair)}
+            icon={<Hourglass size={16} className="text-text-secondary" />}
+            valueClassName="text-text-secondary"
           />
           <StatCard
             label="Total saiu"

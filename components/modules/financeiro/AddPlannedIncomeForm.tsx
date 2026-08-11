@@ -58,6 +58,8 @@ export function AddPlannedIncomeForm({
         category: form.category,
         businessId: form.businessId || null,
         notes: form.notes || null,
+        // Previsão: só entra no saldo depois de marcada como recebida.
+        received: false,
       });
       setOpen(false);
       setForm((prev) => ({ ...prev, name: "", amount: "", notes: "" }));
@@ -139,6 +141,10 @@ export function AddPlannedIncomeForm({
         onChange={(e) => update("notes", e.target.value)}
         className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       />
+      <p className="text-xs text-text-secondary">
+        Entra como previsão. Ela só soma no saldo do mês depois que você marcar
+        que caiu na conta.
+      </p>
       <div className="flex gap-2">
         <Button onClick={handleSubmit} disabled={saving}>
           Salvar

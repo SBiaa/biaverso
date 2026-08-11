@@ -1,10 +1,11 @@
-import { TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Hourglass, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getMonthPlan } from "@/lib/finance";
 import { Topbar } from "@/components/layout/Topbar";
 import { Badge, BusinessBadge, Card, MonthPicker, StatCard } from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { AddPlannedIncomeForm } from "@/components/modules/financeiro/AddPlannedIncomeForm";
+import { IncomeReceivedToggle } from "@/components/modules/financeiro/IncomeReceivedToggle";
 import {
   fixedBillTypeLabels,
   transactionCategoryLabels,
@@ -49,12 +50,18 @@ export default async function PlanejamentoPage({
 
         <MonthPicker month={month} year={year} />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            label={previsto ? "Entrou previsto" : "Entrou"}
-            value={formatCurrencyBRL(plan.incomeTotal)}
+            label="Já caiu na conta"
+            value={formatCurrencyBRL(plan.incomeReceivedTotal)}
             icon={<TrendingUp size={16} className="text-emerald-600" />}
             valueClassName="text-emerald-600"
+          />
+          <StatCard
+            label="Previsto para cair"
+            value={formatCurrencyBRL(plan.incomePendingTotal)}
+            icon={<Hourglass size={16} className="text-text-secondary" />}
+            valueClassName="text-text-secondary"
           />
           <StatCard
             label={previsto ? "Saiu previsto" : "Saiu"}
@@ -201,9 +208,13 @@ export default async function PlanejamentoPage({
 
           <div className="flex flex-col gap-4">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
-                {previsto ? "Entradas previstas" : "Entradas"}
+              <h2 className="mb-1 text-sm font-semibold text-text-primary">
+                Entradas
               </h2>
+              <p className="mb-3 text-xs text-text-secondary">
+                Marque no círculo quando o dinheiro cair na conta — é isso que
+                faz ele entrar no saldo do mês.
+              </p>
               {plan.incomes.length === 0 ? (
                 <p className="mb-3 text-sm text-text-secondary">
                   {previsto
@@ -218,6 +229,10 @@ export default async function PlanejamentoPage({
                       className="flex items-center justify-between gap-3 text-sm"
                     >
                       <div className="flex items-center gap-2">
+                        <IncomeReceivedToggle
+                          id={income.id}
+                          received={income.received}
+                        />
                         <BusinessBadge business={income.business} />
                         <div>
                           <p className="text-text-primary">{income.name}</p>
@@ -227,9 +242,22 @@ export default async function PlanejamentoPage({
                           </p>
                         </div>
                       </div>
-                      <span className="font-medium text-emerald-600">
-                        {formatCurrencyBRL(income.amount)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {!income.received && (
+                          <Badge className="bg-badge-casa-bg text-badge-casa-text">
+                            Previsto
+                          </Badge>
+                        )}
+                        <span
+                          className={
+                            income.received
+                              ? "font-medium text-emerald-600"
+                              : "font-medium text-text-secondary"
+                          }
+                        >
+                          {formatCurrencyBRL(income.amount)}
+                        </span>
+                      </div>
                     </li>
                   ))}
                 </ul>

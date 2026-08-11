@@ -383,6 +383,8 @@ export type PlanTransaction = {
   date: string;
   category: string;
   business: { id: string; name: string; color: string } | null;
+  /** Em ENTRADA: já caiu na conta. Previsão não recebida não entra no saldo. */
+  received: boolean;
 };
 
 export type PlanFixedBill = {
@@ -406,6 +408,11 @@ export type MonthPlan = {
   isFuture: boolean;
   isCurrent: boolean;
   incomes: PlanTransaction[];
+  /** Entradas que já caíram na conta — é o que entra no saldo. */
+  incomeReceivedTotal: number;
+  /** Entradas previstas que ainda não caíram. Fora do saldo, de propósito. */
+  incomePendingTotal: number;
+  /** As duas somadas, para quando interessa o quanto o mês vale no total. */
   incomeTotal: number;
   expenses: PlanTransaction[];
   expenseTransactionsTotal: number;
@@ -461,6 +468,7 @@ export async function getMonthPlan(
     business: t.business
       ? { id: t.business.id, name: t.business.name, color: t.business.color }
       : null,
+    received: t.received,
   });
 
   const incomes = transactions
@@ -493,7 +501,10 @@ export async function getMonthPlan(
   const total = (list: { amount: number }[]) =>
     list.reduce((acc, i) => acc + i.amount, 0);
 
-  const incomeTotal = total(incomes);
+  // Previsão que ainda não caiu fica fora do saldo: o mês só "tem" o dinheiro
+  // depois que ele entra na conta de verdade.
+  const incomeReceivedTotal = total(incomes.filter((i) => i.received));
+  const incomePendingTotal = total(incomes.filter((i) => !i.received));
   const expenseTransactionsTotal = total(expenses);
   const fixedBillsTotal = total(fixedBills);
   // Do cartão entra só `entriesTotal`: as assinaturas já vieram em fixedBills.
@@ -506,13 +517,15 @@ export async function getMonthPlan(
     isFuture: diff > 0,
     isCurrent: diff === 0,
     incomes,
-    incomeTotal,
+    incomeReceivedTotal,
+    incomePendingTotal,
+    incomeTotal: incomeReceivedTotal + incomePendingTotal,
     expenses,
     expenseTransactionsTotal,
     fixedBills,
     fixedBillsTotal,
     invoice,
     expenseTotal,
-    balance: incomeTotal - expenseTotal,
+    balance: incomeReceivedTotal - expenseTotal,
   };
 }

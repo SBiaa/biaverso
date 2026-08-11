@@ -22,6 +22,7 @@ type TransactionInitial = {
   category: string;
   payMethod: string | null;
   notes: string | null;
+  received?: boolean;
 };
 
 function emptyForm() {
@@ -34,6 +35,7 @@ function emptyForm() {
     category: categoryOptions[0],
     payMethod: "",
     notes: "",
+    received: true,
   };
 }
 
@@ -47,6 +49,7 @@ function formFromTransaction(transaction: TransactionInitial) {
     category: transaction.category,
     payMethod: transaction.payMethod ?? "",
     notes: transaction.notes ?? "",
+    received: transaction.received ?? true,
   };
 }
 
@@ -88,6 +91,8 @@ export function AddTransactionForm({
       payMethod: form.payMethod || null,
       amount: Number(form.amount),
       date: form.date,
+      // "Caiu na conta" só existe para entrada; saída nasce sempre marcada.
+      received: form.type === "ENTRADA" ? form.received : true,
     };
 
     try {
@@ -182,6 +187,24 @@ export function AddTransactionForm({
         onChange={(e) => update("notes", e.target.value)}
         className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       />
+      {form.type === "ENTRADA" && (
+        <label className="flex items-start gap-2 text-sm text-text-primary">
+          <input
+            type="checkbox"
+            checked={form.received}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, received: e.target.checked }))
+            }
+            className="mt-0.5"
+          />
+          <span>
+            Já caiu na conta
+            <span className="block text-xs text-text-secondary">
+              Desmarque se ainda é só previsão — aí ela não soma no saldo do mês.
+            </span>
+          </span>
+        </label>
+      )}
       <div className="flex gap-2">
         <Button onClick={handleSubmit} disabled={saving}>
           Salvar

@@ -381,6 +381,10 @@ model Transaction {
   category   TransactionCategory
   payMethod  PayMethod?
   notes      String?
+  /// Só faz sentido em ENTRADA: `false` é dinheiro previsto que ainda não caiu
+  /// na conta. Previsão não entra no saldo do mês — só depois de marcada.
+  /// Saída nasce `true`, o campo é ignorado nela.
+  received   Boolean             @default(true)
   createdAt  DateTime            @default(now())
   businessId String?
   business   Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
@@ -392,6 +396,7 @@ model Transaction {
   @@index([date])
   @@index([type, date])
   @@index([businessId])
+  @@index([type, received])
 }
 
 enum TransactionType {

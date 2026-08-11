@@ -124,7 +124,12 @@ export const transactionSchema = z.object({
   payMethod: z.enum(E.PayMethod).nullish(),
   businessId: optionalId,
   notes: optionalText,
+  // Entrada prevista nasce `false` e só conta no saldo depois de marcada.
+  received: z.boolean().default(true),
 });
+
+/** Marcar que a entrada caiu na conta (ou desmarcar). */
+export const transactionReceivedSchema = z.object({ received: z.boolean() });
 
 export const fixedBillSchema = z.object({
   name: text,

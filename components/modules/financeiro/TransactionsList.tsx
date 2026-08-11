@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { BusinessBadge, ErrorNote } from "@/components/ui";
+import { Badge, BusinessBadge, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { AddTransactionForm } from "./AddTransactionForm";
+import { IncomeReceivedToggle } from "./IncomeReceivedToggle";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { transactionCategoryLabels } from "@/lib/labels";
 
@@ -22,6 +23,7 @@ type Transaction = {
   category: string;
   payMethod: string | null;
   notes: string | null;
+  received?: boolean;
 };
 
 export function TransactionsList({
@@ -86,6 +88,10 @@ export function TransactionsList({
             className="flex items-center justify-between gap-3 py-2.5 text-sm"
           >
             <div className="flex items-center gap-3">
+              {/* Entrada prevista pode ser marcada como recebida daqui mesmo. */}
+              {t.type === "ENTRADA" && (
+                <IncomeReceivedToggle id={t.id} received={t.received ?? true} />
+              )}
               <BusinessBadge business={t.business} />
               <div>
                 <p className="text-text-primary">{t.name}</p>
@@ -96,10 +102,19 @@ export function TransactionsList({
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {t.type === "ENTRADA" && t.received === false && (
+                <Badge className="bg-badge-casa-bg text-badge-casa-text">
+                  Previsto
+                </Badge>
+              )}
               <span
                 className={cn(
                   "font-medium",
-                  t.type === "ENTRADA" ? "text-emerald-600" : "text-red-600",
+                  t.type !== "ENTRADA"
+                    ? "text-red-600"
+                    : t.received === false
+                      ? "text-text-secondary"
+                      : "text-emerald-600",
                 )}
               >
                 {t.type === "ENTRADA" ? "+" : "-"}
