@@ -66,6 +66,10 @@ async function getDay(date: Date) {
           type: true,
           dueDate: true,
           business: { select: { name: true, color: true } },
+          subtasks: {
+            orderBy: { order: "asc" },
+            select: { id: true, title: true, done: true },
+          },
         },
       },
       mealLogs: {
@@ -105,6 +109,10 @@ async function ProductionSection({ date }: { date: Date }) {
       businessId: true,
       business: { select: { name: true, color: true } },
       client: { select: { name: true } },
+      subtasks: {
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, done: true },
+      },
     },
     orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { createdAt: "asc" }],
   });
@@ -135,6 +143,7 @@ async function ProductionSection({ date }: { date: Date }) {
       urgent: task.priority === "URGENTE",
       dueDate: task.dueDate ? task.dueDate.toISOString() : null,
       overdue: isTaskOverdue(task),
+      subtasks: task.subtasks,
     });
   }
 
@@ -168,6 +177,10 @@ async function CollectionTasksSection({ date }: { date: Date }) {
       collection: {
         select: { name: true, businessId: true, business: { select: { color: true } } },
       },
+      subtasks: {
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, done: true },
+      },
     },
     orderBy: [{ dueDate: "asc" }, { order: "asc" }],
   });
@@ -184,6 +197,7 @@ async function CollectionTasksSection({ date }: { date: Date }) {
         collectionName: t.collection.name,
         businessId: t.collection.businessId,
         businessColor: t.collection.business.color,
+        subtasks: t.subtasks,
       }))}
     />
   );
@@ -295,6 +309,7 @@ export default async function DiaPage({
               typeLabel: t.type === "AVULSA" ? null : taskTypeLabels[t.type],
               business: t.business,
               overdue: !t.done && t.dueDate !== null && t.dueDate.getTime() < today.getTime(),
+              subtasks: t.subtasks,
             }))}
           />
         </Card>

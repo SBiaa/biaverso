@@ -104,6 +104,8 @@ model Task {
   template   Task?   @relation("RoutineTemplate", fields: [templateId], references: [id], onDelete: SetNull)
   instances  Task[]  @relation("RoutineTemplate")
 
+  subtasks Subtask[]
+
   @@index([dayId])
   @@index([businessId])
   @@index([projectId])
@@ -116,6 +118,31 @@ enum TaskType {
   ROTINA_NORMAL
   ROTINA_FAXINA
   AVULSA
+}
+
+// Quebra de uma tarefa em passos menores. Pertence a exatamente uma tarefa — do
+// dia a dia, de produção ou de coleção. Os três lados são opcionais aqui porque
+// o Prisma não tem relação polimórfica; quem garante o "exatamente um" é o
+// schema da API.
+model Subtask {
+  id        String   @id @default(cuid())
+  title     String
+  done      Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  productionTaskId String?
+  productionTask   ProductionTask? @relation(fields: [productionTaskId], references: [id], onDelete: Cascade)
+
+  collectionTaskId String?
+  collectionTask   CollectionTask? @relation(fields: [collectionTaskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, order])
+  @@index([productionTaskId, order])
+  @@index([collectionTaskId, order])
 }
 
 // AGENDA
@@ -852,6 +879,8 @@ model ProductionTask {
   projectId  String?
   project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
+  subtasks Subtask[]
+
   @@index([businessId, status])
   @@index([businessId, dueDate])
   @@index([dueDate, status])
@@ -951,6 +980,8 @@ model CollectionTask {
 
   collectionId String
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  subtasks Subtask[]
 
   @@index([collectionId, order])
   // As tarefas do dia varrem por prazo em aberto.

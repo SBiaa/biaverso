@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
+import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "./Subtasks";
 
 type TaskItem = {
   id: string;
@@ -22,6 +23,7 @@ type TaskItem = {
   typeLabel: string | null;
   business: { name: string; color: string } | null;
   overdue: boolean;
+  subtasks: SubtaskItem[];
 };
 
 type TaskListByOriginProps = {
@@ -34,6 +36,60 @@ type TaskListByOriginProps = {
 };
 
 const originOptions = Object.keys(originLabels) as BadgeOrigin[];
+
+function TaskRow({ task, onToggle }: { task: TaskItem; onToggle: (id: string) => void }) {
+  const subtasks = useSubtasks({ kind: "task", id: task.id }, task.subtasks);
+  // Tarefa com passos abertos já nasce expandida: o ponto é ver por onde começar.
+  const [open, setOpen] = useState(task.subtasks.length > 0 && !task.done);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex w-full items-center gap-2 pl-1 text-sm">
+        <button
+          type="button"
+          onClick={() => onToggle(task.id)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          {task.done ? (
+            <CheckCircle2 size={16} className="shrink-0 text-accent" />
+          ) : (
+            <Circle size={16} className="shrink-0 text-text-secondary" />
+          )}
+          <span
+            className={cn(
+              "truncate text-text-primary",
+              task.done && "text-text-secondary line-through",
+            )}
+          >
+            {task.title}
+          </span>
+        </button>
+        {/* Selos à direita: os títulos ficam alinhados numa coluna só. */}
+        <span className="flex shrink-0 items-center gap-1.5">
+          {task.typeLabel && <Badge>{task.typeLabel}</Badge>}
+          {task.business && <BusinessBadge business={task.business} />}
+          {task.overdue && !task.done && (
+            <span className="whitespace-nowrap rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+              Atrasado
+            </span>
+          )}
+          <SubtaskToggle
+            open={open}
+            onClick={() => setOpen((v) => !v)}
+            doneCount={subtasks.doneCount}
+            total={subtasks.subtasks.length}
+          />
+        </span>
+      </div>
+
+      {open && (
+        <div className="pl-7">
+          <SubtaskList {...subtasks} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function TaskListByOrigin({
   dayId,
@@ -90,6 +146,7 @@ export function TaskListByOrigin({
           typeLabel: null,
           business: null,
           overdue: dayInPast,
+          subtasks: [],
         },
       ]);
       setTitle("");
@@ -113,36 +170,7 @@ export function TaskListByOrigin({
           <div key={taskOrigin} className="flex flex-col gap-1.5">
             <Badge origin={taskOrigin as BadgeOrigin} />
             {items.map((task) => (
-              <button
-                key={task.id}
-                type="button"
-                onClick={() => toggle(task.id)}
-                className="flex w-full items-center gap-2 pl-1 text-left text-sm"
-              >
-                {task.done ? (
-                  <CheckCircle2 size={16} className="shrink-0 text-accent" />
-                ) : (
-                  <Circle size={16} className="shrink-0 text-text-secondary" />
-                )}
-                <span
-                  className={cn(
-                    "flex-1 truncate text-text-primary",
-                    task.done && "text-text-secondary line-through",
-                  )}
-                >
-                  {task.title}
-                </span>
-                {/* Selos à direita: os títulos ficam alinhados numa coluna só. */}
-                <span className="flex shrink-0 items-center gap-1.5">
-                  {task.typeLabel && <Badge>{task.typeLabel}</Badge>}
-                  {task.business && <BusinessBadge business={task.business} />}
-                  {task.overdue && !task.done && (
-                    <span className="whitespace-nowrap rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
-                      Atrasado
-                    </span>
-                  )}
-                </span>
-              </button>
+              <TaskRow key={task.id} task={task} onToggle={toggle} />
             ))}
           </div>
         ))

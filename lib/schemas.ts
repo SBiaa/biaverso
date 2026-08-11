@@ -54,6 +54,25 @@ export const taskCreateSchema = z.object({
 });
 export const taskPatchSchema = z.object({ done: z.boolean() });
 
+// Uma subtarefa pende de UMA tarefa — do dia, de produção ou de coleção. O
+// banco aceita os três campos nulos; aqui não.
+export const subtaskCreateSchema = z
+  .object({
+    title: text,
+    taskId: optionalId,
+    productionTaskId: optionalId,
+    collectionTaskId: optionalId,
+  })
+  .refine(
+    (v) => [v.taskId, v.productionTaskId, v.collectionTaskId].filter(Boolean).length === 1,
+    { message: "informe a tarefa dona da subtarefa", path: ["taskId"] },
+  );
+
+export const subtaskPatchSchema = z.object({
+  title: text.optional(),
+  done: z.boolean().optional(),
+});
+
 export const routineCreateSchema = z.object({
   title: text,
   type: z.enum(["ROTINA_NORMAL", "ROTINA_FAXINA"]),

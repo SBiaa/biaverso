@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, Circle } from "lucide-react";
 import { Card, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR } from "@/lib/utils";
+import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "./Subtasks";
 
 type Item = {
   id: string;
@@ -16,7 +17,79 @@ type Item = {
   urgent: boolean;
   dueDate: string | null;
   overdue: boolean;
+  subtasks: SubtaskItem[];
 };
+
+function TaskRow({ task, onToggle }: { task: Item; onToggle: (id: string) => void }) {
+  const done = task.status === "CONCLUIDO";
+  const late = task.overdue && !done;
+  const subtasks = useSubtasks({ kind: "production", id: task.id }, task.subtasks);
+  // Tarefa já quebrada nasce aberta: o ponto dos passos é ver por onde começar.
+  const [open, setOpen] = useState(task.subtasks.length > 0 && !done);
+
+  return (
+    <>
+      <tr>
+        <td className="py-2 pr-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onToggle(task.id)}
+              className="flex min-w-0 items-center gap-2 text-left"
+            >
+              {done ? (
+                <CheckCircle2 size={16} className="shrink-0 text-accent" />
+              ) : (
+                <Circle size={16} className="shrink-0 text-text-secondary" />
+              )}
+              {task.urgent && !done && (
+                <AlertTriangle size={14} className="shrink-0 text-red-600" />
+              )}
+              <span
+                className={cn("text-text-primary", done && "text-text-secondary line-through")}
+              >
+                {task.title}
+                {task.urgent && <span className="sr-only"> (urgente)</span>}
+              </span>
+            </button>
+            <SubtaskToggle
+              open={open}
+              onClick={() => setOpen((v) => !v)}
+              doneCount={subtasks.doneCount}
+              total={subtasks.subtasks.length}
+            />
+          </div>
+        </td>
+        <td className="py-2 pr-3 text-text-secondary">{task.typeLabel}</td>
+        <td className="py-2 pr-3 text-text-secondary">
+          {task.clientName ?? <span className="text-text-secondary/60">Interno</span>}
+        </td>
+        <td className="py-2 whitespace-nowrap">
+          {task.dueDate && (
+            <span className={cn("text-text-secondary", late && "font-medium text-red-600")}>
+              {formatDateBR(new Date(task.dueDate))}
+            </span>
+          )}
+          {late && (
+            <span className="ml-1.5 whitespace-nowrap rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+              Atrasado
+            </span>
+          )}
+        </td>
+      </tr>
+      {open && (
+        // `divide-y` do tbody separaria a tarefa dos próprios passos.
+        <tr className="border-t-0">
+          {/* Os passos ocupam a largura toda: quebrar tarefa é texto corrido,
+              não cabe dentro da coluna "Tarefa". */}
+          <td colSpan={4} className="pb-3 pl-6">
+            <SubtaskList {...subtasks} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
 
 export type ProductionGroup = {
   businessId: string;
@@ -109,62 +182,13 @@ export function ProductionTasksToday({ groups }: { groups: ProductionGroup[] }) 
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {group.tasks.map((task) => {
-                  const done = task.status === "CONCLUIDO";
-                  const late = task.overdue && !done;
-                  return (
-                    <tr key={task.id}>
-                      <td className="py-2 pr-3">
-                        <button
-                          type="button"
-                          onClick={() => toggle(group.businessId, task.id)}
-                          className="flex items-center gap-2 text-left"
-                        >
-                          {done ? (
-                            <CheckCircle2 size={16} className="shrink-0 text-accent" />
-                          ) : (
-                            <Circle size={16} className="shrink-0 text-text-secondary" />
-                          )}
-                          {task.urgent && !done && (
-                            <AlertTriangle size={14} className="shrink-0 text-red-600" />
-                          )}
-                          <span
-                            className={cn(
-                              "text-text-primary",
-                              done && "text-text-secondary line-through",
-                            )}
-                          >
-                            {task.title}
-                            {task.urgent && <span className="sr-only"> (urgente)</span>}
-                          </span>
-                        </button>
-                      </td>
-                      <td className="py-2 pr-3 text-text-secondary">{task.typeLabel}</td>
-                      <td className="py-2 pr-3 text-text-secondary">
-                        {task.clientName ?? (
-                          <span className="text-text-secondary/60">Interno</span>
-                        )}
-                      </td>
-                      <td className="py-2 whitespace-nowrap">
-                        {task.dueDate && (
-                          <span
-                            className={cn(
-                              "text-text-secondary",
-                              late && "font-medium text-red-600",
-                            )}
-                          >
-                            {formatDateBR(new Date(task.dueDate))}
-                          </span>
-                        )}
-                        {late && (
-                          <span className="ml-1.5 whitespace-nowrap rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
-                            Atrasado
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {group.tasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    onToggle={(id) => toggle(group.businessId, id)}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
