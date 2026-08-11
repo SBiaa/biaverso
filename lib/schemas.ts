@@ -241,11 +241,61 @@ export const projectCreateSchema = z.object({
 });
 export const projectPatchSchema = projectCreateSchema
   .omit({ businessId: true, clientId: true })
-  .partial();
+  .partial()
+  // A documentação é texto livre: string vazia é um valor legítimo ("limpei o
+  // conteúdo"), então aqui não vale o `optionalText` que troca "" por null.
+  .extend({ content: z.string().nullish(), clientId: optionalId });
 
 export const projectTaskCreateSchema = z.object({
   title: text,
   dueDate: dateOnly.nullish(),
+});
+
+// ------------------------------------------------- documentos do projeto
+export const projectDocumentCreateSchema = z.object({
+  title: text,
+  url: text,
+  type: z.enum(E.DocumentType).default("LINK"),
+  notes: optionalText,
+});
+export const projectDocumentPatchSchema = projectDocumentCreateSchema.partial();
+
+// ------------------------------------------------ credenciais do projeto
+export const projectCredentialCreateSchema = z.object({
+  passwordEntryId: id,
+});
+
+// -------------------------------------------- tabela de preços do projeto
+export const projectPriceCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  price: money,
+  unit: optionalText,
+});
+export const projectPricePatchSchema = projectPriceCreateSchema
+  .partial()
+  .extend({ order: z.coerce.number().int().min(0).optional() });
+
+// ------------------------------------------------- tarefas das coleções
+export const collectionTaskCreateSchema = z.object({
+  title: text,
+  description: optionalText,
+  dueDate: dateOnly.nullish(),
+});
+export const collectionTaskPatchSchema = collectionTaskCreateSchema
+  .partial()
+  .extend({
+    done: z.boolean().optional(),
+    order: z.coerce.number().int().min(0).optional(),
+  });
+
+/** Reordenação por drag-and-drop: a lista inteira na ordem nova. */
+export const reorderSchema = z.object({
+  ids: z.array(id).min(1),
+});
+
+export const projectsOverviewQuerySchema = z.object({
+  businessId: filter(id),
 });
 
 // -------------------------------------------------------------------- ace
@@ -523,4 +573,118 @@ export const eventPatchSchema = z.object({
   endTime: timeOfDay,
   allDay: z.boolean().optional(),
   category: z.enum(E.EventCategory).optional(),
+});
+
+// ------------------------------------------------------------------ beleza
+/** Tetos de sanidade: intervalo de cuidado em dias e PAO em meses. */
+const intervalDays = z.coerce.number().int().min(1).max(365);
+const paoMonths = z.coerce.number().int().min(1).max(120);
+const orderIndex = z.coerce.number().int().min(0);
+
+/**
+ * Gasto de beleza pode virar lançamento no financeiro. É opt-in: só cria a
+ * Transaction quando a tela marca a caixinha, para registrar custo não sair
+ * mexendo no caixa sem a dona pedir.
+ */
+const createTransaction = z.boolean().default(false);
+
+export const careRoutineCreateSchema = z.object({
+  name: text,
+  timeOfDay: z.enum(E.RoutineTime).default("QUALQUER"),
+});
+export const careRoutinePatchSchema = z.object({
+  name: text.optional(),
+  timeOfDay: z.enum(E.RoutineTime).optional(),
+  active: z.boolean().optional(),
+  order: orderIndex.optional(),
+});
+
+export const careRoutineStepCreateSchema = z.object({
+  title: text,
+  notes: optionalText,
+  productId: optionalId,
+});
+export const careRoutineStepPatchSchema = careRoutineStepCreateSchema
+  .partial()
+  .extend({ order: orderIndex.optional() });
+
+/** Reordenação por arrastar: a posição no array vira o `order`. */
+export const stepsReorderSchema = z.object({ ids: z.array(id).min(1) });
+
+/** Marcar a rotina do dia. Sem `date`, o servidor usa hoje. */
+export const careRoutineLogSchema = z.object({
+  date: dateOnly.optional(),
+  done: z.boolean().default(true),
+});
+
+export const careScheduleCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+});
+export const careSchedulePatchSchema = careScheduleCreateSchema.partial().extend({
+  active: z.boolean().optional(),
+  currentStep: orderIndex.optional(),
+});
+
+export const careScheduleStepCreateSchema = z.object({
+  title: text,
+  description: optionalText,
+  intervalDays: intervalDays.default(7),
+  productId: optionalId,
+});
+export const careScheduleStepPatchSchema = careScheduleStepCreateSchema
+  .partial()
+  .extend({ order: orderIndex.optional() });
+
+/**
+ * Registrar a etapa atual do ciclo. `stepId` só é aceito para corrigir a mão —
+ * sem ele vale o `currentStep` gravado no cronograma.
+ */
+export const careScheduleLogSchema = z.object({
+  date: dateOnly.optional(),
+  stepId: optionalId,
+  notes: optionalText,
+});
+
+export const careAppointmentCreateSchema = z.object({
+  name: text,
+  type: z.enum(E.CareType).default("OUTRO"),
+  intervalDays,
+  lastDoneAt: dateOnly.nullish(),
+  notes: optionalText,
+});
+export const careAppointmentPatchSchema = careAppointmentCreateSchema
+  .partial()
+  .extend({ active: z.boolean().optional() });
+
+export const careAppointmentLogSchema = z.object({
+  date: dateOnly.optional(),
+  cost: money.nullish(),
+  notes: optionalText,
+  createTransaction,
+});
+
+export const beautyProductCreateSchema = z.object({
+  name: text,
+  brand: optionalText,
+  category: z.enum(E.ProductCategory).default("OUTRO"),
+  openedAt: dateOnly.nullish(),
+  // Ignorado quando `openedAt` + `pao` existem: aí a validade é derivada.
+  expiresAt: dateOnly.nullish(),
+  pao: paoMonths.nullish(),
+  cost: money.nullish(),
+  notes: optionalText,
+  createTransaction,
+});
+export const beautyProductPatchSchema = beautyProductCreateSchema
+  .omit({ createTransaction: true })
+  .partial()
+  .extend({
+    finished: z.boolean().optional(),
+    runningLow: z.boolean().optional(),
+  });
+
+export const beautyProductQuerySchema = z.object({
+  category: filter(z.enum(E.ProductCategory)),
+  status: filter(z.enum(["ativos", "acabados", "todos"])),
 });

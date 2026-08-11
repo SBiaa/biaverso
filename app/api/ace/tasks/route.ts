@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseBody, parseQuery, route } from "@/lib/api";
 import { aceListQuerySchema, productionTaskCreateSchema } from "@/lib/schemas";
-import { resolveTaskCompletedAt, scopeClientFilter } from "@/lib/ace";
+import { linkClientToBusiness, resolveTaskCompletedAt, scopeClientFilter } from "@/lib/ace";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const GET = route(async (request: Request) => {
@@ -37,6 +37,12 @@ export const POST = route(async (request: Request) => {
       completedAt: resolveTaskCompletedAt(data.status, completedAt, null),
     },
   });
+
+  // O select de cliente lista todo mundo, não só quem já era do negócio: quem
+  // veio de fora ganha o vínculo agora.
+  if (task.clientId) {
+    await linkClientToBusiness(task.clientId, task.businessId);
+  }
 
   return NextResponse.json(task);
 });

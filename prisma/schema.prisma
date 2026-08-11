@@ -101,8 +101,8 @@ model Task {
   // podia ser reconhecida pelo título, e renomear um template duplicava a
   // tarefa em todo dia já materializado.
   templateId String?
-  template   Task?     @relation("RoutineTemplate", fields: [templateId], references: [id], onDelete: SetNull)
-  instances  Task[]    @relation("RoutineTemplate")
+  template   Task?   @relation("RoutineTemplate", fields: [templateId], references: [id], onDelete: SetNull)
+  instances  Task[]  @relation("RoutineTemplate")
 
   @@index([dayId])
   @@index([businessId])
@@ -414,6 +414,7 @@ enum TransactionCategory {
   ALIMENTACAO
   CUSTO_OPERACIONAL
   CARTAO_CREDITO
+  BELEZA
   OUTRO
 }
 
@@ -600,6 +601,9 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  // Documentação livre do projeto (markdown): briefing, anotações, combinados.
+  content String?
+
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   clientId   String?
@@ -609,8 +613,71 @@ model Project {
   contentPosts    ContentPost[]
   productionTasks ProductionTask[]
 
+  documents   ProjectDocument[]
+  credentials ProjectCredential[]
+  priceTable  ProjectPriceItem[]
+
   @@index([businessId])
   @@index([clientId])
+}
+
+// Links e arquivos do projeto: briefing no Drive, protótipo no Figma, contrato.
+model ProjectDocument {
+  id        String       @id @default(cuid())
+  title     String
+  url       String
+  type      DocumentType @default(LINK)
+  notes     String?
+  order     Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+enum DocumentType {
+  LINK
+  DRIVE
+  FIGMA
+  BRIEFING
+  CONTRATO
+  OUTRO
+}
+
+// Ponte para o cofre de senhas: a senha continua morando só no PasswordEntry,
+// aqui fica apenas o vínculo com o projeto.
+model ProjectCredential {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  passwordEntryId String
+  passwordEntry   PasswordEntry @relation(fields: [passwordEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, passwordEntryId])
+  @@index([projectId])
+  @@index([passwordEntryId])
+}
+
+// Tabela de preços combinada para o projeto.
+model ProjectPriceItem {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  // Ex.: "por post", "mensal", "por hora".
+  unit        String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 enum ProjectStatus {
@@ -811,8 +878,28 @@ model Collection {
 
   products CollectionProduct[]
   orders   Order[]
+  tasks    CollectionTask[]
 
   @@index([businessId, status])
+}
+
+// Tarefas da coleção: costurar, fotografar, montar o lookbook.
+model CollectionTask {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  done        Boolean   @default(false)
+  dueDate     DateTime?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId, order])
+  // As tarefas do dia varrem por prazo em aberto.
+  @@index([dueDate, done])
 }
 
 enum CollectionStatus {
@@ -930,6 +1017,8 @@ model PasswordEntry {
   notes     String?
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+
+  projectLinks ProjectCredential[]
 }
 
 enum PasswordCategory {
@@ -1058,4 +1147,209 @@ model UserSettings {
   waterUnitMl Int      @default(300)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// BELEZA E AUTOCUIDADO
+//
+// Três ritmos diferentes, por isso três modelos em vez de um só:
+// rotina = todo dia; cronograma = ciclo que gira (capilar); cuidado = a cada N dias.
+
+// ROTINAS DIÁRIAS (skincare manhã/noite, cuidados diários)
+model CareRoutine {
+  id        String      @id @default(cuid())
+  name      String
+  timeOfDay RoutineTime
+  active    Boolean     @default(true)
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  steps CareRoutineStep[]
+  logs  CareRoutineLog[]
+
+  @@index([active, order])
+}
+
+enum RoutineTime {
+  MANHA
+  NOITE
+  QUALQUER
+}
+
+// PASSOS DE UMA ROTINA (ex: 1. limpar, 2. tônico, 3. sérum)
+model CareRoutineStep {
+  id    String  @id @default(cuid())
+  title String
+  notes String?
+  order Int     @default(0)
+
+  routineId String
+  routine   CareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   BeautyProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([routineId, order])
+  @@index([productId])
+}
+
+// REGISTRO DIÁRIO DE ROTINA CUMPRIDA
+// `date` é meia-noite UTC do dia, como todo dia-calendário do app.
+model CareRoutineLog {
+  id   String   @id @default(cuid())
+  done Boolean  @default(false)
+  date DateTime
+
+  routineId String
+  routine   CareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@unique([routineId, date])
+  @@index([date])
+}
+
+// CRONOGRAMAS COM CICLO (capilar, etc)
+model CareSchedule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  // Índice do passo atual no ciclo — anda sozinho a cada etapa registrada e
+  // volta a zero no fim, então o ciclo gira sem precisar de data fixa.
+  currentStep Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  steps CareScheduleStep[]
+  logs  CareScheduleLog[]
+
+  @@index([active])
+}
+
+// PASSOS DO CICLO (ex: hidratação → nutrição → reconstrução)
+model CareScheduleStep {
+  id           String  @id @default(cuid())
+  title        String
+  description  String?
+  order        Int     @default(0)
+  intervalDays Int     @default(7)
+
+  scheduleId String
+  schedule   CareSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   BeautyProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  logs CareScheduleLog[]
+
+  @@index([scheduleId, order])
+  @@index([productId])
+}
+
+// REGISTRO DE ETAPA DO CICLO REALIZADA
+model CareScheduleLog {
+  id        String   @id @default(cuid())
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  scheduleId String
+  schedule   CareSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // Cascade também aqui: sem o passo, a linha do histórico não diz mais o que
+  // foi feito. Restrict (o padrão) só faria a exclusão do passo falhar com P2003.
+  stepId String
+  step   CareScheduleStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId, date])
+  @@index([stepId])
+}
+
+// CUIDADOS AGENDADOS (unhas, cabelo, depilação)
+model CareAppointment {
+  id           String    @id @default(cuid())
+  name         String
+  type         CareType
+  intervalDays Int
+  lastDoneAt   DateTime?
+  // Derivado de lastDoneAt + intervalDays. Fica gravado para a lista poder
+  // ordenar e filtrar por vencimento direto no banco.
+  nextDueAt    DateTime?
+  notes        String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  logs CareAppointmentLog[]
+
+  @@index([active, nextDueAt])
+}
+
+enum CareType {
+  UNHAS
+  CABELO
+  DEPILACAO
+  SOBRANCELHA
+  ESTETICA
+  MASSAGEM
+  OUTRO
+}
+
+// HISTÓRICO DE CUIDADOS REALIZADOS
+model CareAppointmentLog {
+  id        String   @id @default(cuid())
+  date      DateTime
+  cost      Float?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  appointmentId String
+  appointment   CareAppointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId, date])
+}
+
+// PRODUTOS DE BELEZA
+model BeautyProduct {
+  id        String          @id @default(cuid())
+  name      String
+  brand     String?
+  category  ProductCategory
+  openedAt  DateTime?
+  // Calculado a partir de openedAt + pao quando os dois existem; também pode
+  // ser preenchido na mão para produto com validade impressa.
+  expiresAt DateTime?
+  // Period After Opening em meses (o "12M" do potinho).
+  pao       Int?
+
+  finished   Boolean   @default(false)
+  finishedAt DateTime?
+  // Marcado na mão quando o produto está no fim — é o que alimenta o card
+  // "quase acabando", já que o app não tem como medir o que sobrou no pote.
+  runningLow Boolean   @default(false)
+  cost       Float?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  routineSteps  CareRoutineStep[]
+  scheduleSteps CareScheduleStep[]
+
+  @@index([finished, category])
+  @@index([expiresAt])
+  @@index([runningLow])
+}
+
+enum ProductCategory {
+  SKINCARE_LIMPEZA
+  SKINCARE_TRATAMENTO
+  SKINCARE_HIDRATACAO
+  SKINCARE_PROTECAO
+  CABELO_SHAMPOO
+  CABELO_CONDICIONADOR
+  CABELO_MASCARA
+  CABELO_FINALIZADOR
+  CORPO
+  MAQUIAGEM
+  UNHAS
+  OUTRO
 }

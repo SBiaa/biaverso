@@ -6,12 +6,14 @@ import { X } from "lucide-react";
 import { Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { postTypeLabels, socialNetworkLabels, contentStatusLabels } from "@/lib/labels";
+import { ClientOptions } from "./ClientOptions";
 
 const typeOptions = Object.keys(postTypeLabels);
 const networkOptions = Object.keys(socialNetworkLabels);
 const statusOptions = Object.keys(contentStatusLabels);
 
-export type ClientOption = { id: string; name: string };
+/** `linked` = já tem vínculo com o negócio da tela; os demais vêm de outros negócios. */
+export type ClientOption = { id: string; name: string; linked: boolean };
 export type ProjectOption = { id: string; name: string; clientId: string | null; createdAt: string };
 
 export type PostRecord = {
@@ -268,11 +270,7 @@ export function ContentPostModal({
             className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
           >
             <option value={INTERNAL_CLIENT}>Projeto interno</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            <ClientOptions clients={clients} />
           </select>
           <select
             value={form.projectId}

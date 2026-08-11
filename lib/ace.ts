@@ -205,3 +205,62 @@ export async function getMonthlyHistory(
 
   return entries;
 }
+
+// Campos exatos que `toPostRecord`/`toTaskRecord` consomem. Usar estes `select`
+// evita puxar a linha inteira do banco só para montar o record — e o
+// `satisfies` quebra o build se algum campo do record deixar de ser buscado.
+export const postRecordSelect = {
+  id: true,
+  title: true,
+  type: true,
+  network: true,
+  status: true,
+  publishDate: true,
+  completedAt: true,
+  caption: true,
+  notes: true,
+  clientId: true,
+  projectId: true,
+} satisfies Prisma.ContentPostSelect;
+
+export const taskRecordSelect = {
+  id: true,
+  title: true,
+  type: true,
+  description: true,
+  priority: true,
+  status: true,
+  dueDate: true,
+  completedAt: true,
+  notes: true,
+  clientId: true,
+  projectId: true,
+} satisfies Prisma.ProductionTaskSelect;
+
+// Das telas que mostram o cliente ao lado do item, só o nome é lido.
+export const postWithClientSelect = {
+  ...postRecordSelect,
+  client: { select: { name: true } },
+} satisfies Prisma.ContentPostSelect;
+
+export const taskWithClientSelect = {
+  ...taskRecordSelect,
+  client: { select: { name: true } },
+} satisfies Prisma.ProductionTaskSelect;
+
+/**
+ * Garante que o cliente esteja vinculado ao negócio.
+ *
+ * Os selects de cliente mostram a agenda inteira, não só quem já é do negócio
+ * — é comum a mesma pessoa ser cliente da Ace e da Creative. Quando ela é
+ * escolhida num negócio onde ainda não tinha vínculo, o vínculo nasce aqui.
+ * `upsert` com `update: {}` é intencional: se já existe, nada é sobrescrito,
+ * então um vínculo marcado como INATIVO não volta para ATIVO sozinho.
+ */
+export async function linkClientToBusiness(clientId: string, businessId: string) {
+  await prisma.clientBusiness.upsert({
+    where: { clientId_businessId: { clientId, businessId } },
+    create: { clientId, businessId, status: "ATIVO" },
+    update: {},
+  });
+}

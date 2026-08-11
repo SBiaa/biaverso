@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   CalendarDays,
   Compass,
+  FolderKanban,
   GraduationCap,
   Home,
   KeyRound,
@@ -11,6 +12,7 @@ import {
   LineChart,
   MoreHorizontal,
   Settings,
+  Sparkles,
   UtensilsCrossed,
   Wallet,
 } from "lucide-react";
@@ -33,6 +35,8 @@ export const navGroups: NavGroup[] = [
       { href: "/", label: "Home", icon: Home },
       { href: "/dia", label: "Dia a dia", icon: CalendarCheck },
       { href: "/agenda", label: "Agenda", icon: CalendarDays },
+      // Projetos de todos os negócios num lugar só.
+      { href: "/projetos", label: "Projetos", icon: FolderKanban },
     ],
   },
   {
@@ -41,6 +45,7 @@ export const navGroups: NavGroup[] = [
       { href: "/visao", label: "Central de Visão", icon: Compass },
       { href: "/financeiro", label: "Financeiro", icon: Wallet },
       { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
+      { href: "/beleza", label: "Beleza", icon: Sparkles },
       { href: "/avaliacao", label: "Avaliação", icon: LineChart },
     ],
   },

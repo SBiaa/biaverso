@@ -12,6 +12,7 @@ import {
   type ClientOption,
   type ProjectOption,
 } from "./ContentPostModal";
+import { ClientOptions } from "./ClientOptions";
 
 const typeOptions = Object.keys(productionTypeLabels);
 const priorityOptions = Object.keys(priorityLabels);
@@ -271,11 +272,7 @@ export function ProductionTaskModal({
             className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
           >
             <option value={INTERNAL_CLIENT}>Projeto interno</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            <ClientOptions clients={clients} />
           </select>
           <select
             value={form.projectId}

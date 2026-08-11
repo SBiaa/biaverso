@@ -19,8 +19,16 @@ import {
   toTaskRecord,
   contentStatusColors,
   productionStatusColors,
+  postRecordSelect,
+  taskRecordSelect,
+  postWithClientSelect,
+  taskWithClientSelect,
 } from "@/lib/ace";
 import { buildBusinessTabs, resolveTab } from "@/lib/business-modules";
+import { ProjectGrid } from "@/components/modules/projetos/ProjectGrid";
+import { ProjectFilterBar } from "@/components/modules/projetos/ProjectFilterBar";
+import { getProjectsOverview } from "@/lib/projects";
+import { projectSortOptions, type ProjectSort } from "@/lib/projects-shared";
 import {
   contentStatusLabels,
   productionStatusLabels,
@@ -47,6 +55,7 @@ type SearchParams = Promise<{
   itemStatus?: string;
   month?: string;
   year?: string;
+  sort?: string;
 }>;
 
 export default async function BusinessDetailPage({
@@ -68,11 +77,17 @@ export default async function BusinessDetailPage({
   const tabs = buildBusinessTabs(id, business.modules);
   const tab = resolveTab(tabs, sp.tab);
 
-  const [clients, projects] = await Promise.all([
+  const [allClients, projects] = await Promise.all([
+    // Todos os clientes, não só os deste negócio: a mesma pessoa costuma ser
+    // cliente de mais de um. O select separa em dois grupos com a flag abaixo,
+    // e escolher alguém sem vínculo faz a API criar o vínculo.
     prisma.client.findMany({
-      where: { businessLinks: { some: { businessId: id } } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        businessLinks: { where: { businessId: id }, select: { id: true } },
+      },
     }),
     prisma.project.findMany({
       where: { businessId: id },
@@ -80,6 +95,12 @@ export default async function BusinessDetailPage({
       select: { id: true, name: true, clientId: true, createdAt: true },
     }),
   ]);
+
+  const clients = allClients.map((c) => ({
+    id: c.id,
+    name: c.name,
+    linked: c.businessLinks.length > 0,
+  }));
 
   const projectOptions = projects.map((p) => ({
     id: p.id,
@@ -97,19 +118,33 @@ export default async function BusinessDetailPage({
     const [internalProjects, loosePosts, looseTasks] = await Promise.all([
       prisma.project.findMany({
         where: { businessId: id, isInternal: true },
-        include: {
-          contentPosts: { orderBy: { publishDate: "asc" } },
-          productionTasks: { orderBy: { dueDate: "asc" } },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          contentPosts: {
+            orderBy: { publishDate: "asc" },
+            select: postRecordSelect,
+          },
+          productionTasks: {
+            orderBy: { dueDate: "asc" },
+            select: taskRecordSelect,
+          },
         },
         orderBy: { createdAt: "desc" },
       }),
       prisma.contentPost.findMany({
         where: { businessId: id, clientId: null, projectId: null },
         orderBy: { publishDate: "asc" },
+        select: postRecordSelect,
       }),
       prisma.productionTask.findMany({
         where: { businessId: id, clientId: null, projectId: null },
         orderBy: { dueDate: "asc" },
+        select: taskRecordSelect,
       }),
     ]);
 
@@ -124,15 +159,38 @@ export default async function BusinessDetailPage({
       tasks: p.productionTasks.map(toTaskRecord),
     }));
 
+    // Mesmo grid da página /projetos, já filtrado neste negócio — inclui os
+    // projetos de cliente, que a seção abaixo (só internos) não mostra.
+    const { projects: projectCards } = await getProjectsOverview(id);
+    const sort: ProjectSort = projectSortOptions.includes(sp.sort as ProjectSort)
+      ? (sp.sort as ProjectSort)
+      : "prazo";
+    const visibleCards = projectCards.filter((p) => {
+      if (sp.status && p.status !== sp.status) return false;
+      if (sp.scope === "interno" && !p.isInternal) return false;
+      if (sp.scope === "cliente" && p.isInternal) return false;
+      return true;
+    });
+
     content = (
-      <ProjectsSection
-        businessId={id}
-        projects={projectsWithItems}
-        clients={clients}
-        projectOptions={projectOptions}
-        loosePosts={loosePosts.map(toPostRecord)}
-        looseTasks={looseTasks.map(toTaskRecord)}
-      />
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold text-text-primary">
+            Todos os projetos deste negócio
+          </h2>
+          <ProjectFilterBar businesses={[]} showBusiness={false} />
+          <ProjectGrid projects={visibleCards} sort={sort} showBusinessGroups={false} />
+        </div>
+
+        <ProjectsSection
+          businessId={id}
+          projects={projectsWithItems}
+          clients={clients}
+          projectOptions={projectOptions}
+          loosePosts={loosePosts.map(toPostRecord)}
+          looseTasks={looseTasks.map(toTaskRecord)}
+        />
+      </div>
     );
   } else if (tab === "calendario") {
     const today = todayUtc();
@@ -150,7 +208,7 @@ export default async function BusinessDetailPage({
               clientId: clientFilter,
               publishDate: { gte: start, lt: end },
             },
-            include: { client: true },
+            select: postWithClientSelect,
           }),
       sp.itemType === "post"
         ? Promise.resolve([])
@@ -160,7 +218,7 @@ export default async function BusinessDetailPage({
               clientId: clientFilter,
               dueDate: { gte: start, lt: end },
             },
-            include: { client: true },
+            select: taskWithClientSelect,
           }),
     ]);
 
@@ -215,11 +273,11 @@ export default async function BusinessDetailPage({
     const [posts, tasks] = await Promise.all([
       prisma.contentPost.findMany({
         where: { businessId: id, clientId: clientFilter },
-        include: { client: true },
+        select: postWithClientSelect,
       }),
       prisma.productionTask.findMany({
         where: { businessId: id, clientId: clientFilter },
-        include: { client: true },
+        select: taskWithClientSelect,
       }),
     ]);
 

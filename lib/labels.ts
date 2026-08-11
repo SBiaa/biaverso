@@ -8,6 +8,7 @@ export const transactionCategoryLabels: Record<string, string> = {
   ALIMENTACAO: "Alimentação",
   CUSTO_OPERACIONAL: "Custo operacional",
   CARTAO_CREDITO: "Cartão de crédito",
+  BELEZA: "Beleza e autocuidado",
   OUTRO: "Outro",
 };
 
@@ -46,6 +47,12 @@ export const mealTypeLabels: Record<string, string> = {
   ALMOCO: "Almoço",
   JANTAR: "Janta",
   LANCHE: "Lanche",
+};
+
+export const taskTypeLabels: Record<string, string> = {
+  ROTINA_NORMAL: "Rotina",
+  ROTINA_FAXINA: "Faxina",
+  AVULSA: "Avulsa",
 };
 
 export const projectStatusLabels: Record<string, string> = {
@@ -231,4 +238,54 @@ export const syncStatusLabels: Record<string, string> = {
   PENDENTE: "Aguardando sincronização",
   SINCRONIZADO: "Sincronizado com o Google",
   ERRO: "Erro ao sincronizar",
+};
+
+// ------------------------------------------------------------------- beleza
+export const routineTimeLabels: Record<string, string> = {
+  MANHA: "Manhã",
+  NOITE: "Noite",
+  QUALQUER: "Qualquer hora",
+};
+
+export const careTypeLabels: Record<string, string> = {
+  UNHAS: "Unhas",
+  CABELO: "Cabelo",
+  DEPILACAO: "Depilação",
+  SOBRANCELHA: "Sobrancelha",
+  ESTETICA: "Estética",
+  MASSAGEM: "Massagem",
+  OUTRO: "Outro",
+};
+
+export const productCategoryLabels: Record<string, string> = {
+  SKINCARE_LIMPEZA: "Skincare · limpeza",
+  SKINCARE_TRATAMENTO: "Skincare · tratamento",
+  SKINCARE_HIDRATACAO: "Skincare · hidratação",
+  SKINCARE_PROTECAO: "Skincare · proteção",
+  CABELO_SHAMPOO: "Cabelo · shampoo",
+  CABELO_CONDICIONADOR: "Cabelo · condicionador",
+  CABELO_MASCARA: "Cabelo · máscara",
+  CABELO_FINALIZADOR: "Cabelo · finalizador",
+  CORPO: "Corpo",
+  MAQUIAGEM: "Maquiagem",
+  UNHAS: "Unhas",
+  OUTRO: "Outro",
+};
+
+export const documentTypeLabels: Record<string, string> = {
+  LINK: "Link",
+  DRIVE: "Drive",
+  FIGMA: "Figma",
+  BRIEFING: "Briefing",
+  CONTRATO: "Contrato",
+  OUTRO: "Outro",
+};
+
+export const documentTypeColors: Record<string, string> = {
+  LINK: "#6366F1",
+  DRIVE: "#059669",
+  FIGMA: "#DB2777",
+  BRIEFING: "#D97706",
+  CONTRATO: "#DC2626",
+  OUTRO: "#6B7280",
 };

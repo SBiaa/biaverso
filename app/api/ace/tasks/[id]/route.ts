@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseBody, route } from "@/lib/api";
 import { productionTaskPatchSchema } from "@/lib/schemas";
-import { resolveTaskCompletedAt } from "@/lib/ace";
+import { linkClientToBusiness, resolveTaskCompletedAt } from "@/lib/ace";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,6 +23,11 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
           : completedAt,
     },
   });
+
+  // Trocar para um cliente de outro negócio também cria o vínculo aqui.
+  if (task.clientId && task.clientId !== existing.clientId) {
+    await linkClientToBusiness(task.clientId, task.businessId);
+  }
 
   return NextResponse.json(task);
 });

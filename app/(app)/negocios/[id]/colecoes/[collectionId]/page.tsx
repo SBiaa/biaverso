@@ -5,6 +5,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card, StatCard } from "@/components/ui";
 import { CollectionHeader } from "@/components/modules/loja/CollectionHeader";
 import { CollectionProductsSection } from "@/components/modules/loja/CollectionProductsSection";
+import { CollectionTasksSection } from "@/components/modules/loja/CollectionTasksSection";
 import { orderStatusLabels } from "@/lib/labels";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { orderStatusColors } from "@/lib/loja";
@@ -23,6 +24,7 @@ export default async function CollectionDetailPage({
     include: {
       products: { orderBy: { createdAt: "asc" } },
       orders: { orderBy: { orderDate: "desc" } },
+      tasks: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
     },
   });
   if (!collection || collection.businessId !== businessId) notFound();
@@ -68,6 +70,17 @@ export default async function CollectionDetailPage({
             cost: p.cost,
             imageUrl: p.imageUrl,
             notes: p.notes,
+          }))}
+        />
+
+        <CollectionTasksSection
+          collectionId={collection.id}
+          initialTasks={collection.tasks.map((t) => ({
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            done: t.done,
+            dueDate: t.dueDate ? t.dueDate.toISOString() : null,
           }))}
         />
 

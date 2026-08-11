@@ -5,3 +5,4 @@ export * from "./StatCard";
 export * from "./MonthPicker";
 export * from "./BusinessBadge";
 export * from "./ErrorNote";
+export * from "./Skeleton";

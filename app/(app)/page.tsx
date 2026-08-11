@@ -12,8 +12,10 @@ import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightC
 import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
 import { HomeHabitList } from "@/components/modules/home/HomeHabitList";
 import { HomeTaskList } from "@/components/modules/home/HomeTaskList";
+import { WaterTracker } from "@/components/modules/dia/WaterTracker";
+import { getOrCreateDay } from "@/lib/day";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
-import { formatWaterProgress, getUserSettings } from "@/lib/settings";
+import { getUserSettings } from "@/lib/settings";
 import {
   dayOfYear,
   formatCurrencyBRL,
@@ -42,25 +44,40 @@ export const dynamic = "force-dynamic";
 async function getDashboardData() {
   const date = todayUtc();
 
-  const day = await prisma.day.findUnique({
-    where: { date },
-    include: {
-      events: { orderBy: { time: "asc" } },
-      tasks: { orderBy: { order: "asc" } },
-      habits: { include: { habit: true } },
-      waterLogs: true,
-      mealLogs: { include: { recipe: true } },
-    },
-  });
-
-  const mealPlans = await prisma.mealPlan.findMany({
-    where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
-    include: { recipe: true },
-  });
+  // Antes era `findUnique`, e num dia ainda sem registro a home não tinha
+  // `dayId` nenhum para pendurar a água. O upsert garante o Day de hoje.
+  const today = await getOrCreateDay(date);
 
   const { start: monthStart, end: monthEnd } = getMonthRange(date);
 
-  const [entradas, saidas] = await Promise.all([
+  // `select` no lugar de `include`: as relações inteiras traziam a linha
+  // completa de Recipe, Habit e Pillar para exibir um punhado de campos.
+  const [day, mealPlans, entradas, saidas, pillars, settings] = await Promise.all([
+    prisma.day.findUniqueOrThrow({
+      where: { id: today.id },
+      select: {
+        id: true,
+        events: {
+          orderBy: { time: "asc" },
+          select: { id: true, time: true, title: true, syncStatus: true },
+        },
+        tasks: {
+          orderBy: { order: "asc" },
+          select: { id: true, title: true, done: true, origin: true },
+        },
+        habits: {
+          select: { id: true, done: true, habit: { select: { name: true } } },
+        },
+        waterLogs: { select: { id: true } },
+        mealLogs: {
+          select: { mealType: true, recipe: { select: { title: true } } },
+        },
+      },
+    }),
+    prisma.mealPlan.findMany({
+      where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
+      select: { mealType: true, recipe: { select: { title: true } } },
+    }),
     prisma.transaction.aggregate({
       _sum: { amount: true },
       where: { type: "ENTRADA", date: { gte: monthStart, lt: monthEnd } },
@@ -69,19 +86,27 @@ async function getDashboardData() {
       _sum: { amount: true },
       where: { type: "SAIDA", date: { gte: monthStart, lt: monthEnd } },
     }),
+    prisma.pillar.findMany({
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        icon: true,
+        conceptualGoals: {
+          select: {
+            measuredGoals: {
+              where: { status: "EM_ANDAMENTO" },
+              orderBy: { deadline: "asc" },
+              select: { title: true, progress: true },
+            },
+          },
+        },
+      },
+    }),
+    getUserSettings(),
   ]);
 
   const saldo = (entradas._sum.amount ?? 0) - (saidas._sum.amount ?? 0);
-
-  const pillars = await prisma.pillar.findMany({
-    include: {
-      conceptualGoals: {
-        include: { measuredGoals: { where: { status: "EM_ANDAMENTO" }, orderBy: { deadline: "asc" } } },
-      },
-    },
-  });
-
-  const settings = await getUserSettings();
 
   const pillarHighlight = pillars
     .map((pillar) => {
@@ -106,13 +131,11 @@ async function getDashboardData() {
 export default async function HomePage() {
   const { day, saldo, date, pillarHighlight, settings, mealPlans } = await getDashboardData();
 
-  const events = day?.events ?? [];
-  const tasks = day?.tasks.map((t) => ({ ...t, origin: t.origin as BadgeOrigin })) ?? [];
-  const habits = day?.habits.map((h) => ({ id: h.id, name: h.habit.name, done: h.done })) ?? [];
-  const waterCount = day?.waterLogs.length ?? 0;
-  // Quem bebeu mais que a meta continua vendo tudo que marcou.
-  const waterSlots = Math.max(settings.waterGoal, waterCount);
-  const mealLogs = day?.mealLogs ?? [];
+  const events = day.events;
+  const tasks = day.tasks.map((t) => ({ ...t, origin: t.origin as BadgeOrigin }));
+  const habits = day.habits.map((h) => ({ id: h.id, name: h.habit.name, done: h.done }));
+  const waterCount = day.waterLogs.length;
+  const mealLogs = day.mealLogs;
 
   const habitsDone = habits.filter((h) => h.done).length;
 
@@ -202,16 +225,11 @@ export default async function HomePage() {
               <div className="mb-4">
                 <HomeHabitList items={habits} />
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {Array.from({ length: waterSlots }, (_, i) => (
-                  <Droplets
-                    key={i}
-                    size={16}
-                    className={i < waterCount ? "text-accent" : "text-border"}
-                    fill={i < waterCount ? "currentColor" : "none"}
-                  />
-                ))}
-              </div>
+              <WaterTracker
+                dayId={day.id}
+                initialCount={waterCount}
+                settings={settings}
+              />
             </Card>
 
             <Card>
@@ -282,22 +300,12 @@ export default async function HomePage() {
         </Card>
 
         <Card>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Água</h2>
-            <span className="text-sm text-text-secondary">
-              {formatWaterProgress(waterCount, settings)}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {Array.from({ length: waterSlots }, (_, i) => (
-              <Droplets
-                key={i}
-                size={16}
-                className={i < waterCount ? "text-accent" : "text-border"}
-                fill={i < waterCount ? "currentColor" : "none"}
-              />
-            ))}
-          </div>
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">Água</h2>
+          <WaterTracker
+            dayId={day.id}
+            initialCount={waterCount}
+            settings={settings}
+          />
         </Card>
 
         <Link

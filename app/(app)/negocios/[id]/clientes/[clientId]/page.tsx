@@ -35,10 +35,15 @@ export default async function AceClientProfilePage({
       },
       orderBy: { createdAt: "desc" },
     }),
+    // Todos os clientes, com a marca de quem já é deste negócio — mesma regra
+    // do select da página do negócio.
     prisma.client.findMany({
-      where: { businessLinks: { some: { businessId } } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        businessLinks: { where: { businessId }, select: { id: true } },
+      },
     }),
     prisma.project.findMany({
       where: { businessId },
@@ -96,7 +101,11 @@ export default async function AceClientProfilePage({
           businessId={businessId}
           clientId={clientId}
           projects={projectsWithItems}
-          clients={businessClients}
+          clients={businessClients.map((c) => ({
+            id: c.id,
+            name: c.name,
+            linked: c.businessLinks.length > 0,
+          }))}
           projectOptions={projectOptions}
         />
 

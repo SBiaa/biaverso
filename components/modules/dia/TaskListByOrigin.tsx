@@ -2,22 +2,45 @@
 
 import { useState } from "react";
 import { CheckCircle2, Circle, Plus } from "lucide-react";
-import { Badge, Button, ErrorNote, originLabels, type BadgeOrigin } from "@/components/ui";
+import {
+  Badge,
+  BusinessBadge,
+  Button,
+  ErrorNote,
+  originLabels,
+  type BadgeOrigin,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
-type TaskItem = { id: string; title: string; done: boolean; origin: BadgeOrigin };
+type TaskItem = {
+  id: string;
+  title: string;
+  done: boolean;
+  origin: BadgeOrigin;
+  /** Null nas avulsas — só rotina/faxina ganham selo de tipo. */
+  typeLabel: string | null;
+  business: { name: string; color: string } | null;
+  overdue: boolean;
+};
 
 type TaskListByOriginProps = {
   dayId: string;
   /** Data do dia aberto (YYYY-MM-DD) — a tarefa vence no dia que está na tela, não em "hoje". */
   dayDate: string;
+  /** Dia aberto já passou: o que for criado aqui já nasce atrasado. */
+  dayInPast: boolean;
   initialTasks: TaskItem[];
 };
 
 const originOptions = Object.keys(originLabels) as BadgeOrigin[];
 
-export function TaskListByOrigin({ dayId, dayDate, initialTasks }: TaskListByOriginProps) {
+export function TaskListByOrigin({
+  dayId,
+  dayDate,
+  dayInPast,
+  initialTasks,
+}: TaskListByOriginProps) {
   const [tasks, setTasks] = useState(initialTasks);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -57,7 +80,18 @@ export function TaskListByOrigin({ dayId, dayDate, initialTasks }: TaskListByOri
         dayId,
         dueDate: dayDate,
       });
-      setTasks((prev) => [...prev, { id: task.id, title: task.title, done: false, origin }]);
+      setTasks((prev) => [
+        ...prev,
+        {
+          id: task.id,
+          title: task.title,
+          done: false,
+          origin,
+          typeLabel: null,
+          business: null,
+          overdue: dayInPast,
+        },
+      ]);
       setTitle("");
       setShowForm(false);
     } catch (e) {
@@ -83,20 +117,30 @@ export function TaskListByOrigin({ dayId, dayDate, initialTasks }: TaskListByOri
                 key={task.id}
                 type="button"
                 onClick={() => toggle(task.id)}
-                className="flex items-center gap-2 pl-1 text-sm"
+                className="flex w-full items-center gap-2 pl-1 text-left text-sm"
               >
                 {task.done ? (
-                  <CheckCircle2 size={16} className="text-accent" />
+                  <CheckCircle2 size={16} className="shrink-0 text-accent" />
                 ) : (
-                  <Circle size={16} className="text-text-secondary" />
+                  <Circle size={16} className="shrink-0 text-text-secondary" />
                 )}
                 <span
                   className={cn(
-                    "text-text-primary",
+                    "flex-1 truncate text-text-primary",
                     task.done && "text-text-secondary line-through",
                   )}
                 >
                   {task.title}
+                </span>
+                {/* Selos à direita: os títulos ficam alinhados numa coluna só. */}
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {task.typeLabel && <Badge>{task.typeLabel}</Badge>}
+                  {task.business && <BusinessBadge business={task.business} />}
+                  {task.overdue && !task.done && (
+                    <span className="whitespace-nowrap rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+                      Atrasado
+                    </span>
+                  )}
                 </span>
               </button>
             ))}

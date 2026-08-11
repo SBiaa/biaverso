@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Card, Button } from "@/components/ui";
 import { formatDateBR } from "@/lib/utils";
 import { projectStatusLabels, contentStatusLabels, productionStatusLabels } from "@/lib/labels";
@@ -194,6 +195,16 @@ export function ProjectsSection({
                     {projectStatusLabels[project.status]}
                   </span>
                 </button>
+
+                {/* Fora do botão de expandir: um <a> dentro de <button> é HTML
+                    inválido e o clique no link seria engolido pelo toggle. */}
+                <Link
+                  href={`/negocios/${businessId}/projetos/${project.id}`}
+                  className="inline-flex items-center gap-1 self-start text-xs font-medium text-accent hover:underline"
+                >
+                  Abrir projeto
+                  <ArrowRight size={13} />
+                </Link>
 
                 {expanded && itemsBlock(project.posts, project.tasks, project.id)}
               </Card>
