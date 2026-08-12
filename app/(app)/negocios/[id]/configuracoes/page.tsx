@@ -22,8 +22,8 @@ export default async function BusinessSettingsPage({
 
   return (
     <>
-      <Topbar title={business.name} />
-      <main className="flex-1 space-y-4 p-4 md:max-w-2xl md:p-6">
+      <Topbar width="narrow" title={business.name} />
+      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <BusinessTabs
           businessId={id}
           tabs={buildBusinessTabs(id, business.modules)}

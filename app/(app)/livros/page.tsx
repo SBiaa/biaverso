@@ -29,7 +29,7 @@ export default async function LivrosPage({
   return (
     <>
       <Topbar title="Livros" />
-      <main className="flex-1 space-y-4 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <BookFilters />
         </div>
@@ -41,7 +41,7 @@ export default async function LivrosPage({
             Nenhum livro encontrado.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
             {books.map((book) => (
               <BookCard key={book.id} book={book} />
             ))}

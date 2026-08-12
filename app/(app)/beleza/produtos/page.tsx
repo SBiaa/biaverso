@@ -28,7 +28,7 @@ export default async function BelezaProdutosPage({
   return (
     <>
       <Topbar title="Produtos" />
-      <main className="flex-1 space-y-4 p-4 md:p-6 md:max-w-4xl">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <h1 className="text-lg font-semibold text-text-primary md:hidden">
           Produtos
         </h1>

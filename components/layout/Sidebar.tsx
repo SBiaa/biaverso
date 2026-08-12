@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2 } from "lucide-react";
@@ -14,16 +15,33 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   return (
     <Link
       href={item.href}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "group flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
         isActive
-          ? "bg-accent/10 text-accent"
-          : "text-text-primary hover:bg-black/[0.03]",
+          ? "bg-surface font-semibold text-accent shadow-elevation"
+          : "font-medium text-text-secondary hover:bg-black/[0.04] hover:text-text-primary",
       )}
     >
-      <Icon size={16} />
-      {item.label}
+      {/* O ícone é o que diferencia os itens de relance numa lista de 20
+          links; apagado quando inativo, ele some junto com o texto. */}
+      <Icon
+        size={16}
+        className={cn(
+          "shrink-0 transition-colors",
+          isActive ? "text-accent" : "text-text-secondary/70 group-hover:text-text-primary",
+        )}
+      />
+      <span className="truncate">{item.label}</span>
     </Link>
+  );
+}
+
+function NavGroupLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="px-3 pb-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary/70">
+      {children}
+    </span>
   );
 }
 
@@ -35,25 +53,37 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
   }
 
   return (
-    <aside className="hidden w-[200px] shrink-0 flex-col gap-6 border-r border-border bg-surface px-3 py-6 md:flex">
-      <span className="px-3 text-lg font-semibold text-text-primary">
+    // `sticky` + `h-screen`: antes a sidebar era um item de flex comum e rolava
+    // junto com a página, então nas telas longas a navegação inteira ficava
+    // acima da dobra. Agora ela fica, e o scroll dela é o seu — a lista de
+    // negócios pode crescer sem empurrar nada para fora.
+    <aside
+      className={cn(
+        "sticky top-0 hidden h-screen w-60 shrink-0 flex-col",
+        "overflow-y-auto overscroll-contain border-r border-border bg-sidebar",
+        "scrollbar-slim px-3 py-5 md:flex",
+      )}
+    >
+      <Link
+        href="/"
+        className="mb-5 flex items-center gap-2 px-3 text-lg font-semibold tracking-tight text-text-primary"
+      >
+        <span className="grid size-7 place-items-center rounded-lg bg-accent text-sm font-bold text-white">
+          b
+        </span>
         biaVerso
-      </span>
+      </Link>
 
-      <nav className="flex flex-col gap-5">
-        <div className="flex flex-col gap-1">
-          <span className="px-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            {navGroups[0].title}
-          </span>
+      <nav className="flex flex-col gap-4 pb-2">
+        <div className="flex flex-col gap-0.5">
+          <NavGroupLabel>{navGroups[0].title}</NavGroupLabel>
           {navGroups[0].items.map((item) => (
             <NavLink key={item.href} item={item} isActive={isItemActive(item.href)} />
           ))}
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="px-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-            Negócios
-          </span>
+        <div className="flex flex-col gap-0.5">
+          <NavGroupLabel>Negócios</NavGroupLabel>
           <NavLink
             item={{ href: "/negocios", label: "Todos os negócios", icon: Building2 }}
             isActive={pathname === "/negocios"}
@@ -72,10 +102,8 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
         </div>
 
         {navGroups.slice(1).map((group) => (
-          <div key={group.title} className="flex flex-col gap-1">
-            <span className="px-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
-              {group.title}
-            </span>
+          <div key={group.title} className="flex flex-col gap-0.5">
+            <NavGroupLabel>{group.title}</NavGroupLabel>
             {group.items.map((item) => (
               <NavLink key={item.href} item={item} isActive={isItemActive(item.href)} />
             ))}

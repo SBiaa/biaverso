@@ -73,7 +73,7 @@ export function ProjectGrid({
             </h3>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
             {group.items.map((project) => {
               const statusColor = projectStatusColors[project.status] ?? "#6B7280";
               return (

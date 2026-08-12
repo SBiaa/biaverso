@@ -267,89 +267,102 @@ export default async function DiaPage({
   return (
     <>
       <Topbar title="Dia a dia" />
-      <main key={day.id} className="flex-1 space-y-4 p-4 md:p-6 md:max-w-3xl">
+      <main
+        key={day.id}
+        className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:space-y-6 md:px-8 md:py-8"
+      >
         <div>
           <DayPicker date={day.date.toISOString()} />
           <p className="text-sm text-text-secondary">Como está o seu dia?</p>
         </div>
 
-        <Card>
-          <MoodEnergySelector
-            dayId={day.id}
-            initialMood={day.mood}
-            initialEnergy={day.energy}
-          />
-        </Card>
+        {/* Duas colunas de peso diferente, e não uma pilha: à esquerda o que é
+            longo e muda o dia todo (tarefas, produção, coleções); à direita os
+            registros curtos que você marca de passagem. Empilhados, os curtos
+            jogavam as tarefas para 2000px abaixo da dobra. */}
+        <div className="grid items-start gap-4 xl:grid-cols-3 xl:gap-6">
+          <div className="flex flex-col gap-4 xl:col-span-2 xl:gap-6">
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+                Tarefas de hoje
+              </h2>
+              <TaskListByOrigin
+                dayId={day.id}
+                dayDate={toDateInputValue(day.date)}
+                dayInPast={day.date.getTime() < today.getTime()}
+                initialTasks={day.tasks.map((t) => ({
+                  id: t.id,
+                  title: t.title,
+                  done: t.done,
+                  origin: t.origin as BadgeOrigin,
+                  // "Avulsa" em quase toda linha vira ruído: só rotina vale o selo.
+                  typeLabel: t.type === "AVULSA" ? null : taskTypeLabels[t.type],
+                  business: t.business,
+                  overdue: !t.done && t.dueDate !== null && t.dueDate.getTime() < today.getTime(),
+                  subtasks: t.subtasks,
+                }))}
+              />
+            </Card>
 
-        <Card className="flex flex-col gap-4">
-          <DayTypeToggle dayId={day.id} initialType={day.type} />
-          <HabitChecklist
-            items={day.habits.map((h) => ({
-              id: h.id,
-              name: h.habit.name,
-              done: h.done,
-            }))}
-          />
-        </Card>
+            <Suspense fallback={<SectionFallback />}>
+              <ProductionSection date={date} />
+            </Suspense>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Tarefas de hoje
-          </h2>
-          <TaskListByOrigin
-            dayId={day.id}
-            dayDate={toDateInputValue(day.date)}
-            dayInPast={day.date.getTime() < today.getTime()}
-            initialTasks={day.tasks.map((t) => ({
-              id: t.id,
-              title: t.title,
-              done: t.done,
-              origin: t.origin as BadgeOrigin,
-              // "Avulsa" em quase toda linha vira ruído: só rotina vale o selo.
-              typeLabel: t.type === "AVULSA" ? null : taskTypeLabels[t.type],
-              business: t.business,
-              overdue: !t.done && t.dueDate !== null && t.dueDate.getTime() < today.getTime(),
-              subtasks: t.subtasks,
-            }))}
-          />
-        </Card>
+            <Suspense fallback={<SectionFallback />}>
+              <CollectionTasksSection date={date} />
+            </Suspense>
+          </div>
 
-        <Suspense fallback={<SectionFallback />}>
-          <ProductionSection date={date} />
-        </Suspense>
+          <div className="flex flex-col gap-4 xl:gap-6">
+            <Card>
+              <MoodEnergySelector
+                dayId={day.id}
+                initialMood={day.mood}
+                initialEnergy={day.energy}
+              />
+            </Card>
 
-        <Suspense fallback={<SectionFallback />}>
-          <CollectionTasksSection date={date} />
-        </Suspense>
+            <Card className="flex flex-col gap-4">
+              <DayTypeToggle dayId={day.id} initialType={day.type} />
+              <HabitChecklist
+                items={day.habits.map((h) => ({
+                  id: h.id,
+                  name: h.habit.name,
+                  done: h.done,
+                }))}
+              />
+            </Card>
 
-        <Suspense fallback={<SectionFallback />}>
-          <SelfCareSection date={date} />
-        </Suspense>
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+                Água
+              </h2>
+              <WaterTracker
+                dayId={day.id}
+                initialCount={day.waterLogs.length}
+                settings={settings}
+              />
+            </Card>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Água
-          </h2>
-          <WaterTracker
-            dayId={day.id}
-            initialCount={day.waterLogs.length}
-            settings={settings}
-          />
-        </Card>
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+                Cardápio
+              </h2>
+              <MealChecklist dayId={day.id} initialMeals={meals} />
+            </Card>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Cardápio
-          </h2>
-          <MealChecklist dayId={day.id} initialMeals={meals} />
-        </Card>
+            <Suspense fallback={<SectionFallback />}>
+              <SelfCareSection date={date} />
+            </Suspense>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Notas do dia
-          </h2>
-          <NotesField dayId={day.id} initialNotes={day.notes} />
-        </Card>
+            <Card>
+              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+                Notas do dia
+              </h2>
+              <NotesField dayId={day.id} initialNotes={day.notes} />
+            </Card>
+          </div>
+        </div>
       </main>
     </>
   );

@@ -46,7 +46,7 @@ export function BusinessGrid({ businesses }: { businesses: BusinessItem[] }) {
 
       <ErrorNote message={error} />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
         {businesses.map((business) => {
           const Icon = getBusinessIcon(business.icon);
           return (

@@ -78,7 +78,7 @@ export default async function DesejosPage({
   return (
     <>
       <Topbar title="Lista de desejos" />
-      <main className="flex-1 space-y-4 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard
             label="Custa realizar a lista"
@@ -141,7 +141,7 @@ export default async function DesejosPage({
                   {grupo.itens.length}
                 </span>
               </h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
                 {grupo.itens.map((item) => (
                   <WishlistCard
                     key={item.id}

@@ -114,8 +114,8 @@ export default async function ProjectDetailPage({
 
   return (
     <>
-      <Topbar title={project.name} />
-      <main className="flex-1 space-y-4 p-4 md:max-w-4xl md:p-6">
+      <Topbar width="narrow" title={project.name} />
+      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Link
           href={`/negocios/${businessId}?tab=interno`}
           className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"

@@ -69,7 +69,7 @@ export default async function DividasPage() {
   return (
     <>
       <Topbar title="Dívidas" />
-      <main className="flex-1 space-y-6 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-6 px-4 py-5 md:px-8 md:py-8">
         <FinanceSubNav />
 
         <section className="space-y-3">

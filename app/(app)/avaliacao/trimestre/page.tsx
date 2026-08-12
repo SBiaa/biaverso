@@ -31,8 +31,8 @@ export default async function AvaliacaoTrimestrePage({
 
   return (
     <>
-      <Topbar title="Avaliação" />
-      <main className="flex-1 space-y-4 p-4 md:mx-auto md:max-w-[800px] md:p-6">
+      <Topbar width="narrow" title="Avaliação" />
+      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <AvaliacaoSubNav />
 
         <QuarterPicker quarter={quarter} year={year} />

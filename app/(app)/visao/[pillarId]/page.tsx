@@ -47,8 +47,8 @@ export default async function PillarDetailPage({
 
   return (
     <>
-      <Topbar title={pillar.name} />
-      <main className="flex-1 space-y-6 p-4 md:mx-auto md:max-w-[800px] md:p-6">
+      <Topbar width="narrow" title={pillar.name} />
+      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-5 md:px-8 md:py-8">
         <PillarHeader pillar={pillar} />
         <MoodboardSection
           pillarId={pillar.id}

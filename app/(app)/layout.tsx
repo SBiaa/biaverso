@@ -28,7 +28,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <Suspense fallback={<Sidebar businesses={[]} />}>
         <SidebarWithBusinesses />
       </Suspense>
-      <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
+      {/* `min-w-0`: sem isso um filho largo (tabela, linha sem quebra) estica o
+          item de flex e empurra a sidebar para fora da tela. */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-16 md:pb-0">
         {children}
       </div>
       <BottomNav />

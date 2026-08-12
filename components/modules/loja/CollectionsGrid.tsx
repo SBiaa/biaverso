@@ -35,7 +35,7 @@ export function CollectionsGrid({
       {collections.length === 0 ? (
         <p className="text-sm text-text-secondary">Nenhuma coleção criada ainda.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
           {collections.map(({ record, productCount, orderCount, ordersTotal }) => (
             <Link key={record.id} href={`/negocios/${businessId}/colecoes/${record.id}`}>
               <Card className="flex h-full flex-col gap-2 transition-colors hover:bg-black/[0.02]">

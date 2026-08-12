@@ -65,7 +65,7 @@ export default async function ContasFixasPage({
   return (
     <>
       <Topbar title="Contas fixas" />
-      <main className="flex-1 space-y-4 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <FinanceSubNav />
 
         <div className="flex flex-wrap items-center justify-between gap-3">

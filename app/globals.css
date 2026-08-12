@@ -8,6 +8,12 @@
   --text-secondary: #6b6b6b;
   --accent: #6366f1;
 
+  /* Fundo da sidebar: um degrau abaixo do branco dos cards, para a navegação
+     recuar e o conteúdo vir à frente — no desktop as duas áreas ficam lado a
+     lado o tempo todo e sem essa diferença tudo lê como um bloco só. */
+  --sidebar: #f4f4f5;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.03);
+
   --badge-ace-bg: #fef2f2;
   --badge-ace-text: #991b1b;
   --badge-tarot-bg: #f3f0ff;
@@ -27,6 +33,8 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-accent: var(--accent);
+  --color-sidebar: var(--sidebar);
+  --shadow-elevation: var(--elevation);
 
   --color-badge-ace-bg: var(--badge-ace-bg);
   --color-badge-ace-text: var(--badge-ace-text);
@@ -51,10 +59,23 @@
   --border: #27272a;
   --text-primary: #f4f4f5;
   --text-secondary: #a1a1aa;
+  --sidebar: #131316;
+  --elevation: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
 }
 
 body {
   background: var(--background);
   color: var(--text-primary);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* A sidebar tem scroll próprio (`overflow-y-auto`), e a barra padrão do
+   Windows é larga e cinza-escura o bastante para virar o elemento mais pesado
+   da tela. Fina e discreta, só aparece quando a lista de negócios cresce. */
+@media (min-width: 768px) {
+  .scrollbar-slim {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text-secondary) 25%, transparent)
+      transparent;
+  }
 }

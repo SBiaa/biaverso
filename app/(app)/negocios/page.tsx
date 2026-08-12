@@ -27,7 +27,7 @@ export default async function NegociosPage() {
   return (
     <>
       <Topbar title="Negócios" />
-      <main className="flex-1 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 py-5 md:px-8 md:py-8">
         <BusinessGrid businesses={items} />
       </main>
     </>

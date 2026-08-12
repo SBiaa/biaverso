@@ -44,7 +44,7 @@ export default async function ConfiguracoesPage({
   return (
     <>
       <Topbar title="Configurações" />
-      <main className="flex-1 space-y-4 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <RoutineTemplateList
             type="ROTINA_NORMAL"

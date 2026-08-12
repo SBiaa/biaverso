@@ -158,13 +158,26 @@ export default async function HomePage() {
       <Topbar title="Home" />
 
       {/* Desktop */}
-      <main className="hidden flex-1 flex-col gap-4 p-6 md:flex">
+      <main className="mx-auto hidden w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-5 md:px-8 md:py-8 md:flex">
+        {/* A frase do dia existia só no mobile, e era o único lugar do desktop
+            com alguma voz — sem ela a home abria direto em quatro números. */}
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="font-serif text-xl italic text-text-secondary">
+            {phrase}
+          </p>
+          <span className="text-sm text-text-secondary">
+            {formatDateBR(date)}
+          </span>
+        </div>
+
         {/* Em Suspense para o radar (4 consultas) não segurar a Home inteira. */}
         <Suspense fallback={null}>
           <RadarHomeNote />
         </Suspense>
 
-        <div className="grid grid-cols-4 gap-4">
+        {/* 4 colunas fixas espremiam "R$ 1.234,56" em ~115px entre 768 e
+            1280px. Duas até lá, quatro quando há espaço de verdade. */}
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           <StatCard
             label="Eventos hoje"
             value={events.length}
@@ -188,8 +201,12 @@ export default async function HomePage() {
           />
         </div>
 
-        <div className="grid flex-1 grid-cols-2 gap-4">
-          <div className="flex flex-col gap-4">
+        {/* Agenda e Tarefas saem de uma coluna compartilhada para uma cada:
+            num container de 1600px, duas colunas davam cards de 780px com uma
+            lista de três linhas dentro. A terceira coluna junta os registros
+            curtos do dia. */}
+        <div className="grid flex-1 grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-6 xl:grid-cols-3">
+          <div className="flex flex-col gap-4 lg:gap-6">
             <Card>
               <h2 className="mb-3 text-sm font-semibold text-text-primary">
                 Agenda de hoje
@@ -215,7 +232,9 @@ export default async function HomePage() {
                 </ul>
               )}
             </Card>
+          </div>
 
+          <div className="flex flex-col gap-4 lg:gap-6">
             <Card>
               <h2 className="mb-3 text-sm font-semibold text-text-primary">
                 Tarefas de hoje
@@ -224,7 +243,7 @@ export default async function HomePage() {
             </Card>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 lg:col-span-2 lg:gap-6 xl:col-span-1">
             <Card>
               <h2 className="mb-3 text-sm font-semibold text-text-primary">
                 Hábitos do dia

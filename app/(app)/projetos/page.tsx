@@ -49,7 +49,7 @@ export default async function ProjetosPage({
   return (
     <>
       <Topbar title="Projetos" />
-      <main className="flex-1 space-y-4 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatCard
             label="Projetos ativos"

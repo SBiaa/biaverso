@@ -1,10 +1,14 @@
 import { Card, Skeleton } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { pageContainer, type PageWidth } from "./page-width";
 
 type PageSkeletonProps = {
   /** Quantos cards vazios desenhar — aproxime da altura real da página. */
   cards?: number;
   /** Faixa de 4 StatCards no topo, como na home e no financeiro. */
   stats?: boolean;
+  /** A mesma da página que ele substitui, senão o conteúdo salta ao chegar. */
+  width?: PageWidth;
 };
 
 /**
@@ -12,16 +16,27 @@ type PageSkeletonProps = {
  * com o mesmo padding) para que o conteúdo real entre no lugar do esqueleto sem
  * empurrar nada.
  */
-export function PageSkeleton({ cards = 3, stats = false }: PageSkeletonProps) {
+export function PageSkeleton({
+  cards = 3,
+  stats = false,
+  width = "wide",
+}: PageSkeletonProps) {
   return (
     <>
-      <header className="hidden h-12 shrink-0 items-center border-b border-border bg-surface px-6 md:flex">
-        <Skeleton className="h-4 w-32" />
+      <header className="sticky top-0 z-10 hidden shrink-0 border-b border-border bg-surface/80 backdrop-blur-md md:block">
+        <div className={cn(pageContainer(width), "flex h-14 items-center")}>
+          <Skeleton className="h-4 w-32" />
+        </div>
       </header>
 
-      <main className="flex-1 space-y-4 p-4 md:p-6">
+      <main
+        className={cn(
+          pageContainer(width),
+          "flex-1 space-y-4 py-5 md:space-y-6 md:py-8",
+        )}
+      >
         {stats && (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
             {Array.from({ length: 4 }, (_, i) => (
               <Card key={i} className="space-y-2">
                 <Skeleton className="h-3 w-20" />

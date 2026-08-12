@@ -29,7 +29,7 @@ export default async function ConhecimentoPage({
   return (
     <>
       <Topbar title="Conhecimento" />
-      <main className="flex-1 space-y-4 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <KnowledgeFilters />
         </div>
@@ -41,7 +41,7 @@ export default async function ConhecimentoPage({
             Nenhum conteúdo cadastrado ainda.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
             {items.map((item) => (
               <Card key={item.id} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
