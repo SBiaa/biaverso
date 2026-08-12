@@ -12,6 +12,11 @@ export type ProjectCard = {
   businessName: string;
   businessColor: string;
   clientName: string | null;
+  // Campos que o card só usa para abrir a edição no lugar, sem sair da lista.
+  description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  clientId: string | null;
   totalItems: number;
   doneItems: number;
   /** 0–100. Projeto sem itens vale 0. */

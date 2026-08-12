@@ -9,6 +9,7 @@ import { ProjectDocuments } from "@/components/modules/projetos/ProjectDocuments
 import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
 import { ProjectPriceTable } from "@/components/modules/projetos/ProjectPriceTable";
 import { ProjectItems } from "@/components/modules/projetos/ProjectItems";
+import { ProjectActions } from "@/components/modules/projetos/ProjectActions";
 import {
   postRecordSelect,
   taskRecordSelect,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/ace";
 import { projectStatusColors } from "@/lib/projects-shared";
 import { projectStatusLabels } from "@/lib/labels";
-import { formatDateBR, hexToRgba } from "@/lib/utils";
+import { formatDateBR, hexToRgba, toDateInputValue } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -130,15 +131,31 @@ export default async function ProjectDetailPage({
                 <p className="mt-1 text-sm text-text-secondary">{project.description}</p>
               )}
             </div>
-            <span
-              className="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-              style={{
-                backgroundColor: hexToRgba(statusColor, 0.12),
-                color: statusColor,
-              }}
-            >
-              {projectStatusLabels[project.status] ?? project.status}
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span
+                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                style={{
+                  backgroundColor: hexToRgba(statusColor, 0.12),
+                  color: statusColor,
+                }}
+              >
+                {projectStatusLabels[project.status] ?? project.status}
+              </span>
+              <ProjectActions
+                businessId={businessId}
+                clients={clients}
+                redirectTo="/projetos"
+                project={{
+                  id: project.id,
+                  name: project.name,
+                  description: project.description,
+                  status: project.status,
+                  startDate: project.startDate ? toDateInputValue(project.startDate) : null,
+                  endDate: project.endDate ? toDateInputValue(project.endDate) : null,
+                  clientId: project.client?.id ?? null,
+                }}
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-text-secondary">

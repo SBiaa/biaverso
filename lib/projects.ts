@@ -27,6 +27,7 @@ export async function getProjectsOverview(
     select: {
       id: true,
       name: true,
+      description: true,
       status: true,
       isInternal: true,
       startDate: true,
@@ -82,6 +83,10 @@ export async function getProjectsOverview(
       businessName: project.business.name,
       businessColor: project.business.color,
       clientName: project.client?.name ?? null,
+      description: project.description,
+      startDate: project.startDate ? project.startDate.toISOString() : null,
+      endDate: project.endDate ? project.endDate.toISOString() : null,
+      clientId: project.client?.id ?? null,
       totalItems: total,
       doneItems: doneCount,
       // Projeto sem nenhum item fica em 0% em vez de dividir por zero.

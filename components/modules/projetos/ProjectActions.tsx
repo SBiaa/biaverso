@@ -1,0 +1,92 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
+import { ErrorNote } from "@/components/ui";
+import { api, errorMessage } from "@/lib/client-api";
+import {
+  ProjectFormModal,
+  type ProjectFormValues,
+} from "@/components/modules/negocios/ProjectFormModal";
+
+/**
+ * Editar e apagar o projeto, no cabeçalho da própria página dele. A tela era só
+ * de leitura: dava para criar projeto e mudar o status, mas nome, datas e
+ * cliente ficavam presos ao que foi digitado na criação.
+ */
+export function ProjectActions({
+  businessId,
+  project,
+  clients,
+  redirectTo,
+}: {
+  businessId: string;
+  project: ProjectFormValues;
+  /** Sem a lista, a edição não mexe no cliente — mantém o que já está gravado. */
+  clients?: { id: string; name: string }[];
+  /** Para onde ir depois de apagar. Sem isso, só recarrega a lista onde está. */
+  redirectTo?: string;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    if (
+      !confirm(
+        `Apagar o projeto "${project.name}"? A documentação, os documentos, a tabela de preços e as senhas vinculadas vão junto. Posts, tarefas de produção e tarefas do dia continuam existindo, só perdem o vínculo com o projeto. Não dá para desfazer.`,
+      )
+    )
+      return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await api.delete(`/api/projects/${project.id}`);
+      // Na página do projeto não dá para ficar: ela deixou de existir.
+      if (redirectTo) router.push(redirectTo);
+      router.refresh();
+    } catch (e) {
+      setError(errorMessage(e));
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          title="Editar projeto"
+          onClick={() => setEditing(true)}
+          className="rounded-md p-1.5 text-text-secondary hover:bg-border hover:text-text-primary"
+        >
+          <Pencil size={15} />
+        </button>
+        <button
+          type="button"
+          title="Apagar projeto"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="rounded-md p-1.5 text-text-secondary hover:bg-border hover:text-red-600 disabled:opacity-50"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+
+      <ErrorNote message={error} />
+
+      {editing && (
+        <ProjectFormModal
+          businessId={businessId}
+          project={project}
+          clients={clients}
+          onClose={() => setEditing(false)}
+        />
+      )}
+    </>
+  );
+}

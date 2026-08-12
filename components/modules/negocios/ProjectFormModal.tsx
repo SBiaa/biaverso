@@ -9,11 +9,26 @@ import { projectStatusLabels } from "@/lib/labels";
 
 const statusOptions = Object.keys(projectStatusLabels);
 
+/** Projeto existente, com as datas já em "YYYY-MM-DD" para os inputs. */
+export type ProjectFormValues = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  clientId: string | null;
+};
+
 type ProjectFormModalProps = {
   businessId: string;
   clientId?: string;
   /** Projeto do próprio negócio, sem cliente do outro lado. */
   isInternal?: boolean;
+  /** Preenchido = edita o projeto; vazio = cria um novo. */
+  project?: ProjectFormValues;
+  /** Com a lista, o formulário deixa trocar o cliente do projeto. */
+  clients?: { id: string; name: string }[];
   onClose: () => void;
 };
 
@@ -21,17 +36,20 @@ export function ProjectFormModal({
   businessId,
   clientId,
   isInternal = false,
+  project,
+  clients,
   onClose,
 }: ProjectFormModalProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: "",
-    description: "",
-    status: "EM_ANDAMENTO",
-    startDate: "",
-    endDate: "",
+    name: project?.name ?? "",
+    description: project?.description ?? "",
+    status: project?.status ?? "EM_ANDAMENTO",
+    startDate: project?.startDate ?? "",
+    endDate: project?.endDate ?? "",
+    clientId: project?.clientId ?? "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -43,8 +61,28 @@ export function ProjectFormModal({
     setSaving(true);
     setError(null);
 
+    // Data em branco vai como null: o campo aceita data ou nada, e "" era
+    // recusado na validação como data inválida.
+    const payload = {
+      name: form.name,
+      description: form.description,
+      status: form.status,
+      startDate: form.startDate || null,
+      endDate: form.endDate || null,
+    };
+
     try {
-      await api.post("/api/projects", { ...form, businessId, clientId, isInternal });
+      if (project) {
+        const chosenClient = clients ? form.clientId || null : project.clientId;
+        await api.patch(`/api/projects/${project.id}`, {
+          ...payload,
+          clientId: chosenClient,
+          // Sem cliente do outro lado, o projeto é interno do negócio.
+          isInternal: !chosenClient,
+        });
+      } else {
+        await api.post("/api/projects", { ...payload, businessId, clientId, isInternal });
+      }
       router.refresh();
       onClose();
     } catch (e) {
@@ -53,6 +91,12 @@ export function ProjectFormModal({
       setSaving(false);
     }
   }
+
+  const title = project
+    ? "Editar projeto"
+    : isInternal
+      ? "Novo projeto interno"
+      : "Novo projeto";
 
   return (
     <div
@@ -64,9 +108,7 @@ export function ProjectFormModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {isInternal ? "Novo projeto interno" : "Novo projeto"}
-          </h3>
+          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
           <button type="button" onClick={onClose}>
             <X size={18} className="text-text-secondary" />
           </button>
@@ -95,6 +137,25 @@ export function ProjectFormModal({
             </option>
           ))}
         </select>
+
+        {clients && (
+          <div>
+            <p className="mb-1 text-xs text-text-secondary">Cliente</p>
+            <select
+              value={form.clientId}
+              onChange={(e) => update("clientId", e.target.value)}
+              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+            >
+              <option value="">Projeto interno (sem cliente)</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <div className="flex-1">
             <p className="mb-1 text-xs text-text-secondary">Início</p>

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { AlertTriangle, CalendarClock } from "lucide-react";
 import { Card } from "@/components/ui";
-import { cn, formatDateBR, hexToRgba } from "@/lib/utils";
+import { cn, formatDateBR, hexToRgba, toDateInputValue } from "@/lib/utils";
+import { ProjectActions } from "./ProjectActions";
 import { projectStatusLabels } from "@/lib/labels";
 import {
   projectStatusColors,
@@ -76,18 +77,25 @@ export function ProjectGrid({
             {group.items.map((project) => {
               const statusColor = projectStatusColors[project.status] ?? "#6B7280";
               return (
-                <Link
+                <Card
                   key={project.id}
-                  href={`/negocios/${project.businessId}/projetos/${project.id}`}
-                  className="block transition-colors hover:bg-black/[0.02]"
+                  className="relative flex h-full flex-col gap-2 transition-colors hover:bg-black/[0.02]"
                 >
-                  <Card className="flex h-full flex-col gap-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-text-primary">
-                        {project.name}
-                      </p>
+                  {/* O link cobre o card inteiro em vez de embrulhá-lo: assim os
+                      botões de editar/apagar ficam por cima sem virar um botão
+                      dentro de um link. */}
+                  <Link
+                    href={`/negocios/${project.businessId}/projetos/${project.id}`}
+                    aria-label={`Abrir ${project.name}`}
+                    className="absolute inset-0 z-10 rounded-lg"
+                  />
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-text-primary">
+                      {project.name}
+                    </p>
+                    <div className="flex shrink-0 items-center gap-1">
                       <span
-                        className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
                         style={{
                           backgroundColor: hexToRgba(statusColor, 0.12),
                           color: statusColor,
@@ -95,49 +103,67 @@ export function ProjectGrid({
                       >
                         {projectStatusLabels[project.status] ?? project.status}
                       </span>
-                    </div>
-
-                    <p className="text-xs text-text-secondary">
-                      {project.isInternal || !project.clientName
-                        ? "Projeto interno"
-                        : project.clientName}
-                    </p>
-
-                    <div className="mt-auto flex flex-col gap-1.5 pt-1">
-                      <div className="flex items-center justify-between text-[11px] text-text-secondary">
-                        <span>
-                          {project.doneItems}/{project.totalItems} concluídas
-                        </span>
-                        <span>{project.progress}%</span>
-                      </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
-                        <div
-                          className="h-full rounded-full bg-accent transition-all"
-                          style={{ width: `${project.progress}%` }}
+                      <div className="relative z-20">
+                        <ProjectActions
+                          businessId={project.businessId}
+                          project={{
+                            id: project.id,
+                            name: project.name,
+                            description: project.description,
+                            status: project.status,
+                            startDate: project.startDate
+                              ? toDateInputValue(project.startDate)
+                              : null,
+                            endDate: project.endDate
+                              ? toDateInputValue(project.endDate)
+                              : null,
+                            clientId: project.clientId,
+                          }}
                         />
                       </div>
-
-                      {project.nextDeadline && (
-                        <span
-                          className={cn(
-                            "flex items-center gap-1 text-[11px]",
-                            project.overdue
-                              ? "font-medium text-red-600"
-                              : "text-text-secondary",
-                          )}
-                        >
-                          {project.overdue ? (
-                            <AlertTriangle size={12} />
-                          ) : (
-                            <CalendarClock size={12} />
-                          )}
-                          {project.overdue ? "Atrasado desde " : "Próximo prazo: "}
-                          {formatDateBR(new Date(project.nextDeadline))}
-                        </span>
-                      )}
                     </div>
-                  </Card>
-                </Link>
+                  </div>
+
+                  <p className="text-xs text-text-secondary">
+                    {project.isInternal || !project.clientName
+                      ? "Projeto interno"
+                      : project.clientName}
+                  </p>
+
+                  <div className="mt-auto flex flex-col gap-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px] text-text-secondary">
+                      <span>
+                        {project.doneItems}/{project.totalItems} concluídas
+                      </span>
+                      <span>{project.progress}%</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all"
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+
+                    {project.nextDeadline && (
+                      <span
+                        className={cn(
+                          "flex items-center gap-1 text-[11px]",
+                          project.overdue
+                            ? "font-medium text-red-600"
+                            : "text-text-secondary",
+                        )}
+                      >
+                        {project.overdue ? (
+                          <AlertTriangle size={12} />
+                        ) : (
+                          <CalendarClock size={12} />
+                        )}
+                        {project.overdue ? "Atrasado desde " : "Próximo prazo: "}
+                        {formatDateBR(new Date(project.nextDeadline))}
+                      </span>
+                    )}
+                  </div>
+                </Card>
               );
             })}
           </div>
