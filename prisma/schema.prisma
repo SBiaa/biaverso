@@ -191,6 +191,8 @@ model GoogleAuth {
   id           String   @id @default(cuid())
   // E-mail da conta conectada, lido do calendário primário na conexão.
   email        String?
+  // Os dois cifrados (ver lib/crypto.ts): com eles em mãos qualquer um lê e
+  // escreve na agenda. Quem decripta é o getAuthClient, em lib/google-calendar.
   accessToken  String   @db.Text
   refreshToken String   @db.Text
   expiresAt    DateTime
@@ -1177,12 +1179,13 @@ enum IdeaStatus {
   ARQUIVADA
 }
 
-// COFRE DE SENHAS (v1 sem criptografia)
-// TODO: encrypt in v2
+// COFRE DE SENHAS
 model PasswordEntry {
   id        String           @id @default(cuid())
   name      String
   login     String?
+  // Cifrada (AES-256-GCM, ver lib/crypto.ts): o valor aqui é "v1:iv:tag:cifra".
+  // Só passa por lib/passwords.ts para voltar a ser legível.
   password  String
   url       String?
   category  PasswordCategory @default(OUTRO)

@@ -1,16 +1,17 @@
-import { AlertTriangle } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
 import { AddPasswordForm } from "@/components/modules/senhas/AddPasswordForm";
 import { PasswordRow } from "@/components/modules/senhas/PasswordRow";
 import { passwordCategoryLabels } from "@/lib/labels";
+import { decryptEntry } from "@/lib/passwords";
 
 export const dynamic = "force-dynamic";
 
 export default async function SenhasPage() {
-  const entries = await prisma.passwordEntry.findMany({
-    orderBy: { name: "asc" },
-  });
+  const entries = (
+    await prisma.passwordEntry.findMany({ orderBy: { name: "asc" } })
+  ).map(decryptEntry);
 
   const categories = Object.keys(passwordCategoryLabels);
   const grouped = categories
@@ -24,12 +25,12 @@ export default async function SenhasPage() {
     <>
       <Topbar title="Senhas" />
       <main className="flex-1 space-y-4 p-4 md:p-6">
-        <div className="flex items-start gap-2 rounded-lg border border-badge-ace-text/20 bg-badge-ace-bg p-3 text-xs text-badge-ace-text">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-emerald-600" />
           <span>
-            Nesta v1 as senhas são salvas em texto simples, sem criptografia.
-            Use este cofre apenas neste ambiente local/pessoal — a
-            criptografia está planejada para uma versão futura.
+            As senhas ficam criptografadas no banco (AES-256-GCM). Quem entra no
+            app com a senha de acesso continua vendo tudo — é para isso que o
+            cofre serve.
           </span>
         </div>
 

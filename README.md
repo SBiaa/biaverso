@@ -33,6 +33,51 @@ Defina `APP_PASSWORD` no `.env` para ligar; `APP_USER` é opcional e o padrão �
 `bia`. Sem a variável, o app roda em desenvolvimento mas **responde 503 em
 produção**, para não subir aberto por esquecimento.
 
+## Criptografia
+
+As senhas do cofre e os tokens do Google ficam **cifrados no banco** com
+AES-256-GCM (`lib/crypto.ts`). Gere a chave e guarde no `.env`:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+```env
+ENCRYPTION_KEY=a-chave-gerada-acima
+```
+
+A mesma chave precisa estar nas variáveis de ambiente da Vercel — o app não
+sobe sem ela: gravar uma senha nova ou renovar o token do Google falha com uma
+mensagem dizendo o que fazer.
+
+> ⚠️ **Guarde uma cópia da chave fora do `.env`** — gerenciador de senhas, papel
+> na gaveta, o que for. Sem ela o cofre não volta: é matemática, não tem
+> "esqueci minha senha". Um `.env` que se perde numa formatação levaria tudo
+> junto.
+
+### Converter o que já estava salvo
+
+Quem já tinha senhas gravadas antes disso roda uma vez:
+
+```bash
+npx tsx prisma/encrypt-existing.ts
+```
+
+Pode rodar de novo sem medo: o que já está cifrado é reconhecido pelo prefixo
+`v1:` e fica como está. E o app funciona antes e depois da conversão — um valor
+sem o prefixo é tratado como texto simples —, então não existe janela em que as
+telas quebram.
+
+### O que isto protege (e o que não protege)
+
+**Protege** o banco vazar sozinho: um dump, um backup, a connection string
+parando onde não devia, alguém abrindo o console do Neon. Sem a chave, o que
+está lá é ruído.
+
+**Não protege** contra quem já entrou no app — passou pelo Basic Auth, vê as
+senhas na tela, que é justamente para o que o cofre existe. Quem controlar o
+servidor tem a chave junto. Para esse lado, quem defende é o `APP_PASSWORD`.
+
 ## Convenção de datas
 
 Toda data-calendário (dia, vencimento, prazo) é gravada como **meia-noite UTC**

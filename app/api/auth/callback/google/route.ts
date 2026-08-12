@@ -6,6 +6,7 @@ import {
   createOAuthClient,
   fetchAccountEmail,
 } from "@/lib/google-calendar";
+import { encrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -46,13 +47,14 @@ export async function GET(request: Request) {
 
     const email = await fetchAccountEmail(client).catch(() => null);
 
-    // Conexão única: a nova substitui a anterior.
+    // Conexão única: a nova substitui a anterior. Os dois tokens vão cifrados:
+    // com eles em mãos qualquer um lê e escreve na agenda dela.
     await prisma.googleAuth.deleteMany({});
     await prisma.googleAuth.create({
       data: {
         email,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encrypt(tokens.access_token),
+        refreshToken: encrypt(tokens.refresh_token),
         expiresAt: new Date(tokens.expiry_date ?? Date.now() + 3_600_000),
       },
     });

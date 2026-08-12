@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { Info } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { decryptCredentialLinks } from "@/lib/passwords";
 import { Topbar } from "@/components/layout/Topbar";
 import { BusinessTabs } from "@/components/modules/negocios/BusinessTabs";
 import { ClientesTab } from "@/components/modules/negocios/ClientesTab";
@@ -344,7 +345,7 @@ export default async function BusinessDetailPage({
       </div>
     );
   } else if (tab === "senhas") {
-    const [credentials, passwordOptions] = await Promise.all([
+    const [rawCredentials, passwordOptions] = await Promise.all([
       prisma.businessCredential.findMany({
         where: { businessId: id },
         orderBy: { createdAt: "asc" },
@@ -368,16 +369,18 @@ export default async function BusinessDetailPage({
       }),
     ]);
 
+    const credentials = decryptCredentialLinks(rawCredentials);
+
     content = (
       <Card className="flex flex-col gap-3">
-        <div className="flex items-start gap-2 rounded-lg border border-badge-ace-text/20 bg-badge-ace-bg p-3 text-xs text-badge-ace-text">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary">
+          <Info size={16} className="mt-0.5 shrink-0" />
           <span>
             As senhas são as mesmas do cofre em{" "}
             <Link href="/senhas" className="font-medium underline">
               Senhas
             </Link>
-            . Nesta v1 elas ficam salvas em texto simples, sem criptografia.
+            . Editar aqui altera lá também — é o mesmo registro.
           </span>
         </div>
         <CredentialsPanel

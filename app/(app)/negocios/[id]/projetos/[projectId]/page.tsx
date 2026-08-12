@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { decryptCredentialLinks } from "@/lib/passwords";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, BusinessBadge } from "@/components/ui";
 import { ProjectDocumentation } from "@/components/modules/projetos/ProjectDocumentation";
@@ -215,7 +216,7 @@ export default async function ProjectDetailPage({
           <h2 className="mb-3 text-sm font-semibold text-text-primary">Credenciais</h2>
           <CredentialsPanel
             endpoint={`/api/projects/${project.id}/credentials`}
-            initialCredentials={project.credentials}
+            initialCredentials={decryptCredentialLinks(project.credentials)}
             passwordOptions={passwordOptions}
             emptyLabel="Nenhuma credencial vinculada a este projeto."
             unlinkLabel="Desvincular do projeto"
