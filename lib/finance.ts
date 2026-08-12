@@ -30,6 +30,11 @@ export async function ensureFixedBillLogsForMonth(month: number, year: number) {
   const missing = activeBills.filter((b) => !existingIds.has(b.id));
 
   if (missing.length > 0) {
+    // `skipDuplicates`: abrir o mesmo mês em duas abas (ou o prefetch do Next
+    // junto com o clique) faz os dois lados lerem a mesma lista de faltantes e
+    // tentarem criar os mesmos logs. Sem isso o segundo estoura o único
+    // (fixedBillId, month, year) — e como isto roda dentro de server
+    // components, o P2002 não passa por `route()`: a tela cai no error boundary.
     await prisma.fixedBillLog.createMany({
       data: missing.map((b) => ({
         fixedBillId: b.id,
@@ -37,6 +42,7 @@ export async function ensureFixedBillLogsForMonth(month: number, year: number) {
         year,
         dueDate: utcDate(year, month, b.dueDay),
       })),
+      skipDuplicates: true,
     });
   }
 

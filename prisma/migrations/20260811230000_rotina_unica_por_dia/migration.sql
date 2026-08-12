@@ -1,0 +1,12 @@
+-- Uma cópia de cada rotina por dia.
+--
+-- Sem este índice, dois carregamentos simultâneos de /dia (duas abas, ou o
+-- prefetch do Next junto com o clique) liam a mesma lista de rotinas faltantes
+-- e materializavam as duas — a lista do dia aparecia duplicada e nada acusava
+-- o erro. O `skipDuplicates` em materializeRoutineTasks só funciona com ele.
+--
+-- No Postgres nulo não conflita com nulo: os templates (dayId nulo) e as
+-- tarefas avulsas (templateId nulo) continuam sem restrição.
+--
+-- CreateIndex
+CREATE UNIQUE INDEX "Task_dayId_templateId_key" ON "Task"("dayId", "templateId");

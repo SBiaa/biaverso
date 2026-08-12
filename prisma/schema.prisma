@@ -112,6 +112,12 @@ model Task {
   @@index([templateId])
   // Templates de rotina são as tarefas com dayId nulo.
   @@index([type, dayId])
+  // Uma cópia de cada rotina por dia. Sem isto, dois carregamentos simultâneos
+  // do /dia materializavam o mesmo template duas vezes e a lista aparecia
+  // duplicada, sem nada acusando o erro. No Postgres nulo não conflita com
+  // nulo, então templates (dayId nulo) e tarefas avulsas (templateId nulo)
+  // continuam livres.
+  @@unique([dayId, templateId])
 }
 
 enum TaskType {

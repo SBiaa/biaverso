@@ -48,6 +48,13 @@ export async function materializeRoutineTasks(day: Day) {
   if (missing.length > 0) {
     // `createManyAndReturn` para saber o id de cada cópia: sem ele não dá para
     // pendurar os passos do template na tarefa recém-criada.
+    //
+    // `skipDuplicates` fecha a corrida: dois carregamentos simultâneos do dia
+    // (duas abas, prefetch + clique) leem a mesma lista de faltantes e tentam
+    // copiar as mesmas rotinas. Quem chegar depois é descartado pelo índice
+    // único (dayId, templateId) em vez de duplicar a lista do dia — e volta de
+    // `copies` só o que este processo criou de fato, então os passos abaixo
+    // também não duplicam.
     const copies = await prisma.task.createManyAndReturn({
       data: missing.map((t) => ({
         title: t.title,
@@ -58,6 +65,7 @@ export async function materializeRoutineTasks(day: Day) {
         dayId: day.id,
         templateId: t.id,
       })),
+      skipDuplicates: true,
       select: { id: true, templateId: true },
     });
 
@@ -91,8 +99,13 @@ export async function materializeHabits(day: Day) {
   const missing = habits.filter((h) => !existingIds.has(h.id));
 
   if (missing.length > 0) {
+    // `skipDuplicates`: dois carregamentos simultâneos leem a mesma lista de
+    // faltantes, e sem isso o segundo estoura o único (habitId, dayId). Como
+    // isto roda dentro de um server component, o P2002 não passaria por
+    // `route()` — a tela inteira cairia no error boundary.
     await prisma.habitLog.createMany({
       data: missing.map((h) => ({ habitId: h.id, dayId: day.id })),
+      skipDuplicates: true,
     });
   }
 }

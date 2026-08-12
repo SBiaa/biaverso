@@ -236,8 +236,15 @@ async function pushToGoogle(
   const primaryCalendar = calendars.find((c) => c.primary)?.id ?? "primary";
 
   // Nunca enviado ao Google, ou editado no app desde a última sync.
+  //
+  // ERRO entra junto porque a tentativa anterior falhou sem entregar a edição:
+  // o pull também pula esse evento (a edição local é mais nova que a última
+  // sync, e nesse caso o app prevalece), então sem tentar de novo aqui ele
+  // ficaria travado no "!" para sempre e a alteração nunca chegaria lá.
   const localEvents = await prisma.event.findMany({
-    where: { OR: [{ googleEventId: null }, { syncStatus: "PENDENTE" }] },
+    where: {
+      OR: [{ googleEventId: null }, { syncStatus: { in: ["PENDENTE", "ERRO"] } }],
+    },
   });
 
   for (const event of localEvents) {
