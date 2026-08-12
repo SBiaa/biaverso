@@ -12,6 +12,7 @@ import {
   Lightbulb,
   LineChart,
   MoreHorizontal,
+  Radar,
   Settings,
   Sparkles,
   UtensilsCrossed,
@@ -37,6 +38,8 @@ export const navGroups: NavGroup[] = [
       { href: "/", label: "Home", icon: Home },
       { href: "/dia", label: "Dia a dia", icon: CalendarCheck },
       { href: "/agenda", label: "Agenda", icon: CalendarDays },
+      // O que foi começado e parou — a única tela do app que olha ausência.
+      { href: "/radar", label: "Radar", icon: Radar },
       // Projetos e clientes de todos os negócios num lugar só.
       { href: "/projetos", label: "Projetos", icon: FolderKanban },
       { href: "/clientes", label: "Clientes", icon: Users },

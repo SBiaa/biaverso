@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -12,6 +13,7 @@ import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightC
 import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
 import { HomeHabitList } from "@/components/modules/home/HomeHabitList";
 import { HomeTaskList } from "@/components/modules/home/HomeTaskList";
+import { RadarHomeNote } from "@/components/modules/radar/RadarHomeNote";
 import { WaterTracker } from "@/components/modules/dia/WaterTracker";
 import { getOrCreateDay } from "@/lib/day";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
@@ -157,6 +159,11 @@ export default async function HomePage() {
 
       {/* Desktop */}
       <main className="hidden flex-1 flex-col gap-4 p-6 md:flex">
+        {/* Em Suspense para o radar (4 consultas) não segurar a Home inteira. */}
+        <Suspense fallback={null}>
+          <RadarHomeNote />
+        </Suspense>
+
         <div className="grid grid-cols-4 gap-4">
           <StatCard
             label="Eventos hoje"
@@ -258,6 +265,10 @@ export default async function HomePage() {
         <p className="font-serif text-lg italic text-text-secondary">
           {phrase}
         </p>
+
+        <Suspense fallback={null}>
+          <RadarHomeNote />
+        </Suspense>
 
         <Card>
           <h2 className="mb-1 text-sm font-semibold text-text-primary">

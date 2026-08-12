@@ -90,6 +90,11 @@ model Task {
   dueDate    DateTime?
   order      Int       @default(0)
   createdAt  DateTime  @default(now())
+  // Quando foi concluída — igual ProductionTask e CollectionTask, que já
+  // tinham. Sem isto, marcar como feita não deixava rastro de quando, e um
+  // projeto tocado ontem parecia parado para o radar. Nulo em tudo que foi
+  // concluído antes deste campo existir: não dá para inventar a data.
+  completedAt DateTime?
   dayId      String?
   day        Day?      @relation(fields: [dayId], references: [id], onDelete: Cascade)
   businessId String?

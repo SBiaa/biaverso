@@ -52,7 +52,12 @@ export const taskCreateSchema = z.object({
   dayId: optionalId,
   dueDate: dateOnly.nullish(),
 });
-export const taskPatchSchema = z.object({ done: z.boolean() });
+// Campo ausente = "não mexe". `dueDate` com data reancora a tarefa naquele dia
+// (é o "trazer para hoje" do radar); com `null` explícito, tira o prazo.
+export const taskPatchSchema = z.object({
+  done: z.boolean().optional(),
+  dueDate: dateOnly.nullish(),
+});
 
 // Uma subtarefa pende de UMA tarefa — do dia, de produção ou de coleção. O
 // banco aceita os três campos nulos; aqui não.
