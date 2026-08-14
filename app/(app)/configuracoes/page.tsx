@@ -4,6 +4,7 @@ import { RoutineTemplateList } from "@/components/modules/configuracoes/RoutineT
 import { HabitList } from "@/components/modules/configuracoes/HabitList";
 import { GoogleCalendarCard } from "@/components/modules/agenda/GoogleCalendarCard";
 import { WaterSettingsForm } from "@/components/modules/configuracoes/WaterSettingsForm";
+import { PricingSettingsForm } from "@/components/modules/configuracoes/PricingSettingsForm";
 import { getGoogleSyncStatus } from "@/lib/agenda";
 import { getUserSettings } from "@/lib/settings";
 
@@ -58,6 +59,7 @@ export default async function ConfiguracoesPage({
           />
           <HabitList initialItems={habits} />
           <WaterSettingsForm initial={settings} />
+          <PricingSettingsForm initial={settings} />
           <GoogleCalendarCard status={googleStatus} feedback={google} />
         </div>
       </main>

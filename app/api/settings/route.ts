@@ -15,7 +15,12 @@ export const PATCH = route(async (request: Request) => {
     where: { id: USER_SETTINGS_ID },
     create: { id: USER_SETTINGS_ID, ...DEFAULT_SETTINGS, ...fields },
     update: fields,
-    select: { waterGoal: true, waterUnitMl: true },
+    select: {
+      waterGoal: true,
+      waterUnitMl: true,
+      hourlyRate: true,
+      targetMargin: true,
+    },
   });
 
   return NextResponse.json(settings);

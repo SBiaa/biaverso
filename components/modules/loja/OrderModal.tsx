@@ -6,19 +6,38 @@ import { X } from "lucide-react";
 import { Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { orderStatusLabels } from "@/lib/labels";
-import { todayInputValue, toDateInputValue } from "@/lib/utils";
+import { formatCurrencyBRL, todayInputValue, toDateInputValue } from "@/lib/utils";
+import {
+  OrderItemsEditor,
+  draftFromSaved,
+  draftTotals,
+  resolveDraft,
+  type OrderItemDraft,
+  type OrderPickOption,
+} from "./OrderItemsEditor";
 
 const statusOptions = Object.keys(orderStatusLabels);
 
 export type CollectionOption = { id: string; name: string };
+
+export type OrderItemRecord = {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  unitCost: number;
+  productId: string | null;
+  collectionProductId: string | null;
+};
 
 export type OrderRecord = {
   id: string;
   orderNumber: string | null;
   customerName: string;
   customerContact: string | null;
-  items: string;
+  items: OrderItemRecord[];
   totalAmount: number;
+  totalCost: number;
   status: string;
   orderDate: string;
   dueDate: string | null;
@@ -32,8 +51,6 @@ function emptyForm() {
     orderNumber: "",
     customerName: "",
     customerContact: "",
-    items: "",
-    totalAmount: "",
     status: "PENDENTE",
     orderDate: todayInputValue(),
     dueDate: "",
@@ -47,8 +64,6 @@ function formFromOrder(order: OrderRecord) {
     orderNumber: order.orderNumber ?? "",
     customerName: order.customerName,
     customerContact: order.customerContact ?? "",
-    items: order.items,
-    totalAmount: String(order.totalAmount),
     status: order.status,
     orderDate: toDateInputValue(order.orderDate),
     dueDate: order.dueDate ? toDateInputValue(order.dueDate) : "",
@@ -62,12 +77,18 @@ export function OrderModal({
   collections,
   order,
   defaultCollectionId,
+  pickOptions,
+  hourlyRate,
+  targetMargin,
   onClose,
 }: {
   businessId: string;
   collections: CollectionOption[];
   order?: OrderRecord;
   defaultCollectionId?: string;
+  pickOptions: OrderPickOption[];
+  hourlyRate: number | null;
+  targetMargin: number;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -80,19 +101,23 @@ export function OrderModal({
       ? formFromOrder(order)
       : { ...emptyForm(), collectionId: defaultCollectionId ?? "" },
   );
+  const [drafts, setDrafts] = useState<OrderItemDraft[]>(
+    order ? order.items.map(draftFromSaved) : [],
+  );
   // Entregar um pedido normalmente significa dinheiro que entrou — a entrada
   // fica marcada por padrão, mas dá para desmarcar (venda ainda não paga).
   const [createTransaction, setCreateTransaction] = useState(true);
 
   const wasDelivered = order?.status === "ENTREGUE";
   const offerTransaction = form.status === "ENTREGUE" && !wasDelivered;
+  const totals = draftTotals(drafts, hourlyRate);
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSubmit() {
-    if (!form.customerName.trim() || !form.items.trim()) return;
+    if (!form.customerName.trim()) return;
     setSaving(true);
     setError(null);
 
@@ -101,10 +126,24 @@ export function OrderModal({
       businessId,
       orderNumber: form.orderNumber || null,
       customerContact: form.customerContact || null,
-      totalAmount: form.totalAmount || 0,
       dueDate: form.dueDate || null,
       notes: form.notes || null,
       collectionId: form.collectionId || null,
+      // O custo vai resolvido: a partir daqui ele é o retrato do dia, e não
+      // muda mais se o preço do blank subir mês que vem.
+      items: drafts
+        .filter((draft) => draft.name.trim())
+        .map((draft) => {
+          const { quantity, unitPrice, unitCost } = resolveDraft(draft, hourlyRate);
+          return {
+            name: draft.name,
+            quantity,
+            unitPrice,
+            unitCost,
+            productId: draft.productId,
+            collectionProductId: draft.collectionProductId,
+          };
+        }),
     };
 
     try {
@@ -115,7 +154,7 @@ export function OrderModal({
         await api.post("/api/transactions", {
           name: `Pedido ${form.orderNumber || form.customerName}`,
           type: "ENTRADA",
-          amount: form.totalAmount || 0,
+          amount: totals.total,
           date: todayInputValue(),
           category: "RECEITA_VENDA",
           businessId,
@@ -199,42 +238,30 @@ export function OrderModal({
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
 
-        <textarea
-          placeholder="Itens do pedido"
-          value={form.items}
-          onChange={(e) => update("items", e.target.value)}
-          rows={3}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Valor total (R$)</p>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.totalAmount}
-              onChange={(e) => update("totalAmount", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Coleção</p>
-            <select
-              value={form.collectionId}
-              onChange={(e) => update("collectionId", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="">Sem coleção</option>
-              {collections.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Coleção</p>
+          <select
+            value={form.collectionId}
+            onChange={(e) => update("collectionId", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          >
+            <option value="">Sem coleção</option>
+            {collections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </div>
+
+        <OrderItemsEditor
+          drafts={drafts}
+          setDrafts={setDrafts}
+          options={pickOptions}
+          collectionId={form.collectionId}
+          hourlyRate={hourlyRate}
+          targetMargin={targetMargin}
+        />
 
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -273,7 +300,8 @@ export function OrderModal({
               onChange={(e) => setCreateTransaction(e.target.checked)}
               className="mt-0.5 h-4 w-4"
             />
-            Lançar uma entrada de R$ {form.totalAmount || 0} no financeiro deste negócio.
+            Lançar uma entrada de {formatCurrencyBRL(totals.total)} no financeiro
+            deste negócio.
           </label>
         )}
 

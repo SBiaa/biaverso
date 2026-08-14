@@ -7,6 +7,7 @@ import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { ORDER_COLUMNS } from "@/lib/loja";
 import { orderStatusLabels } from "@/lib/labels";
 import { OrderModal, type CollectionOption, type OrderRecord } from "./OrderModal";
+import type { OrderPickOption } from "./OrderItemsEditor";
 
 export type OrderCard = {
   record: OrderRecord;
@@ -18,10 +19,16 @@ export function OrdersBoard({
   businessId,
   collections,
   orders,
+  pickOptions,
+  hourlyRate,
+  targetMargin,
 }: {
   businessId: string;
   collections: CollectionOption[];
   orders: OrderCard[];
+  pickOptions: OrderPickOption[];
+  hourlyRate: number | null;
+  targetMargin: number;
 }) {
   const [editing, setEditing] = useState<OrderRecord | null>(null);
   const [creating, setCreating] = useState(false);
@@ -70,13 +77,28 @@ export function OrdersBoard({
                       </div>
 
                       <p className="line-clamp-2 text-xs text-text-secondary">
-                        {order.record.items}
+                        {order.record.items.length === 0
+                          ? "Sem itens"
+                          : order.record.items
+                              .map((item) => `${item.quantity}× ${item.name}`)
+                              .join(", ")}
                       </p>
 
                       <div className="flex flex-wrap items-center gap-1">
                         <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
                           {formatCurrencyBRL(order.record.totalAmount)}
                         </span>
+                        {order.record.totalCost > 0 && (
+                          <span
+                            className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary"
+                            title="Lucro depois do custo dos itens"
+                          >
+                            lucro{" "}
+                            {formatCurrencyBRL(
+                              order.record.totalAmount - order.record.totalCost,
+                            )}
+                          </span>
+                        )}
                         {order.collectionName && (
                           <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
                             {order.collectionName}
@@ -133,6 +155,9 @@ export function OrdersBoard({
         <OrderModal
           businessId={businessId}
           collections={collections}
+          pickOptions={pickOptions}
+          hourlyRate={hourlyRate}
+          targetMargin={targetMargin}
           onClose={() => setCreating(false)}
         />
       )}
@@ -141,6 +166,9 @@ export function OrdersBoard({
           businessId={businessId}
           collections={collections}
           order={editing}
+          pickOptions={pickOptions}
+          hourlyRate={hourlyRate}
+          targetMargin={targetMargin}
           onClose={() => setEditing(null)}
         />
       )}

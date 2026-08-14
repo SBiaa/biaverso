@@ -448,12 +448,24 @@ export const aceListQuerySchema = z.object({
 });
 
 // ------------------------------------------------------------------- loja
+// A linha do pedido. Preço e custo chegam prontos da tela porque são um
+// retrato do dia: recalcular a partir do catálogo aqui apagaria justamente o
+// histórico que o congelamento existe para guardar.
+export const orderItemSchema = z.object({
+  name: text,
+  quantity: z.coerce.number().int().min(1).max(9999),
+  unitPrice: money,
+  unitCost: money.default(0),
+  notes: optionalText,
+  productId: optionalId,
+  collectionProductId: optionalId,
+});
+
 export const orderCreateSchema = z.object({
   orderNumber: optionalText,
   customerName: text,
   customerContact: optionalText,
-  items: text,
-  totalAmount: money,
+  items: z.array(orderItemSchema).default([]),
   status: z.enum(E.OrderStatus).default("PENDENTE"),
   orderDate: dateOnly,
   dueDate: dateOnly.nullish(),
@@ -463,11 +475,14 @@ export const orderCreateSchema = z.object({
   collectionId: optionalId,
 });
 export const orderPatchSchema = orderCreateSchema
-  .omit({ businessId: true, status: true, orderDate: true })
+  .omit({ businessId: true, status: true, orderDate: true, items: true })
   .partial()
   .extend({
     status: z.enum(E.OrderStatus).optional(),
     orderDate: dateOnly.optional(),
+    // Ausente = não mexe nos itens (arrastar no kanban só muda o status).
+    // Presente = substitui a lista inteira, que é como o formulário salva.
+    items: z.array(orderItemSchema).optional(),
   });
 
 export const orderListQuerySchema = z.object({
@@ -494,26 +509,90 @@ export const collectionListQuerySchema = z.object({
   status: filter(z.enum(E.CollectionStatus)),
 });
 
+// Só http(s): um "javascript:" aqui viraria src executável no card do produto.
+const imageUrl = z
+  .union([z.url(), z.literal("")])
+  .nullish()
+  .transform((v) => v || null)
+  .refine((v) => !v || /^https?:\/\//i.test(v), "o link precisa começar com http:// ou https://");
+
+/** Margem em %: acima de 99 o preço sugerido explode, abaixo de 0 é prejuízo. */
+const marginPercent = z.coerce.number().min(0).max(99);
+
+// A peça da coleção: só a arte e o preço da temporada. O que ela custa vem do
+// produto base — por isso não existe `cost` aqui, só o extra desta peça.
 export const collectionProductCreateSchema = z.object({
-  name: text,
+  productId: id,
+  name: optionalText,
   description: optionalText,
   price: money.nullish(),
-  cost: money.nullish(),
-  // Só http(s): um "javascript:" aqui viraria src executável no card do produto.
-  imageUrl: z
-    .union([z.url(), z.literal("")])
-    .nullish()
-    .transform((v) => v || null)
-    .refine((v) => !v || /^https?:\/\//i.test(v), "o link precisa começar com http:// ou https://"),
+  extraCost: money.nullish(),
+  imageUrl,
   notes: optionalText,
 });
-export const collectionProductPatchSchema = collectionProductCreateSchema.partial();
+export const collectionProductPatchSchema = collectionProductCreateSchema
+  .omit({ productId: true })
+  .partial();
+
+// ----------------------------------------------------- central de produtos
+export const productCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  category: optionalText,
+  imageUrl,
+  basePrice: money.nullish(),
+  targetMargin: marginPercent.nullish(),
+  active: z.boolean().default(true),
+  notes: optionalText,
+  // Nulo = produto de todos os negócios, que é o caso normal.
+  businessId: optionalId,
+});
+export const productPatchSchema = productCreateSchema.partial();
+
+export const productListQuerySchema = z.object({
+  businessId: filter(id),
+  category: filter(z.string()),
+  active: filter(z.enum(["true", "false"])),
+});
+
+export const productCostItemCreateSchema = z.object({
+  label: text,
+  kind: z.enum(E.ProductCostKind).default("MATERIAL"),
+  mode: z.enum(E.ProductCostMode).default("FIXO"),
+  // Percentual, minutos e quantidade de insumo passam pelo mesmo campo — o modo
+  // diz o que ele é.
+  amount: z.coerce.number().finite().nonnegative(),
+  // Só no modo INSUMO; nos outros fica nulo.
+  materialId: optionalId,
+});
+export const productCostItemPatchSchema = productCostItemCreateSchema.partial();
+
+// ---------------------------------------------------- biblioteca de insumos
+export const materialCreateSchema = z.object({
+  name: text,
+  unit: optionalText,
+  packPrice: money,
+  // Pacote com 0 unidades tornaria o custo por unidade uma divisão por zero.
+  packQuantity: z.coerce.number().finite().positive(),
+  supplier: optionalText,
+  notes: optionalText,
+});
+export const materialPatchSchema = materialCreateSchema.partial();
 
 // ---------------------------------------------------------- configurações
 export const settingsPatchSchema = z.object({
   // Tetos de sanidade: mais que isso é engano de digitação.
   waterGoal: z.coerce.number().int().min(1).max(30).optional(),
   waterUnitMl: z.coerce.number().int().min(50).max(2000).optional(),
+  // Vazio = "ainda não defini": os custos por tempo ficam avisando na tela.
+  // A string vazia vem primeiro na união porque `z.coerce.number()` engoliria
+  // "" como 0 — e 0/hora não é a mesma coisa que "sem valor definido".
+  hourlyRate: z
+    .union([z.literal(""), z.coerce.number().finite().nonnegative()])
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .optional(),
+  targetMargin: marginPercent.optional(),
 });
 
 // -------------------------------------------------------------- biblioteca

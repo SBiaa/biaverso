@@ -55,9 +55,3 @@ export function resolveOrderCompletedAt(
   if (status === "ENTREGUE" && !previousCompletedAt) return new Date();
   return previousCompletedAt;
 }
-
-/** Margem de um produto em %. Null quando falta preço ou custo. */
-export function productMargin(price: number | null, cost: number | null) {
-  if (price === null || cost === null || price <= 0) return null;
-  return ((price - cost) / price) * 100;
-}

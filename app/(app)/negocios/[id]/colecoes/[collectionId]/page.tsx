@@ -9,6 +9,15 @@ import { CollectionTasksSection } from "@/components/modules/loja/CollectionTask
 import { orderStatusLabels } from "@/lib/labels";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { orderStatusColors } from "@/lib/loja";
+import { getUserSettings } from "@/lib/settings";
+import {
+  buildCostBreakdown,
+  costItemsQuery,
+  effectivePrice,
+  formatMinutes,
+  marginTone,
+  totalCostAt,
+} from "@/lib/produtos";
 
 export const dynamic = "force-dynamic";
 
@@ -19,17 +28,59 @@ export default async function CollectionDetailPage({
 }) {
   const { id: businessId, collectionId } = await params;
 
-  const collection = await prisma.collection.findUnique({
-    where: { id: collectionId },
-    include: {
-      products: { orderBy: { createdAt: "asc" } },
-      orders: { orderBy: { orderDate: "desc" } },
-      tasks: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
-    },
-  });
+  const [collection, settings] = await Promise.all([
+    prisma.collection.findUnique({
+      where: { id: collectionId },
+      include: {
+        products: {
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          include: { product: { include: { costItems: costItemsQuery } } },
+        },
+        orders: { orderBy: { orderDate: "desc" } },
+        tasks: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
+      },
+    }),
+    getUserSettings(),
+  ]);
   if (!collection || collection.businessId !== businessId) notFound();
 
+  // O catálogo do seletor: os ativos que este negócio pode usar, mais os que já
+  // estão na coleção — um produto desativado depois não pode sumir da tela e
+  // deixar a peça sem base para calcular custo.
+  const catalog = await prisma.product.findMany({
+    where: {
+      OR: [
+        { active: true, businessId },
+        { active: true, businessId: null },
+        { id: { in: collection.products.map((item) => item.productId) } },
+      ],
+    },
+    orderBy: [{ category: "asc" }, { name: "asc" }],
+    include: { costItems: costItemsQuery },
+  });
+
   const ordersTotal = collection.orders.reduce((sum, o) => sum + o.totalAmount, 0);
+
+  // Quanto a coleção custa e quanto ela rende se cada peça vender uma unidade.
+  const totals = collection.products.reduce(
+    (acc, item) => {
+      const breakdown = buildCostBreakdown(item.product.costItems, {
+        hourlyRate: settings.hourlyRate,
+        extra: item.extraCost ?? 0,
+      });
+      const price = effectivePrice(item.price, item.product.basePrice);
+      acc.minutes += breakdown.minutes;
+      acc.cost += totalCostAt(breakdown, price);
+      acc.revenue += price ?? 0;
+      if (price === null) acc.semPreco += 1;
+      if (item.product.costItems.length === 0) acc.semCusto += 1;
+      return acc;
+    },
+    { cost: 0, revenue: 0, minutes: 0, semPreco: 0, semCusto: 0 },
+  );
+
+  const lucro = totals.revenue - totals.cost;
+  const margemMedia = totals.revenue > 0 ? (lucro / totals.revenue) * 100 : null;
 
   return (
     <>
@@ -54,20 +105,68 @@ export default async function CollectionDetailPage({
           }}
         />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Produtos" value={collection.products.length} />
-          <StatCard label="Pedidos" value={collection.orders.length} />
-          <StatCard label="Total em pedidos" value={formatCurrencyBRL(ordersTotal)} />
+          <StatCard label="Custo da coleção" value={formatCurrencyBRL(totals.cost)} />
+          <StatCard
+            label="Se vender uma de cada"
+            value={formatCurrencyBRL(totals.revenue)}
+          />
+          <StatCard
+            label="Lucro · margem"
+            value={
+              margemMedia === null
+                ? "—"
+                : `${formatCurrencyBRL(lucro)} · ${margemMedia.toFixed(0)}%`
+            }
+            valueClassName={cn("text-lg", marginTone(margemMedia, settings.targetMargin))}
+          />
         </div>
+
+        {(totals.semPreco > 0 || totals.semCusto > 0 || totals.minutes > 0) && (
+          <p className="text-xs text-text-secondary">
+            {totals.minutes > 0 && (
+              <>Produzir uma de cada leva {formatMinutes(totals.minutes)}. </>
+            )}
+            {totals.semCusto > 0 && (
+              <>
+                {totals.semCusto === 1
+                  ? "1 produto está sem custo cadastrado"
+                  : `${totals.semCusto} produtos estão sem custo cadastrado`}{" "}
+                na central, então a margem acima está otimista.{" "}
+              </>
+            )}
+            {totals.semPreco > 0 && (
+              <>
+                {totals.semPreco === 1
+                  ? "1 peça está sem preço"
+                  : `${totals.semPreco} peças estão sem preço`}{" "}
+                e não entra no faturamento.
+              </>
+            )}
+          </p>
+        )}
 
         <CollectionProductsSection
           collectionId={collection.id}
-          products={collection.products.map((p) => ({
+          hourlyRate={settings.hourlyRate}
+          defaultTargetMargin={settings.targetMargin}
+          catalog={catalog.map((p) => ({
             id: p.id,
+            name: p.name,
+            category: p.category,
+            imageUrl: p.imageUrl,
+            basePrice: p.basePrice,
+            targetMargin: p.targetMargin,
+            costItems: p.costItems,
+          }))}
+          items={collection.products.map((p) => ({
+            id: p.id,
+            productId: p.productId,
             name: p.name,
             description: p.description,
             price: p.price,
-            cost: p.cost,
+            extraCost: p.extraCost,
             imageUrl: p.imageUrl,
             notes: p.notes,
           }))}
@@ -86,7 +185,14 @@ export default async function CollectionDetailPage({
 
         <Card className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Pedidos da coleção</h2>
+            <h2 className="text-sm font-semibold text-text-primary">
+              Pedidos da coleção
+              {collection.orders.length > 0 && (
+                <span className="ml-2 font-normal text-text-secondary">
+                  {collection.orders.length} · {formatCurrencyBRL(ordersTotal)}
+                </span>
+              )}
+            </h2>
             <Link
               href={`/negocios/${businessId}/pedidos`}
               className="text-xs font-medium text-accent"

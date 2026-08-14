@@ -12,6 +12,7 @@ import {
   Lightbulb,
   LineChart,
   MoreHorizontal,
+  Package,
   Radar,
   Settings,
   Sparkles,
@@ -43,6 +44,8 @@ export const navGroups: NavGroup[] = [
       // Projetos e clientes de todos os negócios num lugar só.
       { href: "/projetos", label: "Projetos", icon: FolderKanban },
       { href: "/clientes", label: "Clientes", icon: Users },
+      // O catálogo é compartilhado pelos negócios, por isso fica fora deles.
+      { href: "/produtos", label: "Produtos", icon: Package },
     ],
   },
   {

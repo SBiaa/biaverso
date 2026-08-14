@@ -15,7 +15,12 @@ export const USER_SETTINGS_ID = "single";
 export async function getUserSettings(): Promise<UserSettingsValues> {
   const settings = await prisma.userSettings.findUnique({
     where: { id: USER_SETTINGS_ID },
-    select: { waterGoal: true, waterUnitMl: true },
+    select: {
+      waterGoal: true,
+      waterUnitMl: true,
+      hourlyRate: true,
+      targetMargin: true,
+    },
   });
 
   return settings ?? DEFAULT_SETTINGS;

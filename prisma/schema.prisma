@@ -657,6 +657,7 @@ model Business {
   collections         Collection[]
   wishlistItems       WishlistItem[]
   credentials         BusinessCredential[]
+  products            Product[]
 }
 
 // Mesma ponte do ProjectCredential, um nível acima: senhas do negócio inteiro
@@ -948,9 +949,11 @@ model Order {
   orderNumber     String?
   customerName    String
   customerContact String?
-  // Descrição livre dos itens — sem catálogo de produtos por enquanto.
-  items           String
-  totalAmount     Float
+  // Derivados dos itens, gravados: o kanban e a visão geral do negócio leem
+  // dezenas de pedidos e não podem somar item por item a cada tela. Quem
+  // mantém os dois em dia é a API, sempre que os itens mudam.
+  totalAmount     Float       @default(0)
+  totalCost       Float       @default(0)
   status          OrderStatus @default(PENDENTE)
   orderDate       DateTime    @default(now())
   dueDate         DateTime?
@@ -965,9 +968,41 @@ model Order {
   collectionId String?
   collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
 
+  items OrderItem[]
+
   @@index([businessId, status])
   @@index([businessId, dueDate])
   @@index([collectionId])
+}
+
+// Uma linha do pedido.
+//
+// Nome, preço e custo ficam CONGELADOS aqui, copiados no dia do pedido. Sem
+// isso, reajustar a caneca em janeiro reescreveria o lucro de um pedido de
+// dezembro que já foi pago — o histórico deixaria de ser histórico. As ligações
+// com produto e peça existem só para rastrear a origem, e podem sumir sem levar
+// a linha junto.
+model OrderItem {
+  id        String   @id @default(cuid())
+  name      String
+  quantity  Int      @default(1)
+  unitPrice Float
+  unitCost  Float    @default(0)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  collectionProductId String?
+  collectionProduct   CollectionProduct? @relation(fields: [collectionProductId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([collectionProductId])
 }
 
 enum OrderStatus {
@@ -1028,20 +1063,147 @@ enum CollectionStatus {
   ENCERRADA
 }
 
-model CollectionProduct {
-  id          String   @id @default(cuid())
+// CENTRAL DE PRODUTOS — o catálogo de produtos personalizados.
+//
+// Vale para todos os negócios de propósito: a mesma caneca é vendida pela
+// Creative, pela Alternative Space e pela EntreMundos. Antes cada coleção
+// recadastrava o produto do zero, então "Caneca Rick" e "Caneca Ostara" eram
+// dois cadastros sem relação e o custo se perdia — subiu o preço do blank,
+// nenhuma margem do app ficava certa.
+//
+// Aqui mora a BASE (o item físico e o que custa produzir uma unidade). A arte
+// aplicada e o preço daquela temporada ficam no CollectionProduct.
+model Product {
+  id          String  @id @default(cuid())
   name        String
   description String?
-  price       Float?
-  cost        Float?
+  // Agrupador livre para filtrar a lista: "Canecas", "Vestuário", "Decoração".
+  category    String?
   imageUrl    String?
+  // Preço de venda padrão. Cada coleção pode sobrescrever.
+  basePrice   Float?
+  // Margem desejada deste produto, em %. Sem valor, usa a das configurações.
+  targetMargin Float?
+  active      Boolean @default(true)
   notes       String?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Nulo = produto disponível para qualquer negócio (o caso normal).
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  costItems       ProductCostItem[]
+  collectionItems CollectionProduct[]
+  orderItems      OrderItem[]
+
+  @@index([active, name])
+  @@index([businessId])
+}
+
+// BIBLIOTECA DE INSUMOS
+//
+// O que você compra em pacote e gasta por peça: papel transfer, tinta, fita,
+// caixa. O preço fica guardado como você compra de verdade — R$120 o pacote de
+// 50 — e o app divide para achar o custo por unidade.
+//
+// Existe para o reajuste ser um lugar só: subiu o pacote de transfer, todo
+// produto que usa transfer recalcula a margem sozinho. Sem isso, o mesmo número
+// estaria copiado à mão em oito produtos e nenhum ficaria certo por muito tempo.
+model Material {
+  id   String  @id @default(cuid())
+  name String
+  // A unidade que o produto consome: "folha", "metro", "ml", "un".
+  unit String?
+  // Como você compra: preço do pacote e quantas unidades vêm nele.
+  packPrice    Float
+  packQuantity Float   @default(1)
+  supplier     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  // Quando o preço foi mexido pela última vez — insumo com preço velho é a
+  // causa mais comum de margem errada.
+  updatedAt    DateTime @updatedAt
+
+  costItems ProductCostItem[]
+
+  @@index([name])
+}
+
+// Cada linha do custo de um produto: o blank, a impressão, a embalagem, o seu
+// tempo, a taxa da maquininha. Lista aberta em vez de campos fixos porque cada
+// produto tem uma composição diferente — chinelo não tem sublimação de caneca.
+model ProductCostItem {
+  id    String          @id @default(cuid())
+  label String
+  kind  ProductCostKind @default(MATERIAL)
+  mode  ProductCostMode @default(FIXO)
+  // O que `amount` significa depende do modo: reais (FIXO), porcentagem do
+  // preço de venda (PERCENTUAL), minutos de trabalho (TEMPO) ou quantas
+  // unidades do insumo a peça consome (INSUMO).
+  amount Float
+  order  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Só no modo INSUMO. Restrict: apagar um insumo em uso zeraria em silêncio o
+  // custo de todo produto que depende dele — a API avisa e manda desfazer antes.
+  materialId String?
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: Restrict)
+
+  @@index([productId, order])
+  @@index([materialId])
+}
+
+enum ProductCostKind {
+  MATERIAL // o blank: a caneca crua, a almofada, a camiseta
+  IMPRESSAO // sublimação, DTF, transfer, tinta
+  EMBALAGEM
+  MAO_DE_OBRA
+  FRETE
+  TAXA // maquininha, marketplace, imposto
+  OUTRO
+}
+
+enum ProductCostMode {
+  FIXO // R$ por unidade
+  PERCENTUAL // % do preço de venda — taxa de maquininha, comissão de marketplace
+  TEMPO // minutos × valor/hora das configurações
+  INSUMO // quantidade × custo unitário de um Material da biblioteca
+}
+
+// O produto dentro de uma coleção: a base do catálogo + a arte daquela peça.
+//
+// Sem unique em (collectionId, productId): a mesma caneca aparece várias vezes
+// na coleção, uma por arte ("Caneca Rick", "Caneca Morty").
+model CollectionProduct {
+  id String @id @default(cuid())
+  // Nome da peça nesta coleção ("Caneca Rick"). Vazio = usa o nome da base.
+  name        String?
+  description String?
+  imageUrl    String?
+  notes       String?
+  // Preço nesta coleção. Nulo = herda o basePrice do produto, então reajustar
+  // a base propaga para todas as coleções que não pediram preço próprio.
+  price     Float?
+  // Custo que só existe nesta peça: arte exclusiva, tag bordada, embalagem
+  // especial. Soma ao custo da base em vez de substituí-lo.
+  extraCost Float?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
 
   collectionId String
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
-  @@index([collectionId])
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  orderItems OrderItem[]
+
+  @@index([collectionId, order])
+  @@index([productId])
 }
 
 // BIBLIOTECA DE LIVROS
@@ -1326,6 +1488,11 @@ model UserSettings {
   // Quantas garrafas/copos por dia e quantos ml cada um tem.
   waterGoal   Int      @default(8)
   waterUnitMl Int      @default(300)
+  // Quanto vale uma hora do seu trabalho — vira o custo dos itens em modo
+  // TEMPO. Nulo = você ainda não definiu, e o app avisa em vez de contar zero.
+  hourlyRate  Float?
+  // Margem de lucro desejada, em %. Base do preço sugerido no catálogo.
+  targetMargin Float   @default(60)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

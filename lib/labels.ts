@@ -314,3 +314,20 @@ export const documentTypeColors: Record<string, string> = {
   CONTRATO: "#DC2626",
   OUTRO: "#6B7280",
 };
+
+export const productCostKindLabels: Record<string, string> = {
+  MATERIAL: "Material",
+  IMPRESSAO: "Impressão",
+  EMBALAGEM: "Embalagem",
+  MAO_DE_OBRA: "Mão de obra",
+  FRETE: "Frete",
+  TAXA: "Taxa",
+  OUTRO: "Outro",
+};
+
+export const productCostModeLabels: Record<string, string> = {
+  FIXO: "R$ por unidade",
+  PERCENTUAL: "% do preço de venda",
+  TEMPO: "minutos × valor/hora",
+  INSUMO: "insumo da biblioteca",
+};

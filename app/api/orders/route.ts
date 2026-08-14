@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { parseBody, parseQuery, route } from "@/lib/api";
 import { orderCreateSchema, orderListQuerySchema } from "@/lib/schemas";
 import { resolveOrderCompletedAt } from "@/lib/loja";
+import { orderTotals } from "@/lib/orders";
 
 export const GET = route(async (request: Request) => {
   const q = parseQuery(request, orderListQuerySchema);
@@ -13,7 +14,7 @@ export const GET = route(async (request: Request) => {
       collectionId: q.collectionId,
       status: q.status,
     },
-    include: { collection: true },
+    include: { collection: true, items: { orderBy: { createdAt: "asc" } } },
     orderBy: [{ dueDate: "asc" }, { orderDate: "desc" }],
   });
 
@@ -21,7 +22,7 @@ export const GET = route(async (request: Request) => {
 });
 
 export const POST = route(async (request: Request) => {
-  const { completedAt, ...data } = await parseBody(request, orderCreateSchema);
+  const { completedAt, items, ...data } = await parseBody(request, orderCreateSchema);
 
   const order = await prisma.order.create({
     data: {
@@ -29,7 +30,18 @@ export const POST = route(async (request: Request) => {
       dueDate: data.dueDate ?? null,
       collectionId: data.collectionId ?? null,
       completedAt: resolveOrderCompletedAt(data.status, completedAt, null),
+      // Total e custo saem da soma das linhas — nunca de um campo digitado.
+      ...orderTotals(items),
+      items: {
+        create: items.map((item) => ({
+          ...item,
+          notes: item.notes ?? null,
+          productId: item.productId ?? null,
+          collectionProductId: item.collectionProductId ?? null,
+        })),
+      },
     },
+    include: { items: true },
   });
 
   return NextResponse.json(order);
