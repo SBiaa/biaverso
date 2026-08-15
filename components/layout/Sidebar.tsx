@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBusinessIcon } from "@/lib/business-visuals";
 import { navGroups, type NavItem } from "./nav-config";
@@ -49,7 +48,11 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
   const pathname = usePathname();
 
   function isItemActive(href: string) {
-    return href === "/" ? pathname === "/" : pathname.startsWith(href);
+    // "/negocios" é a lista de todos; sem o match exato ela ficaria acesa
+    // junto com o negócio aberto, dois itens marcados ao mesmo tempo.
+    return href === "/" || href === "/negocios"
+      ? pathname === href
+      : pathname.startsWith(href);
   }
 
   return (
@@ -75,38 +78,24 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
       </Link>
 
       <nav className="flex flex-col gap-4 pb-2">
-        <div className="flex flex-col gap-0.5">
-          <NavGroupLabel>{navGroups[0].title}</NavGroupLabel>
-          {navGroups[0].items.map((item) => (
-            <NavLink key={item.href} item={item} isActive={isItemActive(item.href)} />
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-0.5">
-          <NavGroupLabel>Negócios</NavGroupLabel>
-          <NavLink
-            item={{ href: "/negocios", label: "Todos os negócios", icon: Building2 }}
-            isActive={pathname === "/negocios"}
-          />
-          {businesses.map((business) => (
-            <NavLink
-              key={business.id}
-              item={{
-                href: `/negocios/${business.id}`,
-                label: business.name,
-                icon: getBusinessIcon(business.icon),
-              }}
-              isActive={isItemActive(`/negocios/${business.id}`)}
-            />
-          ))}
-        </div>
-
-        {navGroups.slice(1).map((group) => (
+        {navGroups.map((group) => (
           <div key={group.title} className="flex flex-col gap-0.5">
             <NavGroupLabel>{group.title}</NavGroupLabel>
             {group.items.map((item) => (
               <NavLink key={item.href} item={item} isActive={isItemActive(item.href)} />
             ))}
+            {group.showBusinesses &&
+              businesses.map((business) => (
+                <NavLink
+                  key={business.id}
+                  item={{
+                    href: `/negocios/${business.id}`,
+                    label: business.name,
+                    icon: getBusinessIcon(business.icon),
+                  }}
+                  isActive={isItemActive(`/negocios/${business.id}`)}
+                />
+              ))}
           </div>
         ))}
       </nav>

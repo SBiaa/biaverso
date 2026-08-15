@@ -6,12 +6,20 @@ import { Topbar } from "@/components/layout/Topbar";
 import { allNavItems } from "@/components/layout/nav-config";
 import { getBusinessIcon } from "@/lib/business-visuals";
 
-const primaryHrefs = new Set(["/", "/dia", "/financeiro", "/cardapio"]);
+// Já aparecem em outro lugar: os quatro primeiros na barra de baixo,
+// "/negocios" no cartão que abre o bloco de negócios aqui embaixo.
+const skipHrefs = new Set([
+  "/",
+  "/dia",
+  "/financeiro",
+  "/cardapio",
+  "/negocios",
+]);
 
 export const dynamic = "force-dynamic";
 
 export default async function MaisPage() {
-  const items = allNavItems.filter((item) => !primaryHrefs.has(item.href));
+  const items = allNavItems.filter((item) => !skipHrefs.has(item.href));
   const businesses = await prisma.business.findMany({
     where: { active: true },
     orderBy: { name: "asc" },

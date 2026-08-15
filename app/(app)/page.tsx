@@ -13,6 +13,7 @@ import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightC
 import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
 import { HomeHabitList } from "@/components/modules/home/HomeHabitList";
 import { HomeTaskList } from "@/components/modules/home/HomeTaskList";
+import { QuickCaptureForm } from "@/components/modules/ideias/QuickCaptureForm";
 import { RadarHomeNote } from "@/components/modules/radar/RadarHomeNote";
 import { WaterTracker } from "@/components/modules/dia/WaterTracker";
 import { getOrCreateDay } from "@/lib/day";
@@ -54,7 +55,7 @@ async function getDashboardData() {
 
   // `select` no lugar de `include`: as relações inteiras traziam a linha
   // completa de Recipe, Habit e Pillar para exibir um punhado de campos.
-  const [day, mealPlans, entradas, saidas, pillars, settings] = await Promise.all([
+  const [day, mealPlans, entradas, saidas, pillars, settings, businesses] = await Promise.all([
     prisma.day.findUniqueOrThrow({
       where: { id: today.id },
       select: {
@@ -106,6 +107,12 @@ async function getDashboardData() {
       },
     }),
     getUserSettings(),
+    // Só para o destino da captura rápida de ideias.
+    prisma.business.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
   ]);
 
   const saldo = (entradas._sum.amount ?? 0) - (saidas._sum.amount ?? 0);
@@ -127,11 +134,12 @@ async function getDashboardData() {
     .filter((pillar) => pillar.inProgressCount > 0)
     .sort((a, b) => b.inProgressCount - a.inProgressCount)[0] ?? null;
 
-  return { day, saldo, date, pillarHighlight, settings, mealPlans };
+  return { day, saldo, date, pillarHighlight, settings, mealPlans, businesses };
 }
 
 export default async function HomePage() {
-  const { day, saldo, date, pillarHighlight, settings, mealPlans } = await getDashboardData();
+  const { day, saldo, date, pillarHighlight, settings, mealPlans, businesses } =
+    await getDashboardData();
 
   const events = day.events;
   const tasks = day.tasks.map((t) => ({ ...t, origin: t.origin as BadgeOrigin }));
@@ -169,6 +177,10 @@ export default async function HomePage() {
             {formatDateBR(date)}
           </span>
         </div>
+
+        {/* Ideia boa aparece a qualquer hora e some rápido: o campo fica no
+            topo da home para não depender de achar o menu antes. */}
+        <QuickCaptureForm businesses={businesses} standalone />
 
         {/* Em Suspense para o radar (4 consultas) não segurar a Home inteira. */}
         <Suspense fallback={null}>
@@ -284,6 +296,8 @@ export default async function HomePage() {
         <p className="font-serif text-lg italic text-text-secondary">
           {phrase}
         </p>
+
+        <QuickCaptureForm businesses={businesses} standalone />
 
         <Suspense fallback={null}>
           <RadarHomeNote />

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
+  Building2,
   CalendarCheck,
   CalendarDays,
   Compass,
@@ -30,6 +31,9 @@ export type NavItem = {
 export type NavGroup = {
   title: string;
   items: NavItem[];
+  // A sidebar pendura a lista de negócios ativos logo depois dos itens deste
+  // grupo: os links fixos são a entrada, os negócios vêm do banco.
+  showBusinesses?: boolean;
 };
 
 export const navGroups: NavGroup[] = [
@@ -41,10 +45,17 @@ export const navGroups: NavGroup[] = [
       { href: "/agenda", label: "Agenda", icon: CalendarDays },
       // O que foi começado e parou — a única tela do app que olha ausência.
       { href: "/radar", label: "Radar", icon: Radar },
-      // Projetos e clientes de todos os negócios num lugar só.
+    ],
+  },
+  {
+    title: "Negócios",
+    showBusinesses: true,
+    items: [
+      { href: "/negocios", label: "Todos os negócios", icon: Building2 },
+      // Visões que atravessam os negócios: projetos e clientes de todos eles
+      // num lugar só, e o catálogo, que é compartilhado entre eles.
       { href: "/projetos", label: "Projetos", icon: FolderKanban },
       { href: "/clientes", label: "Clientes", icon: Users },
-      // O catálogo é compartilhado pelos negócios, por isso fica fora deles.
       { href: "/produtos", label: "Produtos", icon: Package },
     ],
   },
@@ -53,6 +64,9 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/visao", label: "Central de Visão", icon: Compass },
       { href: "/financeiro", label: "Financeiro", icon: Wallet },
+      // Fica colada no financeiro porque é dinheiro: a lista soma preço e
+      // compara com o que sobra do mês. Na Biblioteca era só uma lista.
+      { href: "/desejos", label: "Lista de desejos", icon: Gift },
       { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
       { href: "/beleza", label: "Beleza", icon: Sparkles },
       { href: "/avaliacao", label: "Avaliação", icon: LineChart },
@@ -64,7 +78,6 @@ export const navGroups: NavGroup[] = [
       { href: "/livros", label: "Livros", icon: BookOpen },
       { href: "/conhecimento", label: "Conhecimento", icon: GraduationCap },
       { href: "/ideias", label: "Ideias", icon: Lightbulb },
-      { href: "/desejos", label: "Lista de desejos", icon: Gift },
     ],
   },
   {

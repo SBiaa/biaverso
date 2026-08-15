@@ -1,9 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge } from "@/components/ui";
 import { QuickCaptureForm } from "@/components/modules/ideias/QuickCaptureForm";
 import { IdeaFilters } from "@/components/modules/ideias/IdeaFilters";
-import { IdeaStatusToggle } from "@/components/modules/ideias/IdeaStatusToggle";
+import { IdeaCard } from "@/components/modules/ideias/IdeaCard";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -44,26 +43,9 @@ export default async function IdeiasPage({
             Nenhuma ideia encontrada.
           </p>
         ) : (
-          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+          <div className="grid items-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
             {ideas.map((idea) => (
-              <Card key={idea.id} className="flex flex-col gap-2">
-                <p className="text-sm font-medium text-text-primary">
-                  {idea.title}
-                </p>
-                {idea.description && (
-                  <p className="text-xs text-text-secondary">
-                    {idea.description}
-                  </p>
-                )}
-                <div className="flex items-center justify-between">
-                  {idea.business ? (
-                    <BusinessBadge business={idea.business} />
-                  ) : (
-                    <span />
-                  )}
-                  <IdeaStatusToggle ideaId={idea.id} initialStatus={idea.status} />
-                </div>
-              </Card>
+              <IdeaCard key={idea.id} idea={idea} businesses={businesses} />
             ))}
           </div>
         )}
