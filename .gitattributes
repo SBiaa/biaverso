@@ -1,0 +1,16 @@
+# O Windows checa os arquivos com CRLF, então um `git add` num arquivo que
+# outro editor salvou com LF virava diff do arquivo inteiro (e o aviso do
+# "LF will be replaced by CRLF"). Aqui o repositório passa a ser LF em todo
+# lugar, inclusive na cópia de trabalho.
+* text=auto eol=lf
+
+# Binários não passam por conversão nenhuma.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
