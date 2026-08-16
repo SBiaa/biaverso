@@ -52,8 +52,20 @@ export function IconButton({
   className,
   type = "button",
   tone = "default",
+  revealOnHover = false,
   ...props
-}: ComponentPropsWithRef<"button"> & { tone?: "default" | "danger" }) {
+}: ComponentPropsWithRef<"button"> & {
+  tone?: "default" | "danger";
+  /**
+   * Some até o mouse chegar na linha (o pai precisa ter `group`).
+   *
+   * Numa lista de quinze itens, lápis e lixeira sempre visíveis são trinta
+   * ícones disputando atenção com o texto. Só vale onde existe mouse: o
+   * `@media (hover: hover)` deixa tudo à vista no celular, onde "chegar por
+   * cima" não existe e um botão invisível seria um botão perdido.
+   */
+  revealOnHover?: boolean;
+}) {
   return (
     <button
       type={type}
@@ -61,6 +73,9 @@ export function IconButton({
         "inline-flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors sm:size-9",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         "disabled:pointer-events-none disabled:opacity-50",
+        revealOnHover &&
+          "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:transition-opacity " +
+            "group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
         tone === "danger"
           ? "text-text-secondary hover:bg-danger-soft-bg hover:text-danger"
           : "text-text-secondary hover:bg-hover-strong hover:text-text-primary",

@@ -97,7 +97,7 @@ export function TransactionsList({
             <li
               key={t.id}
               className={cn(
-                "flex flex-col gap-1.5 py-2 text-sm",
+                "group flex flex-col gap-1.5 py-2 text-sm",
                 "sm:flex-row sm:items-center sm:justify-between sm:gap-3",
               )}
             >
@@ -140,12 +140,17 @@ export function TransactionsList({
                   {formatCurrencyBRL(t.amount)}
                 </span>
                 <div className="-my-2 flex items-center">
-                  <IconButton title="Editar" onClick={() => setEditingId(t.id)}>
+                  <IconButton
+                    title="Editar"
+                    revealOnHover
+                    onClick={() => setEditingId(t.id)}
+                  >
                     <Pencil size={15} />
                   </IconButton>
                   <IconButton
                     title="Deletar"
                     tone="danger"
+                    revealOnHover
                     onClick={() => handleDelete(t.id)}
                     disabled={deletingId === t.id}
                   >

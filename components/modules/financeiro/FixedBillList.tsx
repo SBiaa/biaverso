@@ -262,7 +262,7 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
             // A borda vermelha na lateral: numa lista de dez contas, o selo
             // "Atrasado" à direita só aparece depois de ler a linha inteira.
             className={cn(
-              "flex items-center justify-between",
+              "group flex items-center justify-between",
               attentionBorder[statusLevel[item.status] ?? "neutro"],
             )}
           >
@@ -327,6 +327,7 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
               <div className="flex items-center gap-1">
                 <IconButton
                   title="Editar"
+                  revealOnHover
                   onClick={() => setEditingId(item.fixedBillId)}
                 >
                   <Pencil size={15} />
@@ -336,6 +337,7 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
                   onClick={() => handleDelete(item.fixedBillId)}
                   disabled={deletingId === item.fixedBillId}
                   tone="danger"
+                  revealOnHover
                 >
                   <Trash2 size={15} />
                 </IconButton>

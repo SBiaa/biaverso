@@ -41,8 +41,11 @@ try {
   var escuro = escolha === "escuro" || (escolha === "sistema" &&
     window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.theme = escuro ? "dark" : "light";
+  document.documentElement.dataset.sidebar =
+    localStorage.getItem("biaverso:barra") === "fechada" ? "fechada" : "aberta";
 } catch (e) {
   document.documentElement.dataset.theme = "light";
+  document.documentElement.dataset.sidebar = "aberta";
 }
 `;
 
@@ -59,6 +62,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       // `data-theme` já sai do servidor para o CSS ter um valor válido mesmo
       // se o script abaixo não rodar; ele corrige em seguida, antes da pintura.
       data-theme="light"
+      data-sidebar="aberta"
       suppressHydrationWarning
     >
       <head>
