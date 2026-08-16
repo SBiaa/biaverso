@@ -29,8 +29,10 @@ function DestinationLink({ item }: { item: NavItem }) {
 }
 
 export default async function MaisPage() {
+  // Esta é a barra lateral do celular, então respeita a mesma escolha: quem
+  // está fora do menu continua em "Todos os negócios" e na busca.
   const businesses = await prisma.business.findMany({
-    where: { active: true },
+    where: { active: true, showInNav: true },
     orderBy: { name: "asc" },
     select: { id: true, name: true, icon: true },
   });

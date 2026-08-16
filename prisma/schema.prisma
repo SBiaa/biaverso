@@ -640,6 +640,10 @@ model Business {
   color       String   @default("#6366F1")
   icon        String?
   active      Boolean  @default(true)
+  /// Aparecer na navegação lateral. Separado de `active` de propósito: um
+  /// negócio fora do menu continua valendo em toda parte (lançar transação,
+  /// abrir pedido, filtrar ideia) — só não ocupa linha na barra.
+  showInNav   Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

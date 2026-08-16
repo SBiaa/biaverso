@@ -293,6 +293,7 @@ export const businessCreateSchema = z.object({
 });
 export const businessPatchSchema = businessCreateSchema.partial().extend({
   active: z.boolean().optional(),
+  showInNav: z.boolean().optional(),
 });
 
 /** Lista inteira dos módulos do negócio: a ordem do array vira `order`. */

@@ -14,12 +14,14 @@ async function SidebarWithBusinesses() {
   const businesses = await prisma.business.findMany({
     where: { active: true },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, icon: true },
+    select: { id: true, name: true, icon: true, showInNav: true },
   });
 
   return (
     <>
-      <Sidebar businesses={businesses} />
+      {/* A barra mostra só os negócios marcados; a busca conhece todos. Tirar
+          do menu é para parar de ocupar linha, não para ficar inalcançável. */}
+      <Sidebar businesses={businesses.filter((b) => b.showInNav)} />
       {/* Solto, e não dentro da sidebar: no celular ela é `hidden`, e um
           `fixed` dentro de um ancestral escondido não chega a pintar. */}
       <CommandPalette businesses={businesses} />

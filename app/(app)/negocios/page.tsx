@@ -20,6 +20,7 @@ export default async function NegociosPage() {
     color: b.color,
     icon: b.icon,
     active: b.active,
+    showInNav: b.showInNav,
     activeClientCount: b.clients.length,
     modules: b.modules.map((m) => m.module),
   }));
