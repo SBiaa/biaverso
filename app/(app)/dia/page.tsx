@@ -291,9 +291,13 @@ export default async function DiaPage({
               vazava, 530px num visor de 375. */}
           <div className="flex min-w-0 flex-col gap-4 xl:col-span-2 xl:gap-6">
             <Card>
-              <CardTitle className="mb-3">
-                Tarefas de hoje
-              </CardTitle>
+              {/* O seletor de tipo do dia mora aqui, e não junto dos hábitos:
+                  o que ele troca são as tarefas de rotina desta lista. Ao lado
+                  dos hábitos, parecia mexer neles. */}
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <CardTitle>Tarefas de hoje</CardTitle>
+                <DayTypeToggle dayId={day.id} initialType={day.type} />
+              </div>
               <TaskListByOrigin
                 dayId={day.id}
                 dayDate={toDateInputValue(day.date)}
@@ -330,8 +334,7 @@ export default async function DiaPage({
               />
             </Card>
 
-            <Card className="flex flex-col gap-4">
-              <DayTypeToggle dayId={day.id} initialType={day.type} />
+            <Card>
               <HabitChecklist
                 items={day.habits.map((h) => ({
                   id: h.id,
