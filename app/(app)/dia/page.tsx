@@ -25,7 +25,7 @@ import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
 import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
 import { getUtcDayRange, isTaskOverdue } from "@/lib/ace";
-import { productionTypeLabels, taskTypeLabels } from "@/lib/labels";
+import { productionTypeLabels } from "@/lib/labels";
 import { getUserSettings } from "@/lib/settings";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
 import type { BadgeOrigin } from "@/components/ui";
@@ -307,8 +307,6 @@ export default async function DiaPage({
                   title: t.title,
                   done: t.done,
                   origin: t.origin as BadgeOrigin,
-                  // "Avulsa" em quase toda linha vira ruído: só rotina vale o selo.
-                  typeLabel: t.type === "AVULSA" ? null : taskTypeLabels[t.type],
                   business: t.business,
                   overdue: !t.done && t.dueDate !== null && t.dueDate.getTime() < today.getTime(),
                   subtasks: t.subtasks,

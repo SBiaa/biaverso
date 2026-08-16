@@ -21,8 +21,6 @@ type TaskItem = {
   title: string;
   done: boolean;
   origin: BadgeOrigin;
-  /** Null nas avulsas — só rotina/faxina ganham selo de tipo. */
-  typeLabel: string | null;
   business: { name: string; color: string } | null;
   overdue: boolean;
   subtasks: SubtaskItem[];
@@ -86,7 +84,6 @@ function TaskRow({
         </div>
         {/* Selos à direita: os títulos ficam alinhados numa coluna só. */}
         <span className="flex shrink-0 items-center gap-1.5">
-          {task.typeLabel && <Badge>{task.typeLabel}</Badge>}
           {task.business && <BusinessBadge business={task.business} />}
           {task.overdue && !task.done && (
             <AttentionBadge level="atrasado">
@@ -173,7 +170,6 @@ export function TaskListByOrigin({
           title: task.title,
           done: false,
           origin,
-          typeLabel: null,
           business: null,
           overdue: dayInPast,
           subtasks: [],
