@@ -67,7 +67,10 @@ export default async function ProdutoDetailPage({
 
   return (
     <>
-      <Topbar title={product.name} />
+      <Topbar
+        title={product.name}
+        trail={[{ label: "Produtos", href: "/produtos" }]}
+      />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Link
           href="/produtos"

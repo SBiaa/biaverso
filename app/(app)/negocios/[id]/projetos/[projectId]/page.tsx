@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { decryptCredentialLinks } from "@/lib/passwords";
 import { Topbar } from "@/components/layout/Topbar";
@@ -114,16 +113,17 @@ export default async function ProjectDetailPage({
 
   return (
     <>
-      <Topbar width="narrow" title={project.name} />
+      <Topbar
+        width="narrow"
+        title={project.name}
+        trail={[
+          { label: "Negócios", href: "/negocios" },
+          { label: project.business.name, href: `/negocios/${businessId}` },
+        ]}
+      />
+      {/* O "Voltar para <negócio>" que ficava aqui saiu: a trilha do cabeçalho
+          leva ao mesmo lugar e não empurra o conteúdo para baixo. */}
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
-        <Link
-          href={`/negocios/${businessId}?tab=interno`}
-          className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
-        >
-          <ArrowLeft size={15} />
-          Voltar para {project.business.name}
-        </Link>
-
         <Card className="flex flex-col gap-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>

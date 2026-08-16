@@ -22,7 +22,14 @@ export default async function BusinessSettingsPage({
 
   return (
     <>
-      <Topbar width="narrow" title={business.name} />
+      <Topbar
+        width="narrow"
+        title="Configurações"
+        trail={[
+          { label: "Negócios", href: "/negocios" },
+          { label: business.name, href: `/negocios/${id}` },
+        ]}
+      />
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <BusinessTabs
           businessId={id}

@@ -47,7 +47,11 @@ export default async function PillarDetailPage({
 
   return (
     <>
-      <Topbar width="narrow" title={pillar.name} />
+      <Topbar
+        width="narrow"
+        title={pillar.name}
+        trail={[{ label: "Central de Visão", href: "/visao" }]}
+      />
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-5 md:px-8 md:py-8">
         <PillarHeader pillar={pillar} />
         <MoodboardSection

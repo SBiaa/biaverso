@@ -50,7 +50,11 @@ export default async function ClientDetailPage({
 
   return (
     <>
-      <Topbar width="narrow" title={client.name} />
+      <Topbar
+        width="narrow"
+        title={client.name}
+        trail={[{ label: "Clientes", href: "/clientes" }]}
+      />
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Link
           href="/clientes"

@@ -118,7 +118,13 @@ export default async function BusinessOrdersPage({
 
   return (
     <>
-      <Topbar title={business.name} />
+      <Topbar
+        title="Pedidos"
+        trail={[
+          { label: "Negócios", href: "/negocios" },
+          { label: business.name, href: `/negocios/${id}` },
+        ]}
+      />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <BusinessTabs businessId={id} tabs={tabs} active="pedidos" />
         <OrdersBoard

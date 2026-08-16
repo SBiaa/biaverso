@@ -32,6 +32,7 @@ export default async function CollectionDetailPage({
     prisma.collection.findUnique({
       where: { id: collectionId },
       include: {
+        business: { select: { name: true } },
         products: {
           orderBy: [{ order: "asc" }, { createdAt: "asc" }],
           include: { product: { include: { costItems: costItemsQuery } } },
@@ -84,7 +85,14 @@ export default async function CollectionDetailPage({
 
   return (
     <>
-      <Topbar title={collection.name} />
+      <Topbar
+        title={collection.name}
+        trail={[
+          { label: "Negócios", href: "/negocios" },
+          { label: collection.business.name, href: `/negocios/${businessId}` },
+          { label: "Coleções", href: `/negocios/${businessId}/colecoes` },
+        ]}
+      />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Link
           href={`/negocios/${businessId}/colecoes`}

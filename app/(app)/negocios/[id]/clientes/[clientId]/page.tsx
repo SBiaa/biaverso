@@ -23,8 +23,9 @@ export default async function AceClientProfilePage({
   });
   if (!client) notFound();
 
-  const isLinkedToBusiness = client.businessLinks.some((link) => link.businessId === businessId);
-  if (!isLinkedToBusiness) notFound();
+  const link = client.businessLinks.find((l) => l.businessId === businessId);
+  if (!link) notFound();
+  const businessName = link.business.name;
 
   const [projects, businessClients, businessProjects, monthlyHistory, pending] = await Promise.all([
     prisma.project.findMany({
@@ -74,7 +75,14 @@ export default async function AceClientProfilePage({
 
   return (
     <>
-      <Topbar width="narrow" title={client.name} />
+      <Topbar
+        width="narrow"
+        title={client.name}
+        trail={[
+          { label: "Negócios", href: "/negocios" },
+          { label: businessName, href: `/negocios/${businessId}` },
+        ]}
+      />
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Card className="flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-lg font-semibold text-accent">
