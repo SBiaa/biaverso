@@ -285,7 +285,11 @@ export default async function DiaPage({
             registros curtos que você marca de passagem. Empilhados, os curtos
             jogavam as tarefas para 2000px abaixo da dobra. */}
         <div className="grid items-start gap-4 xl:grid-cols-3 xl:gap-6">
-          <div className="flex flex-col gap-4 xl:col-span-2 xl:gap-6">
+          {/* `min-w-0`: item de grid nasce com `min-width: auto`, então a
+              coluna esticava para caber a tabela de produção inteira e o
+              `overflow-x-auto` dela nunca chegava a rolar — a página é que
+              vazava, 530px num visor de 375. */}
+          <div className="flex min-w-0 flex-col gap-4 xl:col-span-2 xl:gap-6">
             <Card>
               <CardTitle className="mb-3">
                 Tarefas de hoje
@@ -317,7 +321,7 @@ export default async function DiaPage({
             </Suspense>
           </div>
 
-          <div className="flex flex-col gap-4 xl:gap-6">
+          <div className="flex min-w-0 flex-col gap-4 xl:gap-6">
             <Card>
               <MoodEnergySelector
                 dayId={day.id}

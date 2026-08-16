@@ -55,6 +55,7 @@ export const taskCreateSchema = z.object({
 // Campo ausente = "não mexe". `dueDate` com data reancora a tarefa naquele dia
 // (é o "trazer para hoje" do radar); com `null` explícito, tira o prazo.
 export const taskPatchSchema = z.object({
+  title: text.optional(),
   done: z.boolean().optional(),
   dueDate: dateOnly.nullish(),
 });

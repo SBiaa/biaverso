@@ -28,13 +28,16 @@ export function WaterTracker({ dayId, initialCount, settings }: WaterTrackerProp
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="-m-1 flex flex-wrap items-center">
           {Array.from({ length: slots }, (_, i) => (
             <button
               key={i}
               type="button"
               onClick={() => handleClick(i)}
               aria-label={`Marcar ${i + 1} de ${settings.waterGoal} copos`}
+              // O gotinho tem 22px; o alvo, 44. Sem isto marcar um copo no
+              // celular era mira fina — e é uma das coisas mais tocadas do dia.
+              className="flex size-11 items-center justify-center rounded-full transition-colors hover:bg-hover"
             >
               <Droplets
                 size={22}

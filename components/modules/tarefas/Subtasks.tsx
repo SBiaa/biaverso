@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, Circle, ListPlus, Plus, Trash2 } from "lucide-react";
-import { ErrorNote, IconButton } from "@/components/ui";
+import { ErrorNote, IconButton, InlineEdit } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +64,12 @@ export function useSubtasks(parent: SubtaskParent, initial: SubtaskItem[]) {
     }
   }
 
+  /** Renomear direto na linha. O erro sobe para quem chamou. */
+  async function rename(id: string, title: string) {
+    await api.patch(`/api/subtasks/${id}`, { title });
+    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
+  }
+
   async function remove(id: string) {
     const previous = subtasks;
 
@@ -80,6 +86,7 @@ export function useSubtasks(parent: SubtaskParent, initial: SubtaskItem[]) {
 
   return {
     subtasks,
+    rename,
     doneCount: subtasks.filter((s) => s.done).length,
     error,
     saving,
@@ -102,6 +109,7 @@ export function SubtaskList({
   add,
   toggle,
   remove,
+  rename,
   checkable = true,
 }: SubtasksProps) {
   const [title, setTitle] = useState("");
@@ -118,28 +126,29 @@ export function SubtaskList({
             <button
               type="button"
               onClick={() => toggle(subtask.id)}
-              className="flex flex-1 items-center gap-2 text-left"
+              aria-label={subtask.done ? "Desmarcar passo" : "Marcar passo"}
+              className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover"
             >
               {subtask.done ? (
-                <CheckCircle2 size={14} className="shrink-0 text-accent" />
+                <CheckCircle2 size={14} className="text-accent" />
               ) : (
-                <Circle size={14} className="shrink-0 text-text-secondary" />
+                <Circle size={14} className="text-text-secondary" />
               )}
-              <span
-                className={cn(
-                  "text-text-primary",
-                  subtask.done && "text-text-secondary line-through",
-                )}
-              >
-                {subtask.title}
-              </span>
             </button>
           ) : (
-            <span className="flex flex-1 items-center gap-2">
-              <Circle size={14} className="shrink-0 text-text-secondary/50" />
-              <span className="text-text-primary">{subtask.title}</span>
-            </span>
+            <Circle size={14} className="shrink-0 text-text-secondary/50" />
           )}
+          <div className="min-w-0 flex-1">
+            <InlineEdit
+              value={subtask.title}
+              ariaLabel="Passo"
+              onSave={(title) => rename(subtask.id, title)}
+              className={cn(
+                "block text-text-primary",
+                checkable && subtask.done && "text-text-secondary line-through",
+              )}
+            />
+          </div>
           <IconButton
             title="Apagar passo"
             onClick={() => remove(subtask.id)}

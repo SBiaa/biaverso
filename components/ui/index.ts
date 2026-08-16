@@ -6,6 +6,7 @@ export * from "./StatCard";
 export * from "./MonthPicker";
 export * from "./BusinessBadge";
 export * from "./ErrorNote";
+export * from "./InlineEdit";
 export * from "./Skeleton";
 export * from "./Attention";
 export * from "./Modal";

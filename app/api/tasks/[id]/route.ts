@@ -12,6 +12,10 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
 
   const data: Prisma.TaskUncheckedUpdateInput = {};
 
+  if (patch.title !== undefined) {
+    data.title = patch.title;
+  }
+
   if (patch.done !== undefined) {
     data.done = patch.done;
     // Desmarcar limpa a data: senão uma tarefa reaberta continuaria contando

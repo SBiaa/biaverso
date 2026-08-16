@@ -8,6 +8,7 @@ import {
   BusinessBadge,
   Button,
   ErrorNote,
+  InlineEdit,
   originLabels,
   type BadgeOrigin,
 } from "@/components/ui";
@@ -38,7 +39,15 @@ type TaskListByOriginProps = {
 
 const originOptions = Object.keys(originLabels) as BadgeOrigin[];
 
-function TaskRow({ task, onToggle }: { task: TaskItem; onToggle: (id: string) => void }) {
+function TaskRow({
+  task,
+  onToggle,
+  onRename,
+}: {
+  task: TaskItem;
+  onToggle: (id: string) => void;
+  onRename: (id: string, title: string) => Promise<unknown>;
+}) {
   const subtasks = useSubtasks({ kind: "task", id: task.id }, task.subtasks);
   // Tarefa com passos abertos já nasce expandida: o ponto é ver por onde começar.
   const [open, setOpen] = useState(task.subtasks.length > 0 && !task.done);
@@ -46,25 +55,35 @@ function TaskRow({ task, onToggle }: { task: TaskItem; onToggle: (id: string) =>
   return (
     <div className="flex flex-col gap-1">
       <div className="flex w-full items-center gap-2 pl-1 text-sm">
+        {/* O círculo e o texto viraram alvos separados: antes a linha inteira
+            era um botão de marcar, então não havia onde clicar para renomear
+            sem concluir a tarefa junto. */}
         <button
           type="button"
           onClick={() => onToggle(task.id)}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          aria-label={task.done ? `Desmarcar ${task.title}` : `Marcar ${task.title}`}
+          // Marcar é a ação principal desta tela no celular. O ícone continua
+          // com 16px; a margem negativa devolve ao layout o espaço do alvo de
+          // 44px, para a linha não crescer.
+          className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover"
         >
           {task.done ? (
-            <CheckCircle2 size={16} className="shrink-0 text-accent" />
+            <CheckCircle2 size={16} className="text-accent" />
           ) : (
-            <Circle size={16} className="shrink-0 text-text-secondary" />
+            <Circle size={16} className="text-text-secondary" />
           )}
-          <span
+        </button>
+        <div className="min-w-0 flex-1">
+          <InlineEdit
+            value={task.title}
+            ariaLabel="Tarefa"
+            onSave={(title) => onRename(task.id, title)}
             className={cn(
-              "truncate text-text-primary",
+              "block text-text-primary",
               task.done && "text-text-secondary line-through",
             )}
-          >
-            {task.title}
-          </span>
-        </button>
+          />
+        </div>
         {/* Selos à direita: os títulos ficam alinhados numa coluna só. */}
         <span className="flex shrink-0 items-center gap-1.5">
           {task.typeLabel && <Badge>{task.typeLabel}</Badge>}
@@ -125,6 +144,16 @@ export function TaskListByOrigin({
     }
   }
 
+  /**
+   * O texto novo já está na tela quando isto roda (o InlineEdit fecha depois
+   * do await), então aqui só falta gravar e refletir na lista. O erro sobe
+   * para o campo, que fica aberto com o que foi digitado.
+   */
+  async function rename(id: string, title: string) {
+    await api.patch(`/api/tasks/${id}`, { title });
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)));
+  }
+
   async function addTask() {
     if (!title.trim()) return;
     setSaving(true);
@@ -171,7 +200,12 @@ export function TaskListByOrigin({
           <div key={taskOrigin} className="flex flex-col gap-1.5">
             <Badge origin={taskOrigin as BadgeOrigin} />
             {items.map((task) => (
-              <TaskRow key={task.id} task={task} onToggle={toggle} />
+              <TaskRow
+                key={task.id}
+                task={task}
+                onToggle={toggle}
+                onRename={rename}
+              />
             ))}
           </div>
         ))
