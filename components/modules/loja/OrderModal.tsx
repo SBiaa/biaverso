@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+
+import {
+  Button,
+  confirmAction,
+  ErrorNote,
+  Modal,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { orderStatusLabels } from "@/lib/labels";
 import { formatCurrencyBRL, todayInputValue, toDateInputValue } from "@/lib/utils";
@@ -162,6 +168,7 @@ export function OrderModal({
       }
 
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -172,13 +179,18 @@ export function OrderModal({
 
   async function handleDelete() {
     if (!isEdit) return;
-    if (!confirm("Excluir este pedido?")) return;
+    const confirmed = await confirmAction({
+      title: "Excluir este pedido?",
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setError(null);
 
     try {
       await api.delete(`/api/orders/${order!.id}`);
       router.refresh();
+      notify("Excluído.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -188,146 +200,135 @@ export function OrderModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={isEdit ? "Editar pedido" : "Novo pedido"}
+      size="md"
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {isEdit ? "Editar pedido" : "Novo pedido"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
-        </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            placeholder="Nº do pedido"
-            value={form.orderNumber}
-            onChange={(e) => update("orderNumber", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-          <select
-            value={form.status}
-            onChange={(e) => update("status", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            {statusOptions.map((s) => (
-              <option key={s} value={s}>
-                {orderStatusLabels[s]}
-              </option>
-            ))}
-          </select>
-        </div>
-
+      <div className="grid grid-cols-2 gap-2">
         <input
-          placeholder="Nome do cliente"
-          value={form.customerName}
-          onChange={(e) => update("customerName", e.target.value)}
+          placeholder="Nº do pedido"
+          value={form.orderNumber}
+          onChange={(e) => update("orderNumber", e.target.value)}
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
-        <input
-          placeholder="Contato (WhatsApp, Instagram...)"
-          value={form.customerContact}
-          onChange={(e) => update("customerContact", e.target.value)}
+        <select
+          value={form.status}
+          onChange={(e) => update("status", e.target.value)}
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+        >
+          {statusOptions.map((s) => (
+            <option key={s} value={s}>
+              {orderStatusLabels[s]}
+            </option>
+          ))}
+        </select>
+      </div>
 
+      <input
+        placeholder="Nome do cliente"
+        value={form.customerName}
+        onChange={(e) => update("customerName", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+      <input
+        placeholder="Contato (WhatsApp, Instagram...)"
+        value={form.customerContact}
+        onChange={(e) => update("customerContact", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+
+      <div>
+        <p className="mb-1 text-xs text-text-secondary">Coleção</p>
+        <select
+          value={form.collectionId}
+          onChange={(e) => update("collectionId", e.target.value)}
+          className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value="">Sem coleção</option>
+          {collections.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <OrderItemsEditor
+        drafts={drafts}
+        setDrafts={setDrafts}
+        options={pickOptions}
+        collectionId={form.collectionId}
+        hourlyRate={hourlyRate}
+        targetMargin={targetMargin}
+      />
+
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <p className="mb-1 text-xs text-text-secondary">Coleção</p>
-          <select
-            value={form.collectionId}
-            onChange={(e) => update("collectionId", e.target.value)}
+          <p className="mb-1 text-xs text-text-secondary">Data do pedido</p>
+          <input
+            type="date"
+            value={form.orderDate}
+            onChange={(e) => update("orderDate", e.target.value)}
             className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value="">Sem coleção</option>
-            {collections.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          />
         </div>
-
-        <OrderItemsEditor
-          drafts={drafts}
-          setDrafts={setDrafts}
-          options={pickOptions}
-          collectionId={form.collectionId}
-          hourlyRate={hourlyRate}
-          targetMargin={targetMargin}
-        />
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Data do pedido</p>
-            <input
-              type="date"
-              value={form.orderDate}
-              onChange={(e) => update("orderDate", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Prazo de entrega</p>
-            <input
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => update("dueDate", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-        </div>
-
-        <textarea
-          placeholder="Notas"
-          value={form.notes}
-          onChange={(e) => update("notes", e.target.value)}
-          rows={2}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-
-        {offerTransaction && (
-          <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-2 text-xs text-text-secondary">
-            <input
-              type="checkbox"
-              checked={createTransaction}
-              onChange={(e) => setCreateTransaction(e.target.checked)}
-              className="mt-0.5 h-4 w-4"
-            />
-            Lançar uma entrada de {formatCurrencyBRL(totals.total)} no financeiro
-            deste negócio.
-          </label>
-        )}
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={saving}>
-              Salvar
-            </Button>
-            <Button variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-          </div>
-          {isEdit && (
-            <Button
-              variant="ghost"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-red-600 hover:bg-red-50"
-            >
-              Excluir
-            </Button>
-          )}
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Prazo de entrega</p>
+          <input
+            type="date"
+            value={form.dueDate}
+            onChange={(e) => update("dueDate", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
         </div>
       </div>
-    </div>
+
+      <textarea
+        placeholder="Notas"
+        value={form.notes}
+        onChange={(e) => update("notes", e.target.value)}
+        rows={2}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+
+      {offerTransaction && (
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-2 text-xs text-text-secondary">
+          <input
+            type="checkbox"
+            checked={createTransaction}
+            onChange={(e) => setCreateTransaction(e.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          Lançar uma entrada de {formatCurrencyBRL(totals.total)} no financeiro
+          deste negócio.
+        </label>
+      )}
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <Button type="submit" disabled={saving}>
+            Salvar
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+        {isEdit && (
+          <Button
+            variant="ghost"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-red-600 hover:bg-red-50"
+          >
+            Excluir
+          </Button>
+        )}
+      </div>
+    </Modal>
   );
 }

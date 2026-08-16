@@ -49,8 +49,13 @@ export function IncomeReceivedToggle({
           ? "Caiu na conta — clique para voltar a previsto"
           : "Marcar que caiu na conta")
       }
+      // O ícone continua com 18px, mas a área que responde ao toque tem 44.
+      // As margens negativas devolvem o espaço extra ao layout, para a linha
+      // da transação não crescer por causa do alvo.
       className={cn(
-        "shrink-0 disabled:opacity-50",
+        "-m-2.5 flex size-11 shrink-0 items-center justify-center rounded-full",
+        "transition-colors hover:bg-hover-strong disabled:opacity-50",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         error && "text-red-600",
         className,
       )}

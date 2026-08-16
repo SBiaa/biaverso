@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { Badge, Card } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  confirmAction,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { eventCategoryLabels } from "@/lib/labels";
 import { cn, formatDateLongBR, parseDateOnly, todayInputValue } from "@/lib/utils";
@@ -49,23 +55,19 @@ function EventRow({
       </Badge>
 
       <div className="flex shrink-0 items-center gap-1">
-        <button
-          type="button"
+        <IconButton
           onClick={onEdit}
           aria-label={`Editar ${event.title}`}
-          className="rounded p-1 text-text-secondary hover:bg-black/[0.03]"
         >
-          <Pencil size={14} />
-        </button>
-        <button
-          type="button"
+          <Pencil size={15} />
+        </IconButton>
+        <IconButton
           onClick={onDelete}
           disabled={deleting}
           aria-label={`Excluir ${event.title}`}
-          className="rounded p-1 text-text-secondary hover:bg-black/[0.03] disabled:opacity-50"
         >
-          <Trash2 size={14} />
-        </button>
+          <Trash2 size={15} />
+        </IconButton>
       </div>
     </li>
   );
@@ -81,13 +83,18 @@ export function AgendaBoard({ initialEvents }: { initialEvents: AgendaEvent[] })
   const groups = groupEventsByDate(initialEvents);
 
   async function handleDelete(event: AgendaEvent) {
-    if (!confirm(`Excluir "${event.title}"?`)) return;
+    const confirmed = await confirmAction({
+      title: `Excluir "${event.title}"?`,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     setDeletingId(event.id);
     setError(null);
     try {
       await api.delete(`/api/events/${event.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {

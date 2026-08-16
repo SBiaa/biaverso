@@ -1,6 +1,6 @@
 import { Topbar } from "@/components/layout/Topbar";
 import { cardColumns } from "@/components/layout/page-width";
-import { Card } from "@/components/ui";
+import { Card, CardTitle } from "@/components/ui";
 import { BelezaSubNav } from "@/components/modules/beleza/BelezaSubNav";
 import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { ActiveSchedules } from "@/components/modules/beleza/ActiveSchedules";
@@ -30,17 +30,11 @@ export default async function BelezaPage() {
     <>
       <Topbar title="Beleza e autocuidado" />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
-        <div className="md:hidden">
-          <h1 className="text-lg font-semibold text-text-primary">
-            Beleza e autocuidado
-          </h1>
-        </div>
-
         <BelezaSubNav />
 
         <div className={cardColumns}>
           <Card>
-            <h2 className="text-sm font-semibold text-text-primary">Hoje</h2>
+            <CardTitle>Hoje</CardTitle>
             <p className="mb-3 text-xs text-text-secondary">
               {formatDateLongBR(today)}
             </p>
@@ -48,23 +42,23 @@ export default async function BelezaPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-3 text-sm font-semibold text-text-primary">
+            <CardTitle className="mb-3">
               Cronogramas ativos
-            </h2>
+            </CardTitle>
             <ActiveSchedules schedules={schedules} />
           </Card>
 
           <Card>
-            <h2 className="mb-3 text-sm font-semibold text-text-primary">
+            <CardTitle className="mb-3">
               Cuidados pendentes
-            </h2>
+            </CardTitle>
             <PendingAppointments appointments={appointments} />
           </Card>
 
           <Card>
-            <h2 className="mb-3 text-sm font-semibold text-text-primary">
+            <CardTitle className="mb-3">
               Produtos abrindo e vencendo
-            </h2>
+            </CardTitle>
             <ProductAlerts
               expiring={productAlerts.expiring}
               runningLow={productAlerts.runningLow}

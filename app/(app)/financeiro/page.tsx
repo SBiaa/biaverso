@@ -10,7 +10,13 @@ import { prisma } from "@/lib/prisma";
 import { getCreditCard, getMonthPlan } from "@/lib/finance";
 import { invoiceDueDate } from "@/lib/finance-calc";
 import { Topbar } from "@/components/layout/Topbar";
-import { Badge, Card, BusinessBadge, StatCard } from "@/components/ui";
+import {
+  Badge,
+  BusinessBadge,
+  Card,
+  CardTitle,
+  StatCard,
+} from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { TransactionsList } from "@/components/modules/financeiro/TransactionsList";
 import {
@@ -132,6 +138,9 @@ export default async function FinanceiroPage() {
             valueClassName={data.saldo >= 0 ? "text-emerald-600" : "text-red-600"}
           />
           <StatCard
+            // Cinco cards em duas colunas deixam o último sozinho na linha,
+            // com meia tela vazia ao lado. Largura inteira só no celular.
+            className="col-span-2 md:col-span-1"
             label={data.faturaPaga ? "Fatura do cartão (paga)" : "Fatura do cartão"}
             value={formatCurrencyBRL(data.fatura)}
             icon={
@@ -148,9 +157,9 @@ export default async function FinanceiroPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Receita por negócio
-              </h2>
+              </CardTitle>
               {data.receitaPorNegocio.length === 0 ? (
                 <p className="text-sm text-text-secondary">
                   Nenhuma receita este mês.
@@ -181,12 +190,12 @@ export default async function FinanceiroPage() {
 
             <Card>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-text-primary">
+                <CardTitle>
                   Últimas transações
-                </h2>
+                </CardTitle>
                 <Link
                   href="/financeiro/transacoes"
-                  className="text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent"
                 >
                   Ver todas
                 </Link>
@@ -201,12 +210,12 @@ export default async function FinanceiroPage() {
           <div className="flex flex-col gap-4">
             <Card>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-text-primary">
+                <CardTitle>
                   Contas pendentes do mês
-                </h2>
+                </CardTitle>
                 <Link
                   href="/financeiro/contas-fixas"
-                  className="text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent"
                 >
                   Ver todas
                 </Link>
@@ -253,7 +262,7 @@ export default async function FinanceiroPage() {
 
             <Card>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-text-primary">
+                <CardTitle>
                   Cartão de crédito do mês
                   {data.faturaVenceEm && (
                     <span className="font-normal text-text-secondary">
@@ -261,10 +270,10 @@ export default async function FinanceiroPage() {
                       · vence em {formatDateBR(data.faturaVenceEm)}
                     </span>
                   )}
-                </h2>
+                </CardTitle>
                 <Link
                   href="/financeiro/cartao"
-                  className="text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent"
                 >
                   Ver todos
                 </Link>

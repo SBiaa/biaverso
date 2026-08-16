@@ -9,7 +9,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { Card, StatCard } from "@/components/ui";
+import { Card, CardTitle, StatCard } from "@/components/ui";
 import { ProjectGrid } from "@/components/modules/projetos/ProjectGrid";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { transactionCategoryLabels } from "@/lib/labels";
@@ -114,10 +114,10 @@ export function BusinessOverviewTab({
       )}
 
       <Card className="flex flex-col gap-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+        <CardTitle className="flex items-center gap-2">
           <CalendarClock size={15} className="text-text-secondary" />
           Próximos prazos
-        </h2>
+        </CardTitle>
         {deadlines.length === 0 ? (
           <p className="text-sm text-text-secondary">
             Nada com prazo nos próximos 7 dias.
@@ -159,10 +159,10 @@ export function BusinessOverviewTab({
       {projects.length > 0 && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Projetos</h2>
+            <CardTitle>Projetos</CardTitle>
             <Link
               href={`/negocios/${businessId}?tab=interno`}
-              className="text-xs font-medium text-accent hover:underline"
+              className="-my-2 py-2 text-xs font-medium text-accent hover:underline"
             >
               Ver todos
             </Link>
@@ -174,12 +174,12 @@ export function BusinessOverviewTab({
       {recentTransactions.length > 0 && (
         <Card className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">
+            <CardTitle>
               Últimas transações
-            </h2>
+            </CardTitle>
             <Link
               href={`/negocios/${businessId}?tab=financeiro`}
-              className="text-xs font-medium text-accent hover:underline"
+              className="-my-2 py-2 text-xs font-medium text-accent hover:underline"
             >
               Ver financeiro
             </Link>
@@ -211,13 +211,13 @@ export function BusinessOverviewTab({
 
       {tabs.length > 0 && (
         <Card className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-text-primary">Ir para</h2>
+          <CardTitle>Ir para</CardTitle>
           <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <Link
                 key={tab.key}
                 href={tab.ownPage ? tab.href : `${tab.href}?tab=${tab.key}`}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-primary transition-colors hover:bg-black/[0.03]"
+                className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-primary transition-colors hover:bg-hover"
               >
                 {tab.label}
               </Link>

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+
+import { Button, ErrorNote, Modal, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 export type ProductFormValues = {
@@ -103,6 +103,7 @@ export function ProductFormModal({
         onSaved?.(created.id);
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -112,144 +113,133 @@ export function ProductFormModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={isEdit ? "Editar produto" : "Novo produto base"}
+      size="md"
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {isEdit ? "Editar produto" : "Novo produto base"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
+
+      {!isEdit && (
+        <p className="text-xs text-text-secondary">
+          Cadastre o item físico, não a arte: &ldquo;Caneca 325ml&rdquo;, não
+          &ldquo;Caneca do Rick&rdquo;. A arte você dá na coleção.
+        </p>
+      )}
+
+      <input
+        placeholder="Nome do produto"
+        value={form.name}
+        onChange={(e) => update("name", e.target.value)}
+        className={field}
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Categoria</p>
+          <input
+            list="product-categories"
+            placeholder="Canecas"
+            value={form.category}
+            onChange={(e) => update("category", e.target.value)}
+            className={field}
+          />
+          <datalist id="product-categories">
+            {categories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
-
-        {!isEdit && (
-          <p className="text-xs text-text-secondary">
-            Cadastre o item físico, não a arte: &ldquo;Caneca 325ml&rdquo;, não
-            &ldquo;Caneca do Rick&rdquo;. A arte você dá na coleção.
-          </p>
-        )}
-
-        <input
-          placeholder="Nome do produto"
-          value={form.name}
-          onChange={(e) => update("name", e.target.value)}
-          className={field}
-        />
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Categoria</p>
-            <input
-              list="product-categories"
-              placeholder="Canecas"
-              value={form.category}
-              onChange={(e) => update("category", e.target.value)}
-              className={field}
-            />
-            <datalist id="product-categories">
-              {categories.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Negócio</p>
-            <select
-              value={form.businessId}
-              onChange={(e) => update("businessId", e.target.value)}
-              className={field}
-            >
-              <option value="">Todos os negócios</option>
-              {businesses.map((b) => (
-                <option key={b.id} value={b.id}>
-                  Só {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Preço padrão (R$)</p>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.basePrice}
-              onChange={(e) => update("basePrice", e.target.value)}
-              className={field}
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Margem desejada (%)</p>
-            <input
-              type="number"
-              min="0"
-              max="99"
-              step="1"
-              placeholder="padrão"
-              value={form.targetMargin}
-              onChange={(e) => update("targetMargin", e.target.value)}
-              className={field}
-            />
-          </div>
-        </div>
-
-        <textarea
-          placeholder="Descrição"
-          value={form.description}
-          onChange={(e) => update("description", e.target.value)}
-          rows={2}
-          className={field}
-        />
-        <input
-          placeholder="Link da imagem (https://...)"
-          value={form.imageUrl}
-          onChange={(e) => update("imageUrl", e.target.value)}
-          className={field}
-        />
-        <textarea
-          placeholder="Notas — fornecedor, tempo de entrega, cuidados"
-          value={form.notes}
-          onChange={(e) => update("notes", e.target.value)}
-          rows={2}
-          className={field}
-        />
-
-        {isEdit && (
-          <label className="flex items-center gap-2 text-sm text-text-primary">
-            <input
-              type="checkbox"
-              checked={form.active}
-              onChange={(e) => update("active", e.target.checked)}
-              className="h-4 w-4 accent-[var(--accent)]"
-            />
-            Produto ativo
-            <span className="text-xs text-text-secondary">
-              (desativar tira da lista sem apagar o histórico)
-            </span>
-          </label>
-        )}
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex gap-2">
-          <Button onClick={handleSubmit} disabled={saving}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Negócio</p>
+          <select
+            value={form.businessId}
+            onChange={(e) => update("businessId", e.target.value)}
+            className={field}
+          >
+            <option value="">Todos os negócios</option>
+            {businesses.map((b) => (
+              <option key={b.id} value={b.id}>
+                Só {b.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Preço padrão (R$)</p>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.basePrice}
+            onChange={(e) => update("basePrice", e.target.value)}
+            className={field}
+          />
+        </div>
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Margem desejada (%)</p>
+          <input
+            type="number"
+            min="0"
+            max="99"
+            step="1"
+            placeholder="padrão"
+            value={form.targetMargin}
+            onChange={(e) => update("targetMargin", e.target.value)}
+            className={field}
+          />
+        </div>
+      </div>
+
+      <textarea
+        placeholder="Descrição"
+        value={form.description}
+        onChange={(e) => update("description", e.target.value)}
+        rows={2}
+        className={field}
+      />
+      <input
+        placeholder="Link da imagem (https://...)"
+        value={form.imageUrl}
+        onChange={(e) => update("imageUrl", e.target.value)}
+        className={field}
+      />
+      <textarea
+        placeholder="Notas — fornecedor, tempo de entrega, cuidados"
+        value={form.notes}
+        onChange={(e) => update("notes", e.target.value)}
+        rows={2}
+        className={field}
+      />
+
+      {isEdit && (
+        <label className="flex items-center gap-2 text-sm text-text-primary">
+          <input
+            type="checkbox"
+            checked={form.active}
+            onChange={(e) => update("active", e.target.checked)}
+            className="h-4 w-4 accent-[var(--accent)]"
+          />
+          Produto ativo
+          <span className="text-xs text-text-secondary">
+            (desativar tira da lista sem apagar o histórico)
+          </span>
+        </label>
+      )}
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex gap-2">
+        <Button type="submit" disabled={saving}>
+          Salvar
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Cancelar
+        </Button>
+      </div>
+    </Modal>
   );
 }

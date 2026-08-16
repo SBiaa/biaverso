@@ -3,8 +3,16 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Search, X } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { Plus, Search } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardTitle,
+  confirmAction,
+  ErrorNote,
+  Modal,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import {
@@ -80,81 +88,70 @@ function ProductPicker({
   }, [products, query]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title="Escolher produto da central"
+      size="md"
+      onClose={onClose}
+      // A lista rola por conta própria, abaixo do campo de busca que fica fixo.
+      scrollBody={false}
     >
-      <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-hidden rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            Escolher produto da central
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-md border border-border px-3">
-          <Search size={14} className="shrink-0 text-text-secondary" />
-          <input
-            autoFocus
-            placeholder="Buscar caneca, almofada..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full py-1.5 text-sm outline-none"
-          />
-        </div>
-
-        <div className="-mx-1 flex flex-col overflow-y-auto px-1">
-          {filtered.length === 0 ? (
-            <p className="py-4 text-sm text-text-secondary">
-              Nenhum produto encontrado.{" "}
-              <Link href="/produtos" className="font-medium text-accent">
-                Cadastrar na central
-              </Link>
-            </p>
-          ) : (
-            filtered.map((product) => (
-              <button
-                key={product.id}
-                type="button"
-                onClick={() => onPick(product)}
-                className="flex items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-black/[0.03]"
-              >
-                {product.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={product.imageUrl}
-                    alt=""
-                    className="h-8 w-8 shrink-0 rounded object-cover"
-                  />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-text-primary">
-                    {product.name}
-                  </span>
-                  {product.category && (
-                    <span className="block text-xs text-text-secondary">
-                      {product.category}
-                    </span>
-                  )}
-                </span>
-                <span className="shrink-0 text-sm text-text-secondary">
-                  {product.basePrice === null ? "—" : formatCurrencyBRL(product.basePrice)}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
-
-        <Link href="/produtos" className="text-xs font-medium text-accent">
-          Cadastrar um produto novo na central →
-        </Link>
+      <div className="flex items-center gap-2 rounded-md border border-border px-3">
+        <Search size={14} className="shrink-0 text-text-secondary" />
+        <input
+          autoFocus
+          placeholder="Buscar caneca, almofada..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full py-1.5 text-sm outline-none"
+        />
       </div>
-    </div>
+
+      <div className="-mx-1 flex flex-col overflow-y-auto px-1">
+        {filtered.length === 0 ? (
+          <p className="py-4 text-sm text-text-secondary">
+            Nenhum produto encontrado.{" "}
+            <Link href="/produtos" className="font-medium text-accent">
+              Cadastrar na central
+            </Link>
+          </p>
+        ) : (
+          filtered.map((product) => (
+            <button
+              key={product.id}
+              type="button"
+              onClick={() => onPick(product)}
+              className="flex items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-hover"
+            >
+              {product.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={product.imageUrl}
+                  alt=""
+                  className="h-8 w-8 shrink-0 rounded object-cover"
+                />
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-text-primary">
+                  {product.name}
+                </span>
+                {product.category && (
+                  <span className="block text-xs text-text-secondary">
+                    {product.category}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 text-sm text-text-secondary">
+                {product.basePrice === null ? "—" : formatCurrencyBRL(product.basePrice)}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+
+      <Link href="/produtos" className="-my-2 py-2 text-xs font-medium text-accent">
+        Cadastrar um produto novo na central →
+      </Link>
+    </Modal>
   );
 }
 
@@ -214,6 +211,7 @@ function ItemModal({
         });
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -224,13 +222,19 @@ function ItemModal({
 
   async function handleDelete() {
     if (!isEdit) return;
-    if (!confirm("Tirar esta peça da coleção? O produto continua na central.")) return;
+    const confirmed = await confirmAction({
+      title: "Tirar esta peça da coleção?",
+      description: "O produto continua na central.",
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setError(null);
 
     try {
       await api.delete(`/api/collections/${collectionId}/products/${item.id}`);
       router.refresh();
+      notify("Excluído.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -240,144 +244,133 @@ function ItemModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={isEdit ? "Editar peça" : "Adicionar à coleção"}
+      size="md"
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {isEdit ? "Editar peça" : "Adicionar à coleção"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
-        </div>
 
-        <div className="flex items-center justify-between gap-2 rounded-lg bg-black/[0.02] px-3 py-2">
-          <div className="min-w-0">
-            <p className="text-xs text-text-secondary">Produto base</p>
-            <p className="truncate text-sm font-medium text-text-primary">{product.name}</p>
-          </div>
-          <Link
-            href={`/produtos/${product.id}`}
-            className="shrink-0 text-xs font-medium text-accent"
-          >
-            Ver custos
-          </Link>
+      <div className="flex items-center justify-between gap-2 rounded-lg bg-hover px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-xs text-text-secondary">Produto base</p>
+          <p className="truncate text-sm font-medium text-text-primary">{product.name}</p>
         </div>
+        <Link
+          href={`/produtos/${product.id}`}
+          className="shrink-0 text-xs font-medium text-accent"
+        >
+          Ver custos
+        </Link>
+      </div>
 
+      <div>
+        <p className="mb-1 text-xs text-text-secondary">Nome da peça (a arte)</p>
+        <input
+          placeholder={product.name}
+          value={form.name}
+          onChange={(e) => update("name", e.target.value)}
+          className={field}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <p className="mb-1 text-xs text-text-secondary">Nome da peça (a arte)</p>
+          <p className="mb-1 text-xs text-text-secondary">Preço nesta coleção (R$)</p>
           <input
-            placeholder={product.name}
-            value={form.name}
-            onChange={(e) => update("name", e.target.value)}
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder={
+              product.basePrice === null ? "sem preço na base" : String(product.basePrice)
+            }
+            value={form.price}
+            onChange={(e) => update("price", e.target.value)}
             className={field}
           />
         </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Preço nesta coleção (R$)</p>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder={
-                product.basePrice === null ? "sem preço na base" : String(product.basePrice)
-              }
-              value={form.price}
-              onChange={(e) => update("price", e.target.value)}
-              className={field}
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Custo extra da peça (R$)</p>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="arte, tag..."
-              value={form.extraCost}
-              onChange={(e) => update("extraCost", e.target.value)}
-              className={field}
-            />
-          </div>
-        </div>
-
-        <p className="text-xs text-text-secondary">
-          Preço em branco usa o da base ({" "}
-          {product.basePrice === null ? "sem preço" : formatCurrencyBRL(product.basePrice)} ),
-          então reajustar a base vale para esta peça também.
-        </p>
-
-        <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg bg-black/[0.02] px-3 py-2 text-sm">
-          <span className="text-text-secondary">
-            Custo:{" "}
-            <span className="text-text-primary">
-              {known ? formatCurrencyBRL(cost) : "sem custo cadastrado"}
-            </span>
-          </span>
-          <span className="text-text-secondary">
-            Preço:{" "}
-            <span className="text-text-primary">
-              {price === null ? "—" : formatCurrencyBRL(price)}
-            </span>
-          </span>
-          <span className={cn("font-medium", marginTone(margin, product.targetMargin ?? 60))}>
-            Margem: {margin === null ? "—" : `${margin.toFixed(0)}%`}
-          </span>
-        </div>
-
-        <textarea
-          placeholder="Descrição"
-          value={form.description}
-          onChange={(e) => update("description", e.target.value)}
-          rows={2}
-          className={field}
-        />
-        <input
-          placeholder="Link da imagem da arte (https://...)"
-          value={form.imageUrl}
-          onChange={(e) => update("imageUrl", e.target.value)}
-          className={field}
-        />
-        <textarea
-          placeholder="Notas"
-          value={form.notes}
-          onChange={(e) => update("notes", e.target.value)}
-          rows={2}
-          className={field}
-        />
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={saving}>
-              Salvar
-            </Button>
-            <Button variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-          </div>
-          {isEdit && (
-            <Button
-              variant="ghost"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-red-600 hover:bg-red-50"
-            >
-              Remover
-            </Button>
-          )}
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Custo extra da peça (R$)</p>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="arte, tag..."
+            value={form.extraCost}
+            onChange={(e) => update("extraCost", e.target.value)}
+            className={field}
+          />
         </div>
       </div>
-    </div>
+
+      <p className="text-xs text-text-secondary">
+        Preço em branco usa o da base ({" "}
+        {product.basePrice === null ? "sem preço" : formatCurrencyBRL(product.basePrice)} ),
+        então reajustar a base vale para esta peça também.
+      </p>
+
+      <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg bg-hover px-3 py-2 text-sm">
+        <span className="text-text-secondary">
+          Custo:{" "}
+          <span className="text-text-primary">
+            {known ? formatCurrencyBRL(cost) : "sem custo cadastrado"}
+          </span>
+        </span>
+        <span className="text-text-secondary">
+          Preço:{" "}
+          <span className="text-text-primary">
+            {price === null ? "—" : formatCurrencyBRL(price)}
+          </span>
+        </span>
+        <span className={cn("font-medium", marginTone(margin, product.targetMargin ?? 60))}>
+          Margem: {margin === null ? "—" : `${margin.toFixed(0)}%`}
+        </span>
+      </div>
+
+      <textarea
+        placeholder="Descrição"
+        value={form.description}
+        onChange={(e) => update("description", e.target.value)}
+        rows={2}
+        className={field}
+      />
+      <input
+        placeholder="Link da imagem da arte (https://...)"
+        value={form.imageUrl}
+        onChange={(e) => update("imageUrl", e.target.value)}
+        className={field}
+      />
+      <textarea
+        placeholder="Notas"
+        value={form.notes}
+        onChange={(e) => update("notes", e.target.value)}
+        rows={2}
+        className={field}
+      />
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <Button type="submit" disabled={saving}>
+            Salvar
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+        {isEdit && (
+          <Button
+            variant="ghost"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-red-600 hover:bg-red-50"
+          >
+            Remover
+          </Button>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -409,7 +402,7 @@ export function CollectionProductsSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Produtos da coleção</h2>
+        <CardTitle>Produtos da coleção</CardTitle>
         <Button variant="secondary" onClick={() => setPicking(true)}>
           <Plus size={14} />
           Adicionar produto
@@ -443,7 +436,7 @@ export function CollectionProductsSection({
               <Card
                 key={item.id}
                 onClick={() => setEditing(item)}
-                className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-black/[0.02]"
+                className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-hover"
               >
                 {image && (
                   // eslint-disable-next-line @next/next/no-img-element

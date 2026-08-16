@@ -3,21 +3,27 @@
 import { useRef, useState } from "react";
 import {
   DndContext,
-  closestCenter,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
   arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardTitle,
+  ErrorNote,
+  IconButton,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import {
   SubtaskList,
@@ -85,13 +91,12 @@ function SortableRow({
             total={subtasks.subtasks.length}
           />
         )}
-        <button
-          type="button"
+        <IconButton
           onClick={() => onDelete(item.id)}
-          className="text-text-secondary hover:text-red-600"
+          tone="danger"
         >
-          <Trash2 size={14} />
-        </button>
+          <Trash2 size={15} />
+        </IconButton>
       </div>
 
       {saved && open && (
@@ -200,7 +205,7 @@ export function RoutineTemplateList({
 
   return (
     <Card className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
+      <CardTitle>{title}</CardTitle>
 
       {items.length === 0 ? (
         <p className="text-sm text-text-secondary">Nenhuma tarefa cadastrada.</p>

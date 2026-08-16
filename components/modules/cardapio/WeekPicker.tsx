@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { addUtcDays, toDateInputValue } from "@/lib/utils";
 import { currentWeekStartISO, formatWeekRange } from "@/lib/cardapio";
+import { IconButton } from "@/components/ui";
 
 export function WeekPicker({
   weekStart,
@@ -40,14 +41,13 @@ export function WeekPicker({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-3">
-        <button
-          type="button"
+        <IconButton
           onClick={() => go(-1)}
-          className="rounded-md border border-border p-1.5 hover:bg-black/[0.03]"
           aria-label="Semana anterior"
+          className="border border-border"
         >
           <ChevronLeft size={16} />
-        </button>
+        </IconButton>
         <button
           type="button"
           onClick={() => push(null)}
@@ -55,14 +55,13 @@ export function WeekPicker({
         >
           Semana de {formatWeekRange(new Date(weekStart))}
         </button>
-        <button
-          type="button"
+        <IconButton
           onClick={() => go(1)}
-          className="rounded-md border border-border p-1.5 hover:bg-black/[0.03]"
           aria-label="Próxima semana"
+          className="border border-border"
         >
           <ChevronRight size={16} />
-        </button>
+        </IconButton>
       </div>
 
       {isCurrentWeek ? (
@@ -73,7 +72,7 @@ export function WeekPicker({
         <button
           type="button"
           onClick={() => push(null)}
-          className="text-xs font-medium text-accent hover:underline"
+          className="-my-2 py-2 text-xs font-medium text-accent hover:underline"
         >
           voltar para esta semana
         </button>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Circle } from "lucide-react";
-import { Card, ErrorNote } from "@/components/ui";
+import { Card, CardTitle, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR, hexToRgba } from "@/lib/utils";
 import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
@@ -118,9 +118,9 @@ export function CollectionTasksToday({ tasks }: { tasks: CollectionTaskToday[] }
 
   return (
     <Card>
-      <h2 className="mb-3 text-sm font-semibold text-text-primary">
+      <CardTitle className="mb-3">
         Tarefas de coleções
-      </h2>
+      </CardTitle>
       <ul className="flex flex-col gap-2">
         {items.map((task) => (
           <TaskItem key={task.id} task={task} onToggle={toggle} />

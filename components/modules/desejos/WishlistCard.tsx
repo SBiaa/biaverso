@@ -3,7 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Pencil, Trash2, Undo2 } from "lucide-react";
-import { Badge, BusinessBadge, Button, Card, ErrorNote } from "@/components/ui";
+import {
+  Badge,
+  BusinessBadge,
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { WishlistForm, type WishlistItemInput } from "./WishlistForm";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatCurrencyBRL, formatDateBR, todayInputValue } from "@/lib/utils";
@@ -40,7 +49,7 @@ function BuyPanel({
     createTransaction: true,
   });
 
-  async function confirm() {
+  async function confirmPurchase() {
     setSaving(true);
     setError(null);
     try {
@@ -104,7 +113,7 @@ function BuyPanel({
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={confirm}
+          onClick={confirmPurchase}
           disabled={saving}
           className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50"
         >
@@ -152,17 +161,18 @@ export function WishlistCard({
   }
 
   async function handleDelete() {
-    if (
-      !confirm(
-        `Deletar "${item.name}" da lista? Esta ação não pode ser desfeita.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Deletar "${item.name}" da lista?`,
+      description: `Esta ação não pode ser desfeita.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
     setBusy(true);
     setError(null);
     try {
       await api.delete(`/api/wishlist/${item.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
       setBusy(false);
@@ -283,23 +293,20 @@ export function WishlistCard({
                 <ExternalLink size={14} />
               </a>
             )}
-            <button
-              type="button"
+            <IconButton
               title="Editar"
               onClick={() => setEditing(true)}
-              className="text-text-secondary hover:text-text-primary"
             >
-              <Pencil size={14} />
-            </button>
-            <button
-              type="button"
+              <Pencil size={15} />
+            </IconButton>
+            <IconButton
               title="Deletar"
               onClick={handleDelete}
               disabled={busy}
-              className="text-text-secondary hover:text-red-600 disabled:opacity-50"
+              tone="danger"
             >
-              <Trash2 size={14} />
-            </button>
+              <Trash2 size={15} />
+            </IconButton>
           </div>
         </div>
       )}

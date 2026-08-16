@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, StatCard } from "@/components/ui";
+import { Card, CardTitle, StatCard } from "@/components/ui";
 import { CollectionHeader } from "@/components/modules/loja/CollectionHeader";
 import { CollectionProductsSection } from "@/components/modules/loja/CollectionProductsSection";
 import { CollectionTasksSection } from "@/components/modules/loja/CollectionTasksSection";
@@ -185,17 +185,17 @@ export default async function CollectionDetailPage({
 
         <Card className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">
+            <CardTitle>
               Pedidos da coleção
               {collection.orders.length > 0 && (
                 <span className="ml-2 font-normal text-text-secondary">
                   {collection.orders.length} · {formatCurrencyBRL(ordersTotal)}
                 </span>
               )}
-            </h2>
+            </CardTitle>
             <Link
               href={`/negocios/${businessId}/pedidos`}
-              className="text-xs font-medium text-accent"
+              className="-my-2 py-2 text-xs font-medium text-accent"
             >
               Ver kanban
             </Link>

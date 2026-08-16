@@ -23,9 +23,12 @@ export function PageSkeleton({
 }: PageSkeletonProps) {
   return (
     <>
-      <header className="sticky top-0 z-10 hidden shrink-0 border-b border-border bg-surface/80 backdrop-blur-md md:block">
+      {/* Sem `md:block`: a Topbar passou a existir também no celular, e um
+          esqueleto sem cabeçalho fazia o conteúdo pular 56px quando a página
+          real chegava. */}
+      <header className="sticky top-0 z-10 shrink-0 border-b border-border bg-surface/80 backdrop-blur-md">
         <div className={cn(pageContainer(width), "flex h-14 items-center")}>
-          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-5 w-32 md:h-4" />
         </div>
       </header>
 

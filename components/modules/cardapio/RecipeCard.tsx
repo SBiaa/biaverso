@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { Card, ErrorNote } from "@/components/ui";
+import {
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { AddRecipeForm } from "./AddRecipeForm";
 import { recipeCategoryLabels } from "@/lib/labels";
@@ -30,7 +36,11 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
       recipe.mealPlansCount > 0
         ? `Esta receita está planejada em ${recipe.mealPlansCount} dia(s) do cardápio. Ao deletar, esses slots ficarão vazios. Tem certeza que quer deletar esta receita? Esta ação não pode ser desfeita.`
         : "Tem certeza que quer deletar esta receita? Esta ação não pode ser desfeita.";
-    if (!confirm(message)) return;
+    const confirmed = await confirmAction({
+      title: message,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     setDeleting(true);
     setError(null);
@@ -38,6 +48,7 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
     try {
       await api.delete(`/api/recipes/${recipe.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
       // Sem isso o botão ficava desabilitado para sempre depois de uma falha.
@@ -60,23 +71,20 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
           <span className="text-xs text-text-secondary">
             {recipeCategoryLabels[recipe.category]}
           </span>
-          <button
-            type="button"
+          <IconButton
             title="Editar"
             onClick={() => setEditing(true)}
-            className="text-text-secondary hover:text-text-primary"
           >
-            <Pencil size={14} />
-          </button>
-          <button
-            type="button"
+            <Pencil size={15} />
+          </IconButton>
+          <IconButton
             title="Deletar"
             onClick={handleDelete}
             disabled={deleting}
-            className="text-text-secondary hover:text-red-600 disabled:opacity-50"
+            tone="danger"
           >
-            <Trash2 size={14} />
-          </button>
+            <Trash2 size={15} />
+          </IconButton>
         </div>
       </div>
       {recipe.description && (

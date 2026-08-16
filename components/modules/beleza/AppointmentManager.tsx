@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
-import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { careTypeLabels } from "@/lib/labels";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
@@ -25,17 +33,18 @@ function AppointmentCard({
   const [marking, setMarking] = useState(false);
 
   async function handleDelete() {
-    if (
-      !confirm(
-        `Deletar "${appointment.name}"? O histórico de datas e custos vai junto. Os lançamentos já feitos no financeiro ficam.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Deletar "${appointment.name}"?`,
+      description: `O histórico de datas e custos vai junto. Os lançamentos já feitos no financeiro ficam.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     onError(null);
     try {
       await api.delete(`/api/beauty/appointments/${appointment.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       onError(errorMessage(e));
     }
@@ -78,22 +87,19 @@ function AppointmentCard({
           <div className="flex shrink-0 flex-col items-end gap-2">
             <UrgencyPill urgency={appointment.urgency} days={appointment.daysUntilDue} />
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <IconButton
                 title="Editar"
                 onClick={() => setEditing(true)}
-                className="text-text-secondary hover:text-text-primary"
               >
-                <Pencil size={14} />
-              </button>
-              <button
-                type="button"
+                <Pencil size={15} />
+              </IconButton>
+              <IconButton
                 title="Deletar"
                 onClick={handleDelete}
-                className="text-text-secondary hover:text-red-600"
+                tone="danger"
               >
-                <Trash2 size={14} />
-              </button>
+                <Trash2 size={15} />
+              </IconButton>
             </div>
           </div>
         </div>

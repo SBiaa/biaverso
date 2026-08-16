@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { decryptCredentialLinks } from "@/lib/passwords";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge } from "@/components/ui";
+import { BusinessBadge, Card, CardTitle } from "@/components/ui";
 import { ProjectDocumentation } from "@/components/modules/projetos/ProjectDocumentation";
 import { ProjectDocuments } from "@/components/modules/projetos/ProjectDocuments";
 import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
@@ -190,12 +190,12 @@ export default async function ProjectDetailPage({
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Documentação</h2>
+          <CardTitle className="mb-3">Documentação</CardTitle>
           <ProjectDocumentation projectId={project.id} initialContent={project.content} />
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Tarefas</h2>
+          <CardTitle className="mb-3">Tarefas</CardTitle>
           <ProjectItems
             businessId={businessId}
             projectId={project.id}
@@ -208,12 +208,12 @@ export default async function ProjectDetailPage({
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Documentos</h2>
+          <CardTitle className="mb-3">Documentos</CardTitle>
           <ProjectDocuments projectId={project.id} initialDocuments={project.documents} />
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Credenciais</h2>
+          <CardTitle className="mb-3">Credenciais</CardTitle>
           <CredentialsPanel
             endpoint={`/api/projects/${project.id}/credentials`}
             initialCredentials={decryptCredentialLinks(project.credentials)}
@@ -224,7 +224,7 @@ export default async function ProjectDetailPage({
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Tabela de preços</h2>
+          <CardTitle className="mb-3">Tabela de preços</CardTitle>
           <ProjectPriceTable projectId={project.id} initialItems={project.priceTable} />
         </Card>
       </main>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Link2Off } from "lucide-react";
-import { Button, BusinessBadge, ErrorNote } from "@/components/ui";
+import { BusinessBadge, Button, ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { clientStatusLabels } from "@/lib/labels";
 import { formatDateBR } from "@/lib/utils";
@@ -118,15 +118,14 @@ export function ClientBusinessLinks({
                 </option>
               ))}
             </select>
-            <button
-              type="button"
+            <IconButton
               onClick={() => removeLink(link.id)}
               title={`Desvincular de ${link.business.name}`}
               aria-label={`Desvincular de ${link.business.name}`}
-              className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-red-600"
+              tone="danger"
             >
-              <Link2Off size={14} />
-            </button>
+              <Link2Off size={15} />
+            </IconButton>
           </div>
         </div>
       ))}

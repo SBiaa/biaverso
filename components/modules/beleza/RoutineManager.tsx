@@ -25,7 +25,15 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { routineTimeLabels } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -74,22 +82,19 @@ function SortableStep({
         )}
       </div>
 
-      <button
-        type="button"
+      <IconButton
         title="Editar passo"
         onClick={onEdit}
-        className="text-text-secondary hover:text-text-primary"
       >
-        <Pencil size={14} />
-      </button>
-      <button
-        type="button"
+        <Pencil size={15} />
+      </IconButton>
+      <IconButton
         title="Deletar passo"
         onClick={onDelete}
-        className="text-text-secondary hover:text-red-600"
+        tone="danger"
       >
-        <Trash2 size={14} />
-      </button>
+        <Trash2 size={15} />
+      </IconButton>
     </div>
   );
 }
@@ -149,17 +154,18 @@ function RoutineCard({
   }
 
   async function deleteRoutine() {
-    if (
-      !confirm(
-        `Deletar a rotina "${routine.name}"? Os passos e o histórico dela vão junto.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Deletar a rotina "${routine.name}"?`,
+      description: `Os passos e o histórico dela vão junto.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     onError(null);
     try {
       await api.delete(`/api/beauty/routines/${routine.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       onError(errorMessage(e));
     }
@@ -173,6 +179,7 @@ function RoutineCard({
     try {
       await api.delete(`/api/beauty/routines/${routine.id}/steps/${step.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setSteps(previous);
       onError(errorMessage(e));
@@ -199,6 +206,9 @@ function RoutineCard({
               </p>
               <p className="text-xs text-text-secondary">
                 {steps.length} {steps.length === 1 ? "passo" : "passos"}
+                {/* Como ela vai ver esses passos no dia — a escolha é por
+                    rotina, então precisa dar para conferir de relance. */}
+                {steps.length > 0 && (routine.checklist ? " · checklist" : " · lista")}
                 {!routine.active && " · inativa"}
               </p>
             </div>
@@ -206,22 +216,19 @@ function RoutineCard({
 
           <div className="flex shrink-0 items-center gap-2">
             <Badge>{routineTimeLabels[routine.timeOfDay]}</Badge>
-            <button
-              type="button"
+            <IconButton
               title="Editar rotina"
               onClick={() => setEditingRoutine(true)}
-              className="text-text-secondary hover:text-text-primary"
             >
-              <Pencil size={14} />
-            </button>
-            <button
-              type="button"
+              <Pencil size={15} />
+            </IconButton>
+            <IconButton
               title="Deletar rotina"
               onClick={deleteRoutine}
-              className="text-text-secondary hover:text-red-600"
+              tone="danger"
             >
-              <Trash2 size={14} />
-            </button>
+              <Trash2 size={15} />
+            </IconButton>
           </div>
         </div>
 

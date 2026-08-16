@@ -44,7 +44,6 @@ export default async function AvaliacaoDashboardPage() {
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <AvaliacaoSubNav />
 
-        <div className="md:hidden">{avaliarButton}</div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
@@ -75,7 +74,7 @@ export default async function AvaliacaoDashboardPage() {
               </h2>
               <Link
                 href={`/avaliacao/mes?month=${month}&year=${year}`}
-                className="text-xs font-medium text-accent"
+                className="-my-2 py-2 text-xs font-medium text-accent"
               >
                 Editar mês
               </Link>

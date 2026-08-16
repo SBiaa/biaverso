@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { BusinessBadge, Button, Card, ErrorNote } from "@/components/ui";
+import {
+  BusinessBadge,
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { IdeaStatusToggle } from "./IdeaStatusToggle";
 import { api, errorMessage } from "@/lib/client-api";
 
@@ -50,6 +58,7 @@ export function IdeaCard({
       });
       setEditing(false);
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -70,12 +79,19 @@ export function IdeaCard({
   }
 
   async function handleDelete() {
-    if (!confirm(`Apagar "${idea.title}"? Não dá para desfazer.`)) return;
+    const confirmed = await confirmAction({
+      title: `Apagar "${idea.title}"?`,
+      description: `Não dá para desfazer.`,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
     setBusy(true);
     setError(null);
     try {
       await api.delete(`/api/ideas/${idea.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
       setBusy(false);
@@ -140,23 +156,20 @@ export function IdeaCard({
         {/* Aparecem no hover no desktop; no toque não há hover, então ficam
             sempre visíveis lá. */}
         <div className="flex shrink-0 items-center gap-2 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-within:opacity-100">
-          <button
-            type="button"
+          <IconButton
             title="Editar"
             onClick={() => setEditing(true)}
-            className="text-text-secondary hover:text-text-primary"
           >
-            <Pencil size={14} />
-          </button>
-          <button
-            type="button"
+            <Pencil size={15} />
+          </IconButton>
+          <IconButton
             title="Apagar"
             onClick={handleDelete}
             disabled={busy}
-            className="text-text-secondary hover:text-red-600 disabled:opacity-50"
+            tone="danger"
           >
-            <Trash2 size={14} />
-          </button>
+            <Trash2 size={15} />
+          </IconButton>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { FinancialRecordsSection } from "@/components/modules/financeiro/Financi
 import { CardInstallmentsList } from "@/components/modules/financeiro/CardInstallmentsList";
 import { compareInvoiceMonths } from "@/lib/finance-calc";
 import { formatCurrencyBRL, formatMonthYearBR, todayUtc } from "@/lib/utils";
+import { CardTitle } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -73,17 +74,17 @@ export default async function DividasPage() {
         <FinanceSubNav />
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text-primary">
+          <CardTitle>
             Dívidas avulsas
-          </h2>
+          </CardTitle>
           <FinancialRecordsSection type="DIVIDA" initialRecords={records} />
         </section>
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-text-primary">
+            <CardTitle>
               Parcelas do cartão
-            </h2>
+            </CardTitle>
             {totalCardDebt > 0 && (
               <span className="text-sm text-text-secondary">
                 falta pagar{" "}

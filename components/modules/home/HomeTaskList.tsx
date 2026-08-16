@@ -1,39 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle } from "lucide-react";
 import { Badge, ErrorNote, type BadgeOrigin } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticList } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type TaskItem = { id: string; title: string; done: boolean; origin: BadgeOrigin };
 
-export function HomeTaskList({ items: initialItems }: { items: TaskItem[] }) {
-  const [items, setItems] = useState(initialItems);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const [, startTransition] = useTransition();
+export function HomeTaskList({ items: serverItems }: { items: TaskItem[] }) {
+  const { items, error, update } = useOptimisticList(serverItems);
 
   const tasksByOrigin = items.reduce<Record<string, TaskItem[]>>((acc, task) => {
     (acc[task.origin] ??= []).push(task);
     return acc;
   }, {});
 
-  async function toggle(id: string) {
-    const previous = items;
-    const nextDone = !items.find((t) => t.id === id)?.done;
-
-    setError(null);
-    setItems((prev) => prev.map((t) => (t.id === id ? { ...t, done: nextDone } : t)));
-
-    try {
-      await api.patch(`/api/tasks/${id}`, { done: nextDone });
-      startTransition(() => router.refresh());
-    } catch (e) {
-      setItems(previous);
-      setError(errorMessage(e));
-    }
+  function toggle(id: string) {
+    const done = !items.find((t) => t.id === id)?.done;
+    update(id, { done }, () => api.patch(`/api/tasks/${id}`, { done }));
   }
 
   if (items.length === 0) {

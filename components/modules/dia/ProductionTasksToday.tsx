@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Circle } from "lucide-react";
-import { Card, ErrorNote } from "@/components/ui";
+import {
+  AttentionBadge,
+  Card,
+  CardTitle,
+  ErrorNote,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR } from "@/lib/utils";
 import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
@@ -71,9 +76,9 @@ function TaskRow({ task, onToggle }: { task: Item; onToggle: (id: string) => voi
             </span>
           )}
           {late && (
-            <span className="ml-1.5 whitespace-nowrap rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+            <AttentionBadge level="atrasado" className="ml-1.5">
               Atrasado
-            </span>
+            </AttentionBadge>
           )}
         </td>
       </tr>
@@ -140,7 +145,7 @@ export function ProductionTasksToday({ groups }: { groups: ProductionGroup[] }) 
   if (state.length === 0) {
     return (
       <Card>
-        <h2 className="mb-3 text-sm font-semibold text-text-primary">Produção</h2>
+        <CardTitle className="mb-3">Produção</CardTitle>
         <p className="text-sm text-text-secondary">
           Nenhuma tarefa de produção para hoje.
         </p>
@@ -152,14 +157,14 @@ export function ProductionTasksToday({ groups }: { groups: ProductionGroup[] }) 
     <>
       {state.map((group) => (
         <Card key={group.businessId}>
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
+          <CardTitle className="mb-3 flex items-center gap-2">
             <span
               aria-hidden="true"
               className="size-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: group.businessColor }}
             />
             Produção {group.businessName}
-          </h2>
+          </CardTitle>
 
           {/* Colunas não cabem numa tela de celular: a tabela rola na horizontal
               em vez de espremer o título até virar duas letras por linha. */}

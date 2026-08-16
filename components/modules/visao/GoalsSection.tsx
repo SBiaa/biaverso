@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  Card,
+  CardTitle,
+  ErrorNote,
+  IconButton,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { measuredGoalStatusLabels } from "@/lib/labels";
@@ -164,7 +170,7 @@ export function GoalsSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Objetivos</h2>
+        <CardTitle>Objetivos</CardTitle>
         <Button variant="secondary" onClick={() => setCreatingConceptual(true)}>
           <Plus size={14} />
           Novo objetivo conceitual
@@ -199,26 +205,23 @@ export function GoalsSection({
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
+                    <IconButton
                       onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingConceptual(goal);
+                      e.stopPropagation();
+                      setEditingConceptual(goal);
                       }}
-                      className="text-text-secondary hover:text-text-primary"
                     >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      type="button"
+                      <Pencil size={15} />
+                    </IconButton>
+                    <IconButton
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteConceptual(goal.id);
+                      e.stopPropagation();
+                      handleDeleteConceptual(goal.id);
                       }}
-                      className="text-text-secondary hover:text-red-600"
+                      tone="danger"
                     >
-                      <Trash2 size={14} />
-                    </button>
+                      <Trash2 size={15} />
+                    </IconButton>
                     <ChevronDown
                       size={16}
                       className={cn(

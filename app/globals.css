@@ -14,6 +14,24 @@
   --sidebar: #f4f4f5;
   --elevation: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.03);
 
+  /* Realce de hover/seleção. Era `bg-black/[0.03]` escrito à mão em 55 lugares
+     — preto sobre fundo escuro é invisível, então virou token. */
+  --hover: rgb(0 0 0 / 0.03);
+  --hover-strong: rgb(0 0 0 / 0.06);
+
+  /* A régua de atenção (ver components/ui/Attention). Como token porque no
+     escuro um `bg-red-50` vira uma placa clara no meio da tela. */
+  --danger: #dc2626;
+  --danger-solid-bg: #dc2626;
+  --danger-solid-text: #ffffff;
+  --danger-soft-bg: #fef2f2;
+  --danger-soft-text: #991b1b;
+  --warning-soft-bg: #fef3c7;
+  --warning-soft-text: #92400e;
+  --success: #059669;
+  --success-soft-bg: #ecfdf5;
+  --success-soft-text: #065f46;
+
   --badge-ace-bg: #fef2f2;
   --badge-ace-text: #991b1b;
   --badge-tarot-bg: #f3f0ff;
@@ -36,6 +54,20 @@
   --color-sidebar: var(--sidebar);
   --shadow-elevation: var(--elevation);
 
+  --color-hover: var(--hover);
+  --color-hover-strong: var(--hover-strong);
+
+  --color-danger: var(--danger);
+  --color-danger-solid-bg: var(--danger-solid-bg);
+  --color-danger-solid-text: var(--danger-solid-text);
+  --color-danger-soft-bg: var(--danger-soft-bg);
+  --color-danger-soft-text: var(--danger-soft-text);
+  --color-warning-soft-bg: var(--warning-soft-bg);
+  --color-warning-soft-text: var(--warning-soft-text);
+  --color-success: var(--success);
+  --color-success-soft-bg: var(--success-soft-bg);
+  --color-success-soft-text: var(--success-soft-text);
+
   --color-badge-ace-bg: var(--badge-ace-bg);
   --color-badge-ace-text: var(--badge-ace-text);
   --color-badge-tarot-bg: var(--badge-tarot-bg);
@@ -52,7 +84,13 @@
   --font-serif: var(--font-lora);
 }
 
-/* Tokens dark ficam definidos para uso futuro (toggle de tema ainda não faz parte do escopo). */
+/**
+ * O tema escuro.
+ *
+ * `data-theme` está SEMPRE presente: o script no `<head>` resolve "sistema"
+ * para claro ou escuro antes da primeira pintura. Por isso a regra pode se
+ * apoiar no atributo e não precisa duplicar tudo num `prefers-color-scheme`.
+ */
 :root[data-theme="dark"] {
   --background: #0f0f0f;
   --surface: #18181b;
@@ -61,12 +99,70 @@
   --text-secondary: #a1a1aa;
   --sidebar: #131316;
   --elevation: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
+
+  /* Claro sobre escuro: o realce agora soma luz em vez de subtrair. */
+  --hover: rgb(255 255 255 / 0.06);
+  --hover-strong: rgb(255 255 255 / 0.1);
+
+  /* Fundos de aviso viram tinta escura com texto claro: mantidos como no
+     claro, cada selo seria uma placa acesa no meio de uma tela apagada. */
+  --danger: #f87171;
+  --danger-solid-bg: #b91c1c;
+  --danger-solid-text: #fee2e2;
+  --danger-soft-bg: #450a0a;
+  --danger-soft-text: #fca5a5;
+  --warning-soft-bg: #422006;
+  --warning-soft-text: #fcd34d;
+  --success: #34d399;
+  --success-soft-bg: #052e26;
+  --success-soft-text: #6ee7b7;
+
+  --badge-ace-bg: #3f1d1d;
+  --badge-ace-text: #fca5a5;
+  --badge-tarot-bg: #2e1065;
+  --badge-tarot-text: #c4b5fd;
+  --badge-creative-bg: #052e26;
+  --badge-creative-text: #6ee7b7;
+  --badge-pessoal-bg: #172554;
+  --badge-pessoal-text: #93c5fd;
+  --badge-casa-bg: #27272a;
+  --badge-casa-text: #d4d4d8;
+}
+
+/* Deixa a barra de rolagem e os controles nativos (select, date) acompanharem
+   o tema — sem isto o seletor de data abre branco no meio do escuro. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--text-primary);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Os avisos de sucesso entram deslizando de baixo. Curto de propósito: o toast
+   fica ~3s na tela, uma entrada lenta come metade do tempo de leitura. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 /* A sidebar tem scroll próprio (`overflow-y-auto`), e a barra padrão do

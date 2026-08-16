@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productCategoryLabels } from "@/lib/labels";
 import { formatDateBR, parseDateOnly, toDateInputValue } from "@/lib/utils";
@@ -68,6 +68,7 @@ export function ProductFormModal({
         });
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -77,121 +78,125 @@ export function ProductFormModal({
   }
 
   return (
-    <Modal title={product ? "Editar produto" : "Novo produto"} onClose={onClose}>
+    <Modal
+      title={product ? "Editar produto" : "Novo produto"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+    >
       <Field label="Nome">
-        <input
-          placeholder="Sérum de vitamina C"
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        placeholder="Sérum de vitamina C"
+        value={form.name}
+        onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <Field label="Marca (opcional)">
-        <input
-          value={form.brand}
-          onChange={(e) => setForm((prev) => ({ ...prev, brand: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        value={form.brand}
+        onChange={(e) => setForm((prev) => ({ ...prev, brand: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <Field label="Categoria">
-        <select
-          value={form.category}
-          onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
-          className={fieldClass}
-        >
-          {categoryOptions.map((c) => (
-            <option key={c} value={c}>
-              {productCategoryLabels[c]}
-            </option>
-          ))}
-        </select>
+      <select
+        value={form.category}
+        onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
+        className={fieldClass}
+      >
+        {categoryOptions.map((c) => (
+          <option key={c} value={c}>
+            {productCategoryLabels[c]}
+          </option>
+        ))}
+      </select>
       </Field>
 
       <div className="flex gap-2">
-        <Field label="Abri em" className="flex-1">
-          <input
-            type="date"
-            value={form.openedAt}
-            onChange={(e) => setForm((prev) => ({ ...prev, openedAt: e.target.value }))}
-            className={fieldClass}
-          />
-        </Field>
-        <Field label="PAO em meses" className="flex-1">
-          <input
-            type="number"
-            min="1"
-            max="120"
-            placeholder="12"
-            value={form.pao}
-            onChange={(e) => setForm((prev) => ({ ...prev, pao: e.target.value }))}
-            className={fieldClass}
-          />
-        </Field>
-      </div>
-
-      {derivedExpiry ? (
-        <p className="text-xs text-text-secondary">
-          Validade calculada: {formatDateBR(derivedExpiry)} — o campo abaixo é ignorado.
-        </p>
-      ) : (
-        <Field label="Validade (opcional)">
-          <input
-            type="date"
-            value={form.expiresAt}
-            onChange={(e) => setForm((prev) => ({ ...prev, expiresAt: e.target.value }))}
-            className={fieldClass}
-          />
-          <span className="text-xs text-text-secondary">
-            Para produto com validade impressa. Com abertura + PAO, ela é calculada.
-          </span>
-        </Field>
-      )}
-
-      <Field label="Quanto custou (opcional)">
+      <Field label="Abri em" className="flex-1">
         <input
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="0,00"
-          value={form.cost}
-          onChange={(e) => setForm((prev) => ({ ...prev, cost: e.target.value }))}
+          type="date"
+          value={form.openedAt}
+          onChange={(e) => setForm((prev) => ({ ...prev, openedAt: e.target.value }))}
           className={fieldClass}
         />
       </Field>
+      <Field label="PAO em meses" className="flex-1">
+        <input
+          type="number"
+          min="1"
+          max="120"
+          placeholder="12"
+          value={form.pao}
+          onChange={(e) => setForm((prev) => ({ ...prev, pao: e.target.value }))}
+          className={fieldClass}
+        />
+      </Field>
+      </div>
+
+      {derivedExpiry ? (
+      <p className="text-xs text-text-secondary">
+        Validade calculada: {formatDateBR(derivedExpiry)} — o campo abaixo é ignorado.
+      </p>
+      ) : (
+      <Field label="Validade (opcional)">
+        <input
+          type="date"
+          value={form.expiresAt}
+          onChange={(e) => setForm((prev) => ({ ...prev, expiresAt: e.target.value }))}
+          className={fieldClass}
+        />
+        <span className="text-xs text-text-secondary">
+          Para produto com validade impressa. Com abertura + PAO, ela é calculada.
+        </span>
+      </Field>
+      )}
+
+      <Field label="Quanto custou (opcional)">
+      <input
+        type="number"
+        step="0.01"
+        min="0"
+        placeholder="0,00"
+        value={form.cost}
+        onChange={(e) => setForm((prev) => ({ ...prev, cost: e.target.value }))}
+        className={fieldClass}
+      />
+      </Field>
 
       {!product && hasCost && (
-        <label className="flex items-center gap-2 text-sm text-text-primary">
-          <input
-            type="checkbox"
-            checked={form.createTransaction}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, createTransaction: e.target.checked }))
-            }
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-          Lançar no financeiro como saída de beleza
-        </label>
+      <label className="flex items-center gap-2 text-sm text-text-primary">
+        <input
+          type="checkbox"
+          checked={form.createTransaction}
+          onChange={(e) =>
+            setForm((prev) => ({ ...prev, createTransaction: e.target.checked }))
+          }
+          className="h-4 w-4 accent-[var(--accent)]"
+        />
+        Lançar no financeiro como saída de beleza
+      </label>
       )}
 
       <Field label="Notas (opcional)">
-        <input
-          value={form.notes}
-          onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        value={form.notes}
+        onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <ErrorNote message={error} />
 
       <div className="mt-2 flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={onClose}>
-          Cancelar
-        </Button>
+      <Button type="submit" disabled={saving}>
+        Salvar
+      </Button>
+      <Button variant="ghost" onClick={onClose}>
+        Cancelar
+      </Button>
       </div>
     </Modal>
   );

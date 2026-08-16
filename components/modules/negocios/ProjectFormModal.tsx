@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+
+import { Button, ErrorNote, Modal, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { projectStatusLabels } from "@/lib/labels";
 
@@ -84,6 +84,7 @@ export function ProjectFormModal({
         await api.post("/api/projects", { ...payload, businessId, clientId, isInternal });
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -99,95 +100,85 @@ export function ProjectFormModal({
       : "Novo projeto";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={title}
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
+
+      <input
+        placeholder="Nome"
+        value={form.name}
+        onChange={(e) => update("name", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+      <input
+        placeholder="Descrição (opcional)"
+        value={form.description}
+        onChange={(e) => update("description", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+      <select
+        value={form.status}
+        onChange={(e) => update("status", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
+        {statusOptions.map((s) => (
+          <option key={s} value={s}>
+            {projectStatusLabels[s]}
+          </option>
+        ))}
+      </select>
+
+      {clients && (
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Cliente</p>
+          <select
+            value={form.clientId}
+            onChange={(e) => update("clientId", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          >
+            <option value="">Projeto interno (sem cliente)</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </div>
+      )}
 
-        <input
-          placeholder="Nome"
-          value={form.name}
-          onChange={(e) => update("name", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <input
-          placeholder="Descrição (opcional)"
-          value={form.description}
-          onChange={(e) => update("description", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <select
-          value={form.status}
-          onChange={(e) => update("status", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {statusOptions.map((s) => (
-            <option key={s} value={s}>
-              {projectStatusLabels[s]}
-            </option>
-          ))}
-        </select>
-
-        {clients && (
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Cliente</p>
-            <select
-              value={form.clientId}
-              onChange={(e) => update("clientId", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="">Projeto interno (sem cliente)</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <p className="mb-1 text-xs text-text-secondary">Início</p>
-            <input
-              type="date"
-              value={form.startDate}
-              onChange={(e) => update("startDate", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div className="flex-1">
-            <p className="mb-1 text-xs text-text-secondary">Fim</p>
-            <input
-              type="date"
-              value={form.endDate}
-              onChange={(e) => update("endDate", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <p className="mb-1 text-xs text-text-secondary">Início</p>
+          <input
+            type="date"
+            value={form.startDate}
+            onChange={(e) => update("startDate", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
         </div>
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex gap-2">
-          <Button onClick={handleSubmit} disabled={saving}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
+        <div className="flex-1">
+          <p className="mb-1 text-xs text-text-secondary">Fim</p>
+          <input
+            type="date"
+            value={form.endDate}
+            onChange={(e) => update("endDate", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
         </div>
       </div>
-    </div>
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex gap-2">
+        <Button type="submit" disabled={saving}>
+          Salvar
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Cancelar
+        </Button>
+      </div>
+    </Modal>
   );
 }

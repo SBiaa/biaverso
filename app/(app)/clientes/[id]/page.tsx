@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge } from "@/components/ui";
+import { BusinessBadge, Card, CardTitle } from "@/components/ui";
 import { ClientContactForm } from "@/components/modules/clientes/ClientContactForm";
 import { ClientBusinessLinks } from "@/components/modules/clientes/ClientBusinessLinks";
 import { getInitials } from "@/lib/utils";
@@ -89,7 +89,7 @@ export default async function ClientDetailPage({
         </Card>
 
         <Card className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-text-primary">Negócios</h2>
+          <CardTitle>Negócios</CardTitle>
           <ClientBusinessLinks
             clientId={client.id}
             links={client.businessLinks.map((link) => ({
@@ -105,15 +105,15 @@ export default async function ClientDetailPage({
 
         {client.businessLinks.length > 0 && (
           <Card className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold text-text-primary">
+            <CardTitle>
               Ver dentro do negócio
-            </h2>
+            </CardTitle>
             <div className="flex flex-wrap gap-2">
               {client.businessLinks.map((link) => (
                 <Link
                   key={link.id}
                   href={`/negocios/${link.businessId}/clientes/${client.id}`}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-primary transition-colors hover:bg-black/[0.03]"
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-primary transition-colors hover:bg-hover"
                 >
                   {link.business.name}
                 </Link>

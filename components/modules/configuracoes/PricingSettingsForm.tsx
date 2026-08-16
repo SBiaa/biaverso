@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { Button, Card, CardTitle, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatCurrencyBRL } from "@/lib/utils";
 import type { UserSettingsValues } from "@/lib/settings-shared";
@@ -46,6 +46,7 @@ export function PricingSettingsForm({ initial }: { initial: UserSettingsValues }
         targetMargin: form.targetMargin,
       });
       router.refresh();
+      notify("Salvo.");
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
     } catch (e) {
@@ -57,7 +58,7 @@ export function PricingSettingsForm({ initial }: { initial: UserSettingsValues }
   return (
     <Card className="flex flex-col gap-3">
       <div>
-        <h2 className="text-sm font-semibold text-text-primary">Produtos e preços</h2>
+        <CardTitle>Produtos e preços</CardTitle>
         <p className="text-xs text-text-secondary">
           Usado no cálculo de custo e no preço sugerido da central de produtos.
         </p>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Droplets } from "lucide-react";
 import { ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticValue } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { formatWaterProgress, type UserSettingsValues } from "@/lib/settings-shared";
 
 type WaterTrackerProps = {
@@ -13,26 +13,16 @@ type WaterTrackerProps = {
 };
 
 export function WaterTracker({ dayId, initialCount, settings }: WaterTrackerProps) {
-  const [count, setCount] = useState(initialCount);
-  const [error, setError] = useState<string | null>(null);
+  const { value: count, error, update } = useOptimisticValue(initialCount);
 
   // Quem já bebeu mais que a meta continua vendo tudo que marcou, mesmo depois
   // de a meta ser reduzida nas configurações.
   const slots = Math.max(settings.waterGoal, count);
 
-  async function handleClick(index: number) {
-    const previous = count;
+  function handleClick(index: number) {
+    // Clicar no copo que já é o último desmarca; qualquer outro define o total.
     const next = index + 1 === count ? count - 1 : index + 1;
-
-    setError(null);
-    setCount(next);
-
-    try {
-      await api.put("/api/water-logs", { dayId, count: next });
-    } catch (e) {
-      setCount(previous);
-      setError(errorMessage(e));
-    }
+    update(next, () => api.put("/api/water-logs", { dayId, count: next }));
   }
 
   return (

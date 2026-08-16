@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { AttentionBadge, Button, Card } from "@/components/ui";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { ORDER_COLUMNS } from "@/lib/loja";
 import { orderStatusLabels } from "@/lib/labels";
@@ -60,7 +60,7 @@ export function OrdersBoard({
                       key={order.record.id}
                       onClick={() => setEditing(order.record)}
                       className={cn(
-                        "flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-black/[0.02]",
+                        "flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-hover",
                         // Prazo estourado com o pedido ainda em aberto.
                         order.overdue && "border-red-500 bg-red-50",
                       )}
@@ -105,9 +105,9 @@ export function OrdersBoard({
                           </span>
                         )}
                         {order.overdue && (
-                          <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+                          <AttentionBadge level="atrasado">
                             Atrasado
-                          </span>
+                          </AttentionBadge>
                         )}
                       </div>
 

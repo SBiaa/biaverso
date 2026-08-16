@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
-import { ErrorNote } from "@/components/ui";
+import { ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 
@@ -36,6 +36,7 @@ export function BillAmountOverride({
       await api.patch(`/api/fixed-bill-logs/${logId}`, { amountOverride: next });
       setOpen(false);
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {

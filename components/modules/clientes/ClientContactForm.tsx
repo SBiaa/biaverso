@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, CardTitle, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 type Client = {
@@ -40,6 +40,7 @@ export function ClientContactForm({ client }: { client: Client }) {
       await api.patch(`/api/clients/${client.id}`, form);
       setEditing(false);
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -51,7 +52,7 @@ export function ClientContactForm({ client }: { client: Client }) {
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-text-primary">Contato</h2>
+          <CardTitle>Contato</CardTitle>
           <Button
             variant="ghost"
             onClick={() => setEditing(true)}
@@ -78,7 +79,7 @@ export function ClientContactForm({ client }: { client: Client }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-text-primary">Contato</h2>
+      <CardTitle>Contato</CardTitle>
 
       <div className="grid gap-2 sm:grid-cols-2">
         <input

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { ErrorNote } from "@/components/ui";
+import { confirmAction, ErrorNote, IconButton, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import {
   ProjectFormModal,
@@ -34,12 +34,13 @@ export function ProjectActions({
   const [error, setError] = useState<string | null>(null);
 
   async function handleDelete() {
-    if (
-      !confirm(
-        `Apagar o projeto "${project.name}"? A documentação, os documentos, a tabela de preços e as senhas vinculadas vão junto. Posts, tarefas de produção e tarefas do dia continuam existindo, só perdem o vínculo com o projeto. Não dá para desfazer.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Apagar o projeto "${project.name}"?`,
+      description: `A documentação, os documentos, a tabela de preços e as senhas vinculadas vão junto. Posts, tarefas de produção e tarefas do dia continuam existindo, só perdem o vínculo com o projeto. Não dá para desfazer.`,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     setDeleting(true);
     setError(null);
@@ -49,6 +50,7 @@ export function ProjectActions({
       // Na página do projeto não dá para ficar: ela deixou de existir.
       if (redirectTo) router.push(redirectTo);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
       setDeleting(false);
@@ -58,23 +60,22 @@ export function ProjectActions({
   return (
     <>
       <div className="flex items-center gap-1">
-        <button
-          type="button"
+        <IconButton
           title="Editar projeto"
           onClick={() => setEditing(true)}
-          className="rounded-md p-1.5 text-text-secondary hover:bg-border hover:text-text-primary"
+          className="hover:bg-border"
         >
           <Pencil size={15} />
-        </button>
-        <button
-          type="button"
+        </IconButton>
+        <IconButton
           title="Apagar projeto"
           onClick={handleDelete}
           disabled={deleting}
-          className="rounded-md p-1.5 text-text-secondary hover:bg-border hover:text-red-600 disabled:opacity-50"
+          tone="danger"
+          className="hover:bg-border"
         >
           <Trash2 size={15} />
-        </button>
+        </IconButton>
       </div>
 
       <ErrorNote message={error} />

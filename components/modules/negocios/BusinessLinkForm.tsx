@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 type BusinessOption = { id: string; name: string };
@@ -34,6 +34,7 @@ export function BusinessLinkForm({
       // Vínculo repetido volta 409 com mensagem pronta do servidor.
       await api.post(`/api/clients/${clientId}/business-links`, { businessId });
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {

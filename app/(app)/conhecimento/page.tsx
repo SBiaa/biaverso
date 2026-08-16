@@ -66,7 +66,7 @@ export default async function ConhecimentoPage({
                     href={item.link}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-medium text-accent"
+                    className="-my-2 py-2 text-xs font-medium text-accent"
                   >
                     Abrir link
                   </a>

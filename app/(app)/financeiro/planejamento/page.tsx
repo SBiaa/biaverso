@@ -2,7 +2,14 @@ import { Hourglass, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getMonthPlan } from "@/lib/finance";
 import { Topbar } from "@/components/layout/Topbar";
-import { Badge, BusinessBadge, Card, MonthPicker, StatCard } from "@/components/ui";
+import {
+  Badge,
+  BusinessBadge,
+  Card,
+  CardTitle,
+  MonthPicker,
+  StatCard,
+} from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { AddPlannedIncomeForm } from "@/components/modules/financeiro/AddPlannedIncomeForm";
 import { IncomeReceivedToggle } from "@/components/modules/financeiro/IncomeReceivedToggle";
@@ -80,9 +87,9 @@ export default async function PlanejamentoPage({
         </div>
 
         <Card>
-          <h2 className="mb-2 text-sm font-semibold text-text-primary">
+          <CardTitle className="mb-2">
             Como o &quot;saiu&quot; foi somado
-          </h2>
+          </CardTitle>
           <ul className="flex flex-col gap-1 text-sm">
             <li className="flex items-center justify-between">
               <span className="text-text-secondary">
@@ -120,9 +127,9 @@ export default async function PlanejamentoPage({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Contas fixas do mês
-              </h2>
+              </CardTitle>
               {plan.fixedBills.length === 0 ? (
                 <p className="text-sm text-text-secondary">
                   Nenhuma conta fixa ativa.
@@ -157,14 +164,14 @@ export default async function PlanejamentoPage({
             </Card>
 
             <Card>
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3 flex items-center gap-2">
                 Cartão de crédito — projeção
                 {plan.invoice.status === "PAGA" && (
                   <Badge className="bg-emerald-500/10 text-emerald-600">
                     Fatura paga
                   </Badge>
                 )}
-              </h2>
+              </CardTitle>
               {plan.invoice.items.length === 0 ? (
                 <p className="text-sm text-text-secondary">
                   Nada previsto na fatura deste mês.
@@ -208,9 +215,9 @@ export default async function PlanejamentoPage({
 
           <div className="flex flex-col gap-4">
             <Card>
-              <h2 className="mb-1 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-1">
                 Entradas
-              </h2>
+              </CardTitle>
               <p className="mb-3 text-xs text-text-secondary">
                 Marque no círculo quando o dinheiro cair na conta — é isso que
                 faz ele entrar no saldo do mês.
@@ -270,9 +277,9 @@ export default async function PlanejamentoPage({
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Outras saídas lançadas
-              </h2>
+              </CardTitle>
               {plan.expenses.length === 0 ? (
                 <p className="text-sm text-text-secondary">
                   Nenhuma saída avulsa lançada neste mês.

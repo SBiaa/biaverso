@@ -45,7 +45,7 @@ export function BusinessTabs({
             "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
             active === tab.key
               ? "bg-accent/10 text-accent"
-              : "text-text-secondary hover:bg-black/[0.03]",
+              : "text-text-secondary hover:bg-hover",
           )}
         >
           {tab.label}
@@ -59,7 +59,7 @@ export function BusinessTabs({
           "ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
           active === "configuracoes"
             ? "bg-accent/10 text-accent"
-            : "text-text-secondary hover:bg-black/[0.03]",
+            : "text-text-secondary hover:bg-hover",
         )}
       >
         <Settings size={14} />

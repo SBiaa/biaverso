@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import { Button, Card, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { recipeCategoryLabels } from "@/lib/labels";
 
@@ -80,6 +80,7 @@ export function AddRecipeForm({
       if (!isEdit) setForm(emptyForm());
       onClose?.();
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {

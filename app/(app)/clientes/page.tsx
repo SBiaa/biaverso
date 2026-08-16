@@ -100,7 +100,7 @@ export default async function ClientesPage({
 
               return (
                 <Link key={client.id} href={`/clientes/${client.id}`}>
-                  <Card className="flex flex-wrap items-center justify-between gap-3 transition-colors hover:bg-black/[0.02]">
+                  <Card className="flex flex-wrap items-center justify-between gap-3 transition-colors hover:bg-hover">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-semibold text-accent">
                         {getInitials(client.name)}

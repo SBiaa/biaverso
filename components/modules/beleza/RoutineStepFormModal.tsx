@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import type { ProductOption, RoutineStepView } from "@/lib/beleza-shared";
 import { Field, Modal, fieldClass } from "./shared";
@@ -46,6 +46,7 @@ export function RoutineStepFormModal({
         await api.post(`/api/beauty/routines/${routineId}/steps`, body);
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -55,49 +56,53 @@ export function RoutineStepFormModal({
   }
 
   return (
-    <Modal title={step ? "Editar passo" : "Novo passo"} onClose={onClose}>
+    <Modal
+      title={step ? "Editar passo" : "Novo passo"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+    >
       <Field label="Título">
-        <input
-          placeholder="Limpeza"
-          value={form.title}
-          onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        placeholder="Limpeza"
+        value={form.title}
+        onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <Field label="Produto (opcional)">
-        <select
-          value={form.productId}
-          onChange={(e) => setForm((prev) => ({ ...prev, productId: e.target.value }))}
-          className={fieldClass}
-        >
-          <option value="">Nenhum</option>
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.brand ? `${product.name} · ${product.brand}` : product.name}
-            </option>
-          ))}
-        </select>
+      <select
+        value={form.productId}
+        onChange={(e) => setForm((prev) => ({ ...prev, productId: e.target.value }))}
+        className={fieldClass}
+      >
+        <option value="">Nenhum</option>
+        {products.map((product) => (
+          <option key={product.id} value={product.id}>
+            {product.brand ? `${product.name} · ${product.brand}` : product.name}
+          </option>
+        ))}
+      </select>
       </Field>
 
       <Field label="Notas (opcional)">
-        <input
-          placeholder="Massagear por 30 segundos"
-          value={form.notes}
-          onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        placeholder="Massagear por 30 segundos"
+        value={form.notes}
+        onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <ErrorNote message={error} />
 
       <div className="mt-2 flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={onClose}>
-          Cancelar
-        </Button>
+      <Button type="submit" disabled={saving}>
+        Salvar
+      </Button>
+      <Button variant="ghost" onClick={onClose}>
+        Cancelar
+      </Button>
       </div>
     </Modal>
   );

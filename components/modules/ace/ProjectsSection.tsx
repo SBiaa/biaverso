@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronDown, ChevronRight, Plus } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Button, Card, CardTitle } from "@/components/ui";
 import { formatDateBR } from "@/lib/utils";
 import { projectStatusLabels, contentStatusLabels, productionStatusLabels } from "@/lib/labels";
 import { ProjectFormModal } from "@/components/modules/negocios/ProjectFormModal";
@@ -74,7 +74,7 @@ export function ProjectsSection({
             <button
               type="button"
               onClick={() => setEditingPost(post)}
-              className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1 text-left text-sm hover:bg-black/[0.02]"
+              className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1 text-left text-sm hover:bg-hover"
             >
               <span className="text-text-primary">{post.title}</span>
               <span className="flex items-center gap-2 text-xs text-text-secondary">
@@ -99,7 +99,7 @@ export function ProjectsSection({
             <button
               type="button"
               onClick={() => setEditingTask(task)}
-              className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1 text-left text-sm hover:bg-black/[0.02]"
+              className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1 text-left text-sm hover:bg-hover"
             >
               <span className="text-text-primary">{task.title}</span>
               <span className="flex items-center gap-2 text-xs text-text-secondary">
@@ -156,9 +156,9 @@ export function ProjectsSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">
+        <CardTitle>
           {internal ? "Projetos internos" : "Projetos"}
-        </h2>
+        </CardTitle>
         <Button variant="secondary" onClick={() => setCreatingProject(true)}>
           <Plus size={14} />
           {internal ? "Novo projeto interno" : "Novo projeto"}

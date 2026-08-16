@@ -1,29 +1,69 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentPropsWithRef } from "react";
 import { cn } from "@/lib/utils";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary: "bg-accent text-white hover:bg-accent/90",
   secondary:
-    "bg-surface border border-border text-text-primary hover:bg-black/[0.03]",
-  ghost: "text-text-primary hover:bg-black/[0.03]",
+    "bg-surface border border-border text-text-primary hover:bg-hover",
+  ghost: "text-text-primary hover:bg-hover",
+  danger: "bg-danger-solid-bg text-danger-solid-text hover:opacity-90",
 };
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+// `ComponentPropsWithRef` e não `ButtonHTMLAttributes`: o `ref` entra junto com
+// o resto das props (React 19), e o diálogo de confirmação precisa dele para
+// pousar o foco no "Cancelar".
+type ButtonProps = ComponentPropsWithRef<"button"> & {
   variant?: ButtonVariant;
 };
 
 export function Button({
   variant = "primary",
   className,
+  // Sem isto, um botão dentro de `<form>` vira submit por padrão — e o
+  // "Cancelar" de todo modal passaria a salvar. Quem quer submeter pede.
+  type = "button",
   ...props
 }: ButtonProps) {
   return (
     <button
+      type={type}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+        "disabled:pointer-events-none disabled:opacity-50",
         variantStyles[variant],
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * Botão só de ícone (editar, excluir, mover).
+ *
+ * O ícone continua com 14–16px, mas a área que responde ao toque tem 44px: as
+ * listas do app tinham botões de 14×14 encostados uns nos outros, e no celular
+ * acertar "editar" sem pegar "excluir" era sorte.
+ */
+export function IconButton({
+  className,
+  type = "button",
+  tone = "default",
+  ...props
+}: ComponentPropsWithRef<"button"> & { tone?: "default" | "danger" }) {
+  return (
+    <button
+      type={type}
+      className={cn(
+        "inline-flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors sm:size-9",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        "disabled:pointer-events-none disabled:opacity-50",
+        tone === "danger"
+          ? "text-text-secondary hover:bg-danger-soft-bg hover:text-danger"
+          : "text-text-secondary hover:bg-hover-strong hover:text-text-primary",
         className,
       )}
       {...props}

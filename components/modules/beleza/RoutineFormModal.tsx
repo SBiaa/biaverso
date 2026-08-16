@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
+import { cn } from "@/lib/utils";
 import { routineTimeLabels } from "@/lib/labels";
 import type { RoutineView } from "@/lib/beleza-shared";
 import { Field, Modal, fieldClass } from "./shared";
@@ -25,6 +26,7 @@ export function RoutineFormModal({
     name: routine?.name ?? "",
     timeOfDay: routine?.timeOfDay ?? "MANHA",
     active: routine?.active ?? true,
+    checklist: routine?.checklist ?? true,
   });
 
   async function handleSubmit() {
@@ -39,9 +41,11 @@ export function RoutineFormModal({
         await api.post("/api/beauty/routines", {
           name: form.name,
           timeOfDay: form.timeOfDay,
+          checklist: form.checklist,
         });
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       // O modal fica aberto com o que foi digitado, para não perder o texto.
@@ -52,51 +56,83 @@ export function RoutineFormModal({
   }
 
   return (
-    <Modal title={routine ? "Editar rotina" : "Nova rotina"} onClose={onClose}>
+    <Modal
+      title={routine ? "Editar rotina" : "Nova rotina"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+    >
       <Field label="Nome">
-        <input
-          placeholder="Skincare manhã"
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        placeholder="Skincare manhã"
+        value={form.name}
+        onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <Field label="Período">
-        <select
-          value={form.timeOfDay}
-          onChange={(e) => setForm((prev) => ({ ...prev, timeOfDay: e.target.value }))}
-          className={fieldClass}
-        >
-          {timeOptions.map((t) => (
-            <option key={t} value={t}>
-              {routineTimeLabels[t]}
-            </option>
-          ))}
-        </select>
+      <select
+        value={form.timeOfDay}
+        onChange={(e) => setForm((prev) => ({ ...prev, timeOfDay: e.target.value }))}
+        className={fieldClass}
+      >
+        {timeOptions.map((t) => (
+          <option key={t} value={t}>
+            {routineTimeLabels[t]}
+          </option>
+        ))}
+      </select>
+      </Field>
+
+      <Field label="Como os passos aparecem no dia">
+      <div className="flex gap-2">
+        {[
+          { value: true, label: "Checklist", hint: "marcar um a um" },
+          { value: false, label: "Lista", hint: "só para consultar" },
+        ].map((option) => (
+          <button
+            key={option.label}
+            type="button"
+            onClick={() =>
+              setForm((prev) => ({ ...prev, checklist: option.value }))
+            }
+            className={cn(
+              "flex-1 rounded-md border px-3 py-2 text-left text-sm",
+              form.checklist === option.value
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border text-text-primary hover:bg-hover",
+            )}
+          >
+            <span className="font-medium">{option.label}</span>
+            <span className="block text-xs text-text-secondary">
+              {option.hint}
+            </span>
+          </button>
+        ))}
+      </div>
       </Field>
 
       {routine && (
-        <label className="flex items-center gap-2 text-sm text-text-primary">
-          <input
-            type="checkbox"
-            checked={form.active}
-            onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-          Ativa (aparece no dia)
-        </label>
+      <label className="flex items-center gap-2 text-sm text-text-primary">
+        <input
+          type="checkbox"
+          checked={form.active}
+          onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
+          className="h-4 w-4 accent-[var(--accent)]"
+        />
+        Ativa (aparece no dia)
+      </label>
       )}
 
       <ErrorNote message={error} />
 
       <div className="mt-2 flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={onClose}>
-          Cancelar
-        </Button>
+      <Button type="submit" disabled={saving}>
+        Salvar
+      </Button>
+      <Button variant="ghost" onClick={onClose}>
+        Cancelar
+      </Button>
       </div>
     </Modal>
   );

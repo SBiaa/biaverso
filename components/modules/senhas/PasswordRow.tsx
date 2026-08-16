@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Eye, EyeOff, Lock, Pencil, Trash2, User } from "lucide-react";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import {
   PasswordFields,
@@ -57,6 +64,7 @@ export function PasswordRow({ id, name, login, password, url, category }: Passwo
       await api.patch(`/api/passwords/${id}`, passwordFormPayload(form));
       setEditing(false);
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -65,7 +73,13 @@ export function PasswordRow({ id, name, login, password, url, category }: Passwo
   }
 
   async function remove() {
-    if (!confirm(`Apagar a senha "${name}"? Isso não tem como desfazer.`)) return;
+    const confirmed = await confirmAction({
+      title: `Apagar a senha "${name}"?`,
+      description: `Isso não tem como desfazer.`,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
     setSaving(true);
     setError(null);
     try {
@@ -118,7 +132,7 @@ export function PasswordRow({ id, name, login, password, url, category }: Passwo
               href={url}
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-medium text-accent"
+              className="-my-2 py-2 text-xs font-medium text-accent"
             >
               {url}
             </a>
@@ -131,7 +145,7 @@ export function PasswordRow({ id, name, login, password, url, category }: Passwo
               type="button"
               title="Copiar login"
               onClick={() => handleCopy(login, "login")}
-              className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+              className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
             >
               {copied === "login" ? (
                 <Check size={14} className="text-emerald-600" />
@@ -144,7 +158,7 @@ export function PasswordRow({ id, name, login, password, url, category }: Passwo
             type="button"
             title="Copiar senha"
             onClick={() => handleCopy(password, "password")}
-            className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+            className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
           >
             {copied === "password" ? (
               <Check size={14} className="text-emerald-600" />
@@ -152,23 +166,20 @@ export function PasswordRow({ id, name, login, password, url, category }: Passwo
               <Lock size={14} />
             )}
           </button>
-          <button
-            type="button"
+          <IconButton
             title="Editar"
             onClick={startEditing}
-            className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
           >
-            <Pencil size={14} />
-          </button>
-          <button
-            type="button"
+            <Pencil size={15} />
+          </IconButton>
+          <IconButton
             title="Apagar"
             onClick={remove}
             disabled={saving}
-            className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-red-600"
+            tone="danger"
           >
-            <Trash2 size={14} />
-          </button>
+            <Trash2 size={15} />
+          </IconButton>
         </div>
       </div>
 

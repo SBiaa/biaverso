@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getBusinessIcon } from "@/lib/business-visuals";
+import { CommandPaletteTrigger } from "./CommandPalette";
 import { navGroups, type NavItem } from "./nav-config";
 
 type Business = { id: string; name: string; icon: string | null };
@@ -19,7 +20,7 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
         "group flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
         isActive
           ? "bg-surface font-semibold text-accent shadow-elevation"
-          : "font-medium text-text-secondary hover:bg-black/[0.04] hover:text-text-primary",
+          : "font-medium text-text-secondary hover:bg-hover-strong hover:text-text-primary",
       )}
     >
       {/* O ícone é o que diferencia os itens de relance numa lista de 20
@@ -69,13 +70,15 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
     >
       <Link
         href="/"
-        className="mb-5 flex items-center gap-2 px-3 text-lg font-semibold tracking-tight text-text-primary"
+        className="mb-4 flex items-center gap-2 px-3 text-lg font-semibold tracking-tight text-text-primary"
       >
         <span className="grid size-7 place-items-center rounded-lg bg-accent text-sm font-bold text-white">
           b
         </span>
         biaVerso
       </Link>
+
+      <CommandPaletteTrigger />
 
       <nav className="flex flex-col gap-4 pb-2">
         {navGroups.map((group) => (

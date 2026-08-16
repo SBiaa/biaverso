@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticValue } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { projectStatusLabels } from "@/lib/labels";
 
 const statusOptions = Object.keys(projectStatusLabels);
@@ -14,20 +14,10 @@ export function ProjectStatusSelect({
   projectId: string;
   initialStatus: string;
 }) {
-  const [status, setStatus] = useState(initialStatus);
-  const [error, setError] = useState<string | null>(null);
+  const { value: status, error, update } = useOptimisticValue(initialStatus);
 
-  async function handleChange(value: string) {
-    const previous = status;
-    setError(null);
-    setStatus(value);
-
-    try {
-      await api.patch(`/api/projects/${projectId}`, { status: value });
-    } catch (e) {
-      setStatus(previous);
-      setError(errorMessage(e));
-    }
+  function handleChange(next: string) {
+    update(next, () => api.patch(`/api/projects/${projectId}`, { status: next }));
   }
 
   return (

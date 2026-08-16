@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, Circle, ListPlus, Plus, Trash2 } from "lucide-react";
-import { ErrorNote } from "@/components/ui";
+import { ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
@@ -140,14 +140,14 @@ export function SubtaskList({
               <span className="text-text-primary">{subtask.title}</span>
             </span>
           )}
-          <button
-            type="button"
+          <IconButton
             title="Apagar passo"
             onClick={() => remove(subtask.id)}
-            className="shrink-0 text-text-secondary opacity-0 transition-opacity hover:text-red-600 focus:opacity-100 group-hover:opacity-100"
+            tone="danger"
+            className="opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
           >
-            <Trash2 size={13} />
-          </button>
+            <Trash2 size={15} />
+          </IconButton>
         </div>
       ))}
 
@@ -164,15 +164,14 @@ export function SubtaskList({
           placeholder="Quebrar em um passo…"
           className="min-w-0 flex-1 rounded-md border border-border px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
-        <button
-          type="button"
+        <IconButton
           title="Adicionar passo"
           onClick={() => void submit()}
           disabled={saving || !title.trim()}
-          className="shrink-0 rounded-md border border-border p-1 text-text-secondary hover:text-text-primary disabled:opacity-40"
+          className="border border-border disabled:opacity-40"
         >
-          <Plus size={14} />
-        </button>
+          <Plus size={15} />
+        </IconButton>
       </div>
 
       <ErrorNote message={error} />

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Pencil, Target } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Button, Card, IconButton } from "@/components/ui";
 import { getPillarIcon } from "@/lib/vision-visuals";
 import { PillarFormModal } from "./PillarFormModal";
 
@@ -44,13 +44,11 @@ export function PillarGrid({ pillars }: { pillars: PillarItem[] }) {
                     )}
                   </div>
                 </Link>
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => setEditing(pillar)}
-                  className="text-text-secondary hover:text-text-primary"
                 >
-                  <Pencil size={14} />
-                </button>
+                  <Pencil size={15} />
+                </IconButton>
               </div>
 
               <div className="flex items-center gap-1.5 text-xs text-text-secondary">

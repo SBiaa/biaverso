@@ -18,7 +18,7 @@ export async function RadarHomeNote() {
   return (
     <Link
       href="/radar"
-      className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-4 py-2.5 text-sm text-text-primary transition-colors hover:bg-black/[0.02]"
+      className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-4 py-2.5 text-sm text-text-primary transition-colors hover:bg-hover"
     >
       <Radar size={16} className="shrink-0 text-amber-600" />
       <span className="flex-1">

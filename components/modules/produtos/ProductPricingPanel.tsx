@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { Button, Card, CardTitle, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import {
@@ -71,7 +71,7 @@ export function ProductPricingPanel({
 
   return (
     <Card className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold text-text-primary">Preço e margem</h2>
+      <CardTitle>Preço e margem</CardTitle>
 
       {breakdown.missingHourlyRate && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -134,7 +134,7 @@ export function ProductPricingPanel({
         </div>
       )}
 
-      <div className="flex flex-col gap-2 rounded-lg bg-black/[0.02] p-3">
+      <div className="flex flex-col gap-2 rounded-lg bg-hover p-3">
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-sm text-text-primary" htmlFor="target-margin">
             Quero uma margem de

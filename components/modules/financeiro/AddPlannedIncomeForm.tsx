@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { transactionCategoryLabels } from "@/lib/labels";
 import { utcDate } from "@/lib/finance-calc";
@@ -64,6 +64,7 @@ export function AddPlannedIncomeForm({
       setOpen(false);
       setForm((prev) => ({ ...prev, name: "", amount: "", notes: "" }));
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {

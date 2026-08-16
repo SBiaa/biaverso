@@ -3,7 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, Pencil, Trash2 } from "lucide-react";
-import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import {
+  attentionBorder,
+  AttentionBadge,
+  type AttentionLevel,
+  Badge,
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { BillAmountOverride } from "@/components/modules/financeiro/BillAmountOverride";
 import { api, errorMessage } from "@/lib/client-api";
 import {
@@ -36,10 +47,11 @@ type BillItem = {
   status: "PAGO" | "PENDENTE" | "ATRASADO";
 };
 
-const statusStyles: Record<string, string> = {
-  PAGO: "bg-badge-creative-bg text-badge-creative-text",
-  PENDENTE: "bg-badge-casa-bg text-badge-casa-text",
-  ATRASADO: "bg-badge-ace-bg text-badge-ace-text",
+/** A régua de atenção do app aplicada ao estado da conta. */
+const statusLevel: Record<string, AttentionLevel> = {
+  PAGO: "ok",
+  PENDENTE: "neutro",
+  ATRASADO: "atrasado",
 };
 
 function FixedBillForm({
@@ -88,6 +100,7 @@ function FixedBillForm({
     setSaving(false);
     onClose();
     router.refresh();
+    notify("Salvo.");
   }
 
   return (
@@ -203,17 +216,18 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
   }
 
   async function handleDelete(fixedBillId: string) {
-    if (
-      !confirm(
-        "Tem certeza que quer deletar esta conta fixa? Esta ação não pode ser desfeita.",
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: "Tem certeza que quer deletar esta conta fixa?",
+      description: "Esta ação não pode ser desfeita.",
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeletingId(fixedBillId);
     setError(null);
     try {
       await api.delete(`/api/fixed-bills/${fixedBillId}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -243,7 +257,15 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
         }
 
         return (
-          <Card key={item.logId} className="flex items-center justify-between">
+          <Card
+            key={item.logId}
+            // A borda vermelha na lateral: numa lista de dez contas, o selo
+            // "Atrasado" à direita só aparece depois de ler a linha inteira.
+            className={cn(
+              "flex items-center justify-between",
+              attentionBorder[statusLevel[item.status] ?? "neutro"],
+            )}
+          >
             {(() => {
               const onCard = item.paymentMethod === "CARTAO_CREDITO";
               const content = (
@@ -290,14 +312,12 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
               );
             })()}
             <div className="flex items-center gap-3">
-              <span
-                className={cn(
-                  "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                  statusStyles[item.status],
-                )}
+              <AttentionBadge
+                level={statusLevel[item.status] ?? "neutro"}
+                className="px-2.5 text-xs"
               >
                 {billStatusLabels[item.status]}
-              </span>
+              </AttentionBadge>
               <BillAmountOverride
                 logId={item.logId}
                 amount={item.amount}
@@ -305,23 +325,20 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
                 amountOverride={item.amountOverride}
               />
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
+                <IconButton
                   title="Editar"
                   onClick={() => setEditingId(item.fixedBillId)}
-                  className="text-text-secondary hover:text-text-primary"
                 >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  type="button"
+                  <Pencil size={15} />
+                </IconButton>
+                <IconButton
                   title="Deletar"
                   onClick={() => handleDelete(item.fixedBillId)}
                   disabled={deletingId === item.fixedBillId}
-                  className="text-text-secondary hover:text-red-600 disabled:opacity-50"
+                  tone="danger"
                 >
-                  <Trash2 size={14} />
-                </button>
+                  <Trash2 size={15} />
+                </IconButton>
               </div>
             </div>
           </Card>

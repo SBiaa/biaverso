@@ -1509,6 +1509,9 @@ model CareRoutine {
   timeOfDay RoutineTime
   active    Boolean     @default(true)
   order     Int         @default(0)
+  // Passos marcáveis um a um, ou lista numerada só de leitura. É por rotina:
+  // a do banho quer checklist, a de maquiagem pode ser só uma ordem para ler.
+  checklist Boolean     @default(true)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -1537,8 +1540,25 @@ model CareRoutineStep {
   productId String?
   product   BeautyProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
+  logs CareRoutineStepLog[]
+
   @@index([routineId, order])
   @@index([productId])
+}
+
+// REGISTRO DIÁRIO DE PASSO CUMPRIDO
+// Separado do log da rotina porque "3 de 5" é o estado normal no meio da
+// manhã: a rotina só fica feita quando todos os passos estão marcados.
+model CareRoutineStepLog {
+  id   String   @id @default(cuid())
+  done Boolean  @default(false)
+  date DateTime
+
+  stepId String
+  step   CareRoutineStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@unique([stepId, date])
+  @@index([date])
 }
 
 // REGISTRO DIÁRIO DE ROTINA CUMPRIDA

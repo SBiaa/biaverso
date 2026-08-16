@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui";
+import { Card, CardTitle } from "@/components/ui";
 import { ProductHeader } from "@/components/modules/produtos/ProductHeader";
 import { ProductCostEditor } from "@/components/modules/produtos/ProductCostEditor";
 import { ProductPricingPanel } from "@/components/modules/produtos/ProductPricingPanel";
@@ -117,7 +117,7 @@ export default async function ProdutoDetailPage({
 
         {sales.units > 0 && (
           <Card className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold text-text-primary">Vendas</h2>
+            <CardTitle>Vendas</CardTitle>
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <p className="text-xs text-text-secondary">Unidades vendidas</p>
@@ -143,7 +143,7 @@ export default async function ProdutoDetailPage({
         )}
 
         <Card className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-text-primary">Onde este produto está</h2>
+          <CardTitle>Onde este produto está</CardTitle>
           {product.collectionItems.length === 0 ? (
             <p className="text-sm text-text-secondary">
               Ainda não está em nenhuma coleção. Abra uma coleção e escolha este

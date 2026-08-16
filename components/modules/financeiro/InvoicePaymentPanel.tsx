@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, confirmAction, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import {
   formatCurrencyBRL,
@@ -65,15 +65,16 @@ export function InvoicePaymentPanel({ invoice }: { invoice: Invoice }) {
           </p>
           <button
             type="button"
-            onClick={() => {
-              if (
-                !confirm(
-                  invoice.paymentTransactionId
-                    ? "Reabrir a fatura também apaga a transação de saída lançada com o pagamento. Continuar?"
-                    : "Reabrir esta fatura?",
-                )
-              )
-                return;
+            onClick={async () => {
+              const confirmed = await confirmAction({
+                title: "Reabrir esta fatura?",
+                description: invoice.paymentTransactionId
+                  ? "A transação de saída lançada com o pagamento também é apagada."
+                  : undefined,
+                confirmLabel: "Reabrir",
+                destructive: !!invoice.paymentTransactionId,
+              });
+              if (!confirmed) return;
               submit({ status: "ABERTA" });
             }}
             disabled={saving}

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { Card, CardTitle } from "@/components/ui";
 import { Topbar } from "@/components/layout/Topbar";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { RoutineTemplateList } from "@/components/modules/configuracoes/RoutineTemplateList";
 import { HabitList } from "@/components/modules/configuracoes/HabitList";
 import { GoogleCalendarCard } from "@/components/modules/agenda/GoogleCalendarCard";
@@ -46,6 +48,17 @@ export default async function ConfiguracoesPage({
     <>
       <Topbar title="Configurações" />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
+        <Card className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle>Tema</CardTitle>
+            <p className="text-sm text-text-secondary">
+              &ldquo;Sistema&rdquo; acompanha o que o seu computador ou celular
+              estiver usando.
+            </p>
+          </div>
+          <ThemeToggle />
+        </Card>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <RoutineTemplateList
             type="ROTINA_NORMAL"

@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+
+import {
+  Button,
+  confirmAction,
+  ErrorNote,
+  Modal,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productionTypeLabels, priorityLabels, productionStatusLabels } from "@/lib/labels";
 import {
@@ -149,6 +155,7 @@ export function ProductionTaskModal({
       if (isEdit) await api.patch(`/api/ace/tasks/${task!.id}`, payload);
       else await api.post("/api/ace/tasks", payload);
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -159,13 +166,18 @@ export function ProductionTaskModal({
 
   async function handleDelete() {
     if (!isEdit) return;
-    if (!confirm("Excluir esta tarefa de produção?")) return;
+    const confirmed = await confirmAction({
+      title: "Excluir esta tarefa de produção?",
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setError(null);
 
     try {
       await api.delete(`/api/ace/tasks/${task!.id}`);
       router.refresh();
+      notify("Excluído.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -175,150 +187,139 @@ export function ProductionTaskModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={isEdit ? "Editar tarefa" : "Nova tarefa de produção"}
+      size="md"
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
+
+      <input
+        placeholder="Título"
+        value={form.title}
+        onChange={(e) => update("title", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+
+      <select
+        value={form.type}
+        onChange={(e) => update("type", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {isEdit ? "Editar tarefa" : "Nova tarefa de produção"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
-        </div>
+        {typeOptions.map((t) => (
+          <option key={t} value={t}>
+            {productionTypeLabels[t]}
+          </option>
+        ))}
+      </select>
 
-        <input
-          placeholder="Título"
-          value={form.title}
-          onChange={(e) => update("title", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+      <textarea
+        placeholder="Descrição / briefing"
+        value={form.description}
+        onChange={(e) => update("description", e.target.value)}
+        rows={2}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
 
+      <div className="grid grid-cols-2 gap-2">
         <select
-          value={form.type}
-          onChange={(e) => update("type", e.target.value)}
+          value={form.priority}
+          onChange={(e) => update("priority", e.target.value)}
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         >
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>
-              {productionTypeLabels[t]}
+          {priorityOptions.map((p) => (
+            <option key={p} value={p}>
+              {priorityLabels[p]}
             </option>
           ))}
         </select>
-
-        <textarea
-          placeholder="Descrição / briefing"
-          value={form.description}
-          onChange={(e) => update("description", e.target.value)}
-          rows={2}
+        <select
+          value={form.status}
+          onChange={(e) => update("status", e.target.value)}
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+        >
+          {statusOptions.map((s) => (
+            <option key={s} value={s}>
+              {productionStatusLabels[s]}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={form.priority}
-            onChange={(e) => update("priority", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            {priorityOptions.map((p) => (
-              <option key={p} value={p}>
-                {priorityLabels[p]}
-              </option>
-            ))}
-          </select>
-          <select
-            value={form.status}
-            onChange={(e) => update("status", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            {statusOptions.map((s) => (
-              <option key={s} value={s}>
-                {productionStatusLabels[s]}
-              </option>
-            ))}
-          </select>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Prazo máximo</p>
+          <input
+            type="date"
+            value={form.dueDate}
+            onChange={(e) => update("dueDate", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
         </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Prazo máximo</p>
-            <input
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => update("dueDate", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Finalização</p>
-            <input
-              type="date"
-              value={form.completedAt}
-              onChange={(e) => update("completedAt", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={form.clientId}
-            onChange={(e) => update("clientId", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value={INTERNAL_CLIENT}>Projeto interno</option>
-            <ClientOptions clients={clients} />
-          </select>
-          <select
-            value={form.projectId}
-            onChange={(e) => update("projectId", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value="">Sem projeto</option>
-            {clientProjects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <textarea
-          placeholder="Notas"
-          value={form.notes}
-          onChange={(e) => update("notes", e.target.value)}
-          rows={2}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={saving}>
-              Salvar
-            </Button>
-            <Button variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-          </div>
-          {isEdit && (
-            <Button
-              variant="ghost"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-red-600 hover:bg-red-50"
-            >
-              Excluir
-            </Button>
-          )}
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Finalização</p>
+          <input
+            type="date"
+            value={form.completedAt}
+            onChange={(e) => update("completedAt", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          value={form.clientId}
+          onChange={(e) => update("clientId", e.target.value)}
+          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value={INTERNAL_CLIENT}>Projeto interno</option>
+          <ClientOptions clients={clients} />
+        </select>
+        <select
+          value={form.projectId}
+          onChange={(e) => update("projectId", e.target.value)}
+          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value="">Sem projeto</option>
+          {clientProjects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <textarea
+        placeholder="Notas"
+        value={form.notes}
+        onChange={(e) => update("notes", e.target.value)}
+        rows={2}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <Button type="submit" disabled={saving}>
+            Salvar
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+        {isEdit && (
+          <Button
+            variant="ghost"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-red-600 hover:bg-red-50"
+          >
+            Excluir
+          </Button>
+        )}
+      </div>
+    </Modal>
   );
 }

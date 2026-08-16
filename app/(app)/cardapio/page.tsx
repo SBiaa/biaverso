@@ -7,6 +7,7 @@ import { WeeklyMealGrid } from "@/components/modules/cardapio/WeeklyMealGrid";
 import { RecipeFilters } from "@/components/modules/cardapio/RecipeFilters";
 import { AddRecipeForm } from "@/components/modules/cardapio/AddRecipeForm";
 import { RecipeCard } from "@/components/modules/cardapio/RecipeCard";
+import { CardTitle } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -78,12 +79,12 @@ export default async function CardapioPage({
             embaixo ela fica junto de onde a receita é usada. */}
         <section id="receitas" className="space-y-4 border-t border-border pt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-text-primary">
+            <CardTitle>
               Biblioteca de receitas
               <span className="ml-2 font-normal text-text-secondary">
                 {recipes.length}
               </span>
-            </h2>
+            </CardTitle>
             <div className="flex flex-wrap items-center gap-3">
               <RecipeFilters />
               <AddRecipeForm />

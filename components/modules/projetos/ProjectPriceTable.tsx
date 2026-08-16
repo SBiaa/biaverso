@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatCurrencyBRL } from "@/lib/utils";
 
@@ -101,14 +101,13 @@ export function ProjectPriceTable({
                     {formatCurrencyBRL(item.price)}
                   </td>
                   <td className="py-2 text-right">
-                    <button
-                      type="button"
+                    <IconButton
                       onClick={() => remove(item.id)}
                       aria-label={`Remover ${item.name}`}
-                      className="rounded-md p-1 text-text-secondary hover:bg-black/[0.03] hover:text-red-600"
+                      tone="danger"
                     >
                       <Trash2 size={15} />
-                    </button>
+                    </IconButton>
                   </td>
                 </tr>
               ))}

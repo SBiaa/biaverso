@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Button } from "@/components/ui";
+import { Button, Card, CardTitle, confirmAction } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import type { GoogleSyncStatus } from "@/lib/agenda-shared";
@@ -53,9 +53,13 @@ export function GoogleCalendarCard({
   const message = feedback ? FEEDBACK[feedback] : undefined;
 
   async function handleDisconnect() {
-    if (!confirm("Desconectar o Google Calendar? Os eventos já sincronizados continuam no app.")) {
-      return;
-    }
+    const confirmed = await confirmAction({
+      title: "Desconectar o Google Calendar?",
+      description: "Os eventos já sincronizados continuam no app.",
+      confirmLabel: "Desconectar",
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     setDisconnecting(true);
     setError(null);
@@ -71,7 +75,7 @@ export function GoogleCalendarCard({
 
   return (
     <Card className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-text-primary">Google Calendar</h2>
+      <CardTitle>Google Calendar</CardTitle>
 
       {message && (
         <p className={cn("text-xs", message.error ? "text-red-600" : "text-emerald-600")}>

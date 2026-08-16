@@ -7,10 +7,19 @@ import { Topbar } from "@/components/layout/Topbar";
 import { BusinessTabs } from "@/components/modules/negocios/BusinessTabs";
 import { ClientesTab } from "@/components/modules/negocios/ClientesTab";
 import { AceFilterBar } from "@/components/modules/ace/AceFilterBar";
-import { CalendarBoard, type CalendarItem } from "@/components/modules/ace/CalendarBoard";
-import { KanbanBoard, type KanbanItem } from "@/components/modules/ace/KanbanBoard";
-import { ProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ProjectsSection";
-import { Card, MonthPicker, StatCard } from "@/components/ui";
+import {
+  CalendarBoard,
+  type CalendarItem,
+} from "@/components/modules/ace/CalendarBoard";
+import {
+  KanbanBoard,
+  type KanbanItem,
+} from "@/components/modules/ace/KanbanBoard";
+import {
+  ProjectsSection,
+  type ProjectWithItems,
+} from "@/components/modules/ace/ProjectsSection";
+import { Card, CardTitle, MonthPicker, StatCard } from "@/components/ui";
 import {
   getClientsOverview,
   getKanbanColumn,
@@ -199,9 +208,9 @@ export default async function BusinessDetailPage({
     content = (
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-text-primary">
+          <CardTitle>
             Todos os projetos deste negócio
-          </h2>
+          </CardTitle>
           <ProjectFilterBar businesses={[]} showBusiness={false} />
           <ProjectGrid projects={visibleCards} sort={sort} showBusinessGroups={false} />
         </div>
@@ -429,8 +438,8 @@ export default async function BusinessDetailPage({
 
         <Card className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Últimas transações</h2>
-            <Link href="/financeiro/transacoes" className="text-xs font-medium text-accent">
+            <CardTitle>Últimas transações</CardTitle>
+            <Link href="/financeiro/transacoes" className="-my-2 py-2 text-xs font-medium text-accent">
               Ver todas
             </Link>
           </div>

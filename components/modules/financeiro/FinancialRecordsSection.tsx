@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { financialStatusLabels } from "@/lib/labels";
@@ -186,12 +192,12 @@ export function FinancialRecordsSection({
 
   async function handleDelete(id: string) {
     const label = type === "DIVIDA" ? "esta dívida" : "este investimento";
-    if (
-      !confirm(
-        `Tem certeza que quer deletar ${label}? Esta ação não pode ser desfeita.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Tem certeza que quer deletar ${label}?`,
+      description: `Esta ação não pode ser desfeita.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeletingId(id);
     setListError(null);
 
@@ -280,23 +286,20 @@ export function FinancialRecordsSection({
                   {financialStatusLabels[record.status]}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
+                  <IconButton
                     title="Editar"
                     onClick={() => setEditingId(record.id)}
-                    className="text-text-secondary hover:text-text-primary"
                   >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    type="button"
+                    <Pencil size={15} />
+                  </IconButton>
+                  <IconButton
                     title="Deletar"
                     onClick={() => handleDelete(record.id)}
                     disabled={deletingId === record.id}
-                    className="text-text-secondary hover:text-red-600 disabled:opacity-50"
+                    tone="danger"
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    <Trash2 size={15} />
+                  </IconButton>
                 </div>
               </div>
             </div>

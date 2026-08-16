@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Wallet } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card, CardTitle } from "@/components/ui";
 import { formatCurrencyBRL, formatMonthYearBR } from "@/lib/utils";
 import { wishPriorityLabels } from "@/lib/labels";
 
@@ -77,13 +77,13 @@ export function WishlistBudget({
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+        <CardTitle className="flex items-center gap-2">
           <Wallet size={16} className="text-text-secondary" />
           Cabe no seu mês?
-        </h2>
+        </CardTitle>
         <Link
           href="/financeiro/planejamento"
-          className="text-xs font-medium text-accent"
+          className="-my-2 py-2 text-xs font-medium text-accent"
         >
           Ver planejamento
         </Link>

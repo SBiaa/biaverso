@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui";
+import { AttentionBadge, Card } from "@/components/ui";
 import { cn, formatDateBR } from "@/lib/utils";
 import { KANBAN_COLUMNS } from "@/lib/ace-shared";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
@@ -51,7 +51,7 @@ export function KanbanBoard({
                   columnItems.map((item) => (
                     <Card
                       key={`${item.kind}-${item.id}`}
-                      className="flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-black/[0.02]"
+                      className="flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-hover"
                       onClick={() => setEditing(item)}
                     >
                       <p className="text-sm font-medium text-text-primary">{item.title}</p>
@@ -70,9 +70,9 @@ export function KanbanBoard({
                           {item.typeLabel}
                         </span>
                         {item.overdue && (
-                          <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+                          <AttentionBadge level="atrasado">
                             Atrasado
-                          </span>
+                          </AttentionBadge>
                         )}
                       </div>
                       {item.date && (

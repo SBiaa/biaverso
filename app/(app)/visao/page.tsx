@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui";
+import { Card, CardTitle } from "@/components/ui";
 import { PillarGrid } from "@/components/modules/visao/PillarGrid";
 import { MeasuredGoalsOverview } from "@/components/modules/visao/MeasuredGoalsOverview";
 
@@ -67,14 +67,14 @@ export default async function VisaoPage() {
         </Card>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-text-primary">Pilares</h2>
+          <CardTitle>Pilares</CardTitle>
           <PillarGrid pillars={pillarItems} />
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-text-primary">
+          <CardTitle>
             Objetivos metrificados
-          </h2>
+          </CardTitle>
           <MeasuredGoalsOverview goals={overviewItems} />
         </section>
       </main>

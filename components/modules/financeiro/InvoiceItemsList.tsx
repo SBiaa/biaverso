@@ -4,7 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
-import { Badge, Button, BusinessBadge, ErrorNote } from "@/components/ui";
+import {
+  Badge,
+  BusinessBadge,
+  Button,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { BillAmountOverride } from "@/components/modules/financeiro/BillAmountOverride";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatCurrencyBRL, formatDateBR, toDateInputValue } from "@/lib/utils";
@@ -63,6 +71,7 @@ function EditCreditCardEntryForm({
       });
       onClose();
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -185,7 +194,11 @@ export function InvoiceItemsList({
     const message = item.purchaseId
       ? `"${item.description}" é uma compra parcelada. Deletar agora apaga TODAS as parcelas, em todas as faturas. Esta ação não pode ser desfeita.`
       : "Tem certeza que quer deletar este lançamento? Esta ação não pode ser desfeita.";
-    if (!confirm(message)) return;
+    const confirmed = await confirmAction({
+      title: message,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     setDeletingId(item.id);
     setListError(null);
@@ -197,6 +210,7 @@ export function InvoiceItemsList({
           : `/api/credit-card-entries/${item.id}`,
       );
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setListError(errorMessage(e));
       setDeletingId(null);
@@ -294,23 +308,20 @@ export function InvoiceItemsList({
                   {formatCurrencyBRL(item.amount)}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
+                  <IconButton
                     title="Editar"
                     onClick={() => setEditingId(item.id)}
-                    className="text-text-secondary hover:text-text-primary"
                   >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    type="button"
+                    <Pencil size={15} />
+                  </IconButton>
+                  <IconButton
                     title="Deletar"
                     onClick={() => handleDelete(item)}
                     disabled={deletingId === item.id}
-                    className="text-text-secondary hover:text-red-600 disabled:opacity-50"
+                    tone="danger"
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    <Trash2 size={15} />
+                  </IconButton>
                 </div>
               </div>
             </li>

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronRight, Circle } from "lucide-react";
 import { ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticList } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { routineTimeLabels } from "@/lib/labels";
 import type { RoutineView } from "@/lib/beleza-shared";
@@ -11,36 +12,59 @@ import type { RoutineView } from "@/lib/beleza-shared";
 /**
  * Rotinas do dia com checkbox. Marcar grava um CareRoutineLog na data — a
  * mesma lista aparece aqui e na seção Autocuidado do /dia.
+ *
+ * Cada rotina decide se os passos são marcáveis (`checklist`) ou uma lista
+ * numerada só de leitura — a escolha vive na própria rotina, em Rotinas. Em
+ * checklist a manhã pode acontecer em pedaços: "3 de 5" cabe na tela, e a
+ * rotina fecha sozinha quando o último passo é marcado.
  */
 export function TodayRoutines({
-  routines: initialRoutines,
+  routines: serverRoutines,
   date,
 }: {
   routines: RoutineView[];
   /** Data-calendário ISO do dia mostrado. */
   date: string;
 }) {
-  const [routines, setRoutines] = useState(initialRoutines);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { items: routines, error, update } = useOptimisticList(serverRoutines);
+  // O que ela abriu ou fechou na mão. Sem entrada aqui vale o padrão do modo:
+  // em checklist os passos já nascem à vista, porque escondê-los atrás de um
+  // clique era o que fazia a rotina parecer "tudo ou nada".
+  const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
 
-  async function toggle(id: string) {
+  function toggleOpen(routineId: string, open: boolean) {
+    setOpenOverrides((prev) => ({ ...prev, [routineId]: !open }));
+  }
+
+  function toggle(id: string) {
     const routine = routines.find((r) => r.id === id);
     if (!routine) return;
 
-    const previous = routines;
     const done = !routine.done;
+    // Marcar a rotina inteira leva os passos junto, do mesmo jeito que o
+    // servidor faz: senão a lista abaixo contaria outra história.
+    update(
+      id,
+      { done, steps: routine.steps.map((s) => ({ ...s, done })) },
+      () => api.post(`/api/beauty/routines/${id}/log`, { date, done }),
+    );
+  }
 
-    setError(null);
-    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, done } : r)));
+  function toggleStep(routineId: string, stepId: string) {
+    const routine = routines.find((r) => r.id === routineId);
+    const step = routine?.steps.find((s) => s.id === stepId);
+    if (!routine || !step) return;
 
-    try {
-      await api.post(`/api/beauty/routines/${id}/log`, { date, done });
-    } catch (e) {
-      // Volta ao estado anterior: sem isso o check ficava marcado só na tela.
-      setRoutines(previous);
-      setError(errorMessage(e));
-    }
+    const done = !step.done;
+    const steps = routine.steps.map((s) => (s.id === stepId ? { ...s, done } : s));
+
+    // A rotina fecha sozinha quando o último passo é marcado.
+    update(routineId, { steps, done: steps.every((s) => s.done) }, () =>
+      api.post(`/api/beauty/routines/${routineId}/steps/${stepId}/log`, {
+        date,
+        done,
+      }),
+    );
   }
 
   if (routines.length === 0) {
@@ -56,7 +80,9 @@ export function TodayRoutines({
       <ErrorNote message={error} />
 
       {routines.map((routine) => {
-        const isOpen = expanded === routine.id;
+        const checklist = routine.checklist;
+        const open = openOverrides[routine.id] ?? checklist;
+        const doneSteps = routine.steps.filter((s) => s.done).length;
         return (
           <div
             key={routine.id}
@@ -85,7 +111,10 @@ export function TodayRoutines({
                   <p className="text-xs text-text-secondary">
                     {routineTimeLabels[routine.timeOfDay]}
                     {routine.steps.length > 0 &&
-                      ` · ${routine.steps.length} ${routine.steps.length === 1 ? "passo" : "passos"}`}
+                      // Em checklist o que interessa é onde ela parou.
+                      (checklist
+                        ? ` · ${doneSteps} de ${routine.steps.length} passos`
+                        : ` · ${routine.steps.length} ${routine.steps.length === 1 ? "passo" : "passos"}`)}
                   </p>
                 </div>
               </button>
@@ -93,30 +122,71 @@ export function TodayRoutines({
               {routine.steps.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setExpanded(isOpen ? null : routine.id)}
-                  aria-label={isOpen ? "Esconder passos" : "Ver passos"}
+                  onClick={() => toggleOpen(routine.id, open)}
+                  aria-label={open ? "Esconder passos" : "Ver passos"}
                   className="text-text-secondary hover:text-text-primary"
                 >
-                  {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </button>
               )}
             </div>
 
-            {isOpen && (
-              <ol className="mt-2 flex flex-col gap-1 border-t border-border pt-2 pl-8">
+            {open && routine.steps.length > 0 && (
+              <ul className="mt-2 flex flex-col gap-1 border-t border-border pt-2 pl-8">
                 {routine.steps.map((step, index) => (
                   <li key={step.id} className="text-sm text-text-primary">
-                    <span className="text-text-secondary">{index + 1}.</span>{" "}
-                    {step.title}
-                    {step.productName && (
-                      <span className="text-text-secondary"> · {step.productName}</span>
+                    {checklist ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleStep(routine.id, step.id)}
+                        className="flex w-full items-start gap-2 text-left"
+                      >
+                        {step.done ? (
+                          <CheckCircle2
+                            size={15}
+                            className="mt-0.5 shrink-0 text-accent"
+                          />
+                        ) : (
+                          <Circle
+                            size={15}
+                            className="mt-0.5 shrink-0 text-text-secondary"
+                          />
+                        )}
+                        <span className={cn(step.done && "line-through opacity-60")}>
+                          {step.title}
+                          {step.productName && (
+                            <span className="text-text-secondary">
+                              {" "}
+                              · {step.productName}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    ) : (
+                      <>
+                        <span className="text-text-secondary">{index + 1}.</span>{" "}
+                        {step.title}
+                        {step.productName && (
+                          <span className="text-text-secondary">
+                            {" "}
+                            · {step.productName}
+                          </span>
+                        )}
+                      </>
                     )}
                     {step.notes && (
-                      <p className="pl-4 text-xs text-text-secondary">{step.notes}</p>
+                      <p
+                        className={cn(
+                          "text-xs text-text-secondary",
+                          checklist ? "pl-6" : "pl-4",
+                        )}
+                      >
+                        {step.notes}
+                      </p>
                     )}
                   </li>
                 ))}
-              </ol>
+              </ul>
             )}
           </div>
         );

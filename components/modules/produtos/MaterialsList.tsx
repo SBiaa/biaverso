@@ -2,8 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { Plus } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardTitle,
+  confirmAction,
+  ErrorNote,
+  Modal,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { materialUnitCost } from "@/lib/produtos";
@@ -87,6 +95,7 @@ function MaterialModal({
       if (isEdit) await api.patch(`/api/materials/${material.id}`, payload);
       else await api.post("/api/materials", payload);
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -97,13 +106,18 @@ function MaterialModal({
 
   async function handleDelete() {
     if (!isEdit) return;
-    if (!confirm(`Excluir "${material.name}" da biblioteca?`)) return;
+    const confirmed = await confirmAction({
+      title: `Excluir "${material.name}" da biblioteca?`,
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setError(null);
 
     try {
       await api.delete(`/api/materials/${material.id}`);
       router.refresh();
+      notify("Excluído.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -113,128 +127,116 @@ function MaterialModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={isEdit ? "Editar insumo" : "Novo insumo"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex max-h-[90vh] w-full max-w-sm flex-col gap-3 overflow-y-auto rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {isEdit ? "Editar insumo" : "Novo insumo"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
+
+      <input
+        placeholder="Nome — papel transfer, fita, tinta"
+        value={form.name}
+        onChange={(e) => update("name", e.target.value)}
+        className={field}
+      />
+
+      <p className="text-xs text-text-secondary">
+        Cadastre como você compra de verdade. O custo por unidade sai da
+        divisão.
+      </p>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Preço do pacote</p>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.packPrice}
+            onChange={(e) => update("packPrice", e.target.value)}
+            className={field}
+          />
         </div>
-
-        <input
-          placeholder="Nome — papel transfer, fita, tinta"
-          value={form.name}
-          onChange={(e) => update("name", e.target.value)}
-          className={field}
-        />
-
-        <p className="text-xs text-text-secondary">
-          Cadastre como você compra de verdade. O custo por unidade sai da
-          divisão.
-        </p>
-
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Preço do pacote</p>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.packPrice}
-              onChange={(e) => update("packPrice", e.target.value)}
-              className={field}
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Vem quantos</p>
-            <input
-              type="number"
-              min="0.01"
-              step="any"
-              value={form.packQuantity}
-              onChange={(e) => update("packQuantity", e.target.value)}
-              className={field}
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Unidade</p>
-            <input
-              placeholder="folha"
-              value={form.unit}
-              onChange={(e) => update("unit", e.target.value)}
-              className={field}
-            />
-          </div>
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Vem quantos</p>
+          <input
+            type="number"
+            min="0.01"
+            step="any"
+            value={form.packQuantity}
+            onChange={(e) => update("packQuantity", e.target.value)}
+            className={field}
+          />
         </div>
-
-        <p className="rounded-lg bg-black/[0.02] px-3 py-2 text-sm text-text-primary">
-          {unitCost === null ? (
-            <span className="text-text-secondary">
-              Informe quantas unidades vêm no pacote.
-            </span>
-          ) : (
-            <>
-              Custo por unidade: <strong>{formatCurrencyBRL(unitCost)}</strong>
-              {form.unit && ` por ${form.unit}`}
-            </>
-          )}
-        </p>
-
-        {isEdit && material.usageCount > 0 && (
-          <p className="text-xs text-text-secondary">
-            Mudar o preço aqui recalcula a margem de {material.usageCount}{" "}
-            {material.usageCount === 1 ? "produto" : "produtos"} na hora. Pedidos
-            já fechados não mudam — o custo deles ficou congelado.
-          </p>
-        )}
-
-        <input
-          placeholder="Fornecedor"
-          value={form.supplier}
-          onChange={(e) => update("supplier", e.target.value)}
-          className={field}
-        />
-        <textarea
-          placeholder="Notas — link de compra, prazo de entrega"
-          value={form.notes}
-          onChange={(e) => update("notes", e.target.value)}
-          rows={2}
-          className={field}
-        />
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={saving}>
-              Salvar
-            </Button>
-            <Button variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-          </div>
-          {isEdit && (
-            <Button
-              variant="ghost"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-red-600 hover:bg-red-50"
-            >
-              Excluir
-            </Button>
-          )}
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Unidade</p>
+          <input
+            placeholder="folha"
+            value={form.unit}
+            onChange={(e) => update("unit", e.target.value)}
+            className={field}
+          />
         </div>
       </div>
-    </div>
+
+      <p className="rounded-lg bg-hover px-3 py-2 text-sm text-text-primary">
+        {unitCost === null ? (
+          <span className="text-text-secondary">
+            Informe quantas unidades vêm no pacote.
+          </span>
+        ) : (
+          <>
+            Custo por unidade: <strong>{formatCurrencyBRL(unitCost)}</strong>
+            {form.unit && ` por ${form.unit}`}
+          </>
+        )}
+      </p>
+
+      {isEdit && material.usageCount > 0 && (
+        <p className="text-xs text-text-secondary">
+          Mudar o preço aqui recalcula a margem de {material.usageCount}{" "}
+          {material.usageCount === 1 ? "produto" : "produtos"} na hora. Pedidos
+          já fechados não mudam — o custo deles ficou congelado.
+        </p>
+      )}
+
+      <input
+        placeholder="Fornecedor"
+        value={form.supplier}
+        onChange={(e) => update("supplier", e.target.value)}
+        className={field}
+      />
+      <textarea
+        placeholder="Notas — link de compra, prazo de entrega"
+        value={form.notes}
+        onChange={(e) => update("notes", e.target.value)}
+        rows={2}
+        className={field}
+      />
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <Button type="submit" disabled={saving}>
+            Salvar
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+        {isEdit && (
+          <Button
+            variant="ghost"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-red-600 hover:bg-red-50"
+          >
+            Excluir
+          </Button>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -245,7 +247,7 @@ export function MaterialsList({ materials }: { materials: MaterialRecord[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Insumos</h2>
+        <CardTitle>Insumos</CardTitle>
         <Button onClick={() => setCreating(true)}>
           <Plus size={14} />
           Novo insumo
@@ -267,7 +269,7 @@ export function MaterialsList({ materials }: { materials: MaterialRecord[] }) {
             <Card
               key={material.id}
               onClick={() => setEditing(material)}
-              className="flex cursor-pointer flex-col gap-2 transition-colors hover:bg-black/[0.02]"
+              className="flex cursor-pointer flex-col gap-2 transition-colors hover:bg-hover"
             >
               <div>
                 <p className="text-sm font-medium text-text-primary">{material.name}</p>

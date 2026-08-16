@@ -25,7 +25,7 @@ export function PillarHighlightCard({ pillar }: { pillar: PillarHighlight | null
         <p className="text-sm text-text-secondary">
           Nenhum objetivo em andamento ainda.
         </p>
-        <Link href="/visao" className="text-xs font-medium text-accent">
+        <Link href="/visao" className="-my-2 py-2 text-xs font-medium text-accent">
           Ir para a Central de Visão
         </Link>
       </Card>

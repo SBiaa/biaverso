@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticValue } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import type { Energy } from "@/app/generated/prisma/client";
 
@@ -25,22 +25,18 @@ export function MoodEnergySelector({
   initialMood,
   initialEnergy,
 }: MoodEnergySelectorProps) {
-  const [mood, setMood] = useState(initialMood);
-  const [energy, setEnergy] = useState(initialEnergy);
-  const [error, setError] = useState<string | null>(null);
+  // Humor e energia num valor só: são o mesmo PATCH e o mesmo aviso de erro,
+  // e separados davam duas transições concorrentes para a mesma linha do dia.
+  const { value, error, update } = useOptimisticValue({
+    mood: initialMood,
+    energy: initialEnergy,
+  });
+  const { mood, energy } = value;
 
-  async function save(patch: { mood?: string; energy?: Energy }) {
-    const previous = { mood, energy };
-    setError(null);
-
-    try {
-      await api.patch(`/api/dias/${dayId}`, patch);
-    } catch (e) {
-      // Desfaz a seleção otimista se o salvamento não passou.
-      setMood(previous.mood);
-      setEnergy(previous.energy);
-      setError(errorMessage(e));
-    }
+  function save(patch: { mood?: string; energy?: Energy }) {
+    update({ ...value, ...patch }, () =>
+      api.patch(`/api/dias/${dayId}`, patch),
+    );
   }
 
   return (
@@ -54,13 +50,10 @@ export function MoodEnergySelector({
             <button
               key={emoji}
               type="button"
-              onClick={() => {
-                setMood(emoji);
-                save({ mood: emoji });
-              }}
+              onClick={() => save({ mood: emoji })}
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-full text-xl transition-colors",
-                mood === emoji ? "bg-accent/10 ring-2 ring-accent" : "hover:bg-black/[0.03]",
+                mood === emoji ? "bg-accent/10 ring-2 ring-accent" : "hover:bg-hover",
               )}
             >
               {emoji}
@@ -76,15 +69,12 @@ export function MoodEnergySelector({
             <button
               key={option.value}
               type="button"
-              onClick={() => {
-                setEnergy(option.value);
-                save({ energy: option.value });
-              }}
+              onClick={() => save({ energy: option.value })}
               className={cn(
                 "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                 energy === option.value
                   ? "bg-accent text-white"
-                  : "text-text-secondary hover:bg-black/[0.03]",
+                  : "text-text-secondary hover:bg-hover",
               )}
             >
               {option.label}

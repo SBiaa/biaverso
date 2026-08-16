@@ -45,7 +45,7 @@ export function ProductCard({
     <Link href={`/produtos/${product.id}`} className="group">
       <Card
         className={cn(
-          "flex h-full flex-col gap-3 transition-colors group-hover:bg-black/[0.02]",
+          "flex h-full flex-col gap-3 transition-colors group-hover:bg-hover",
           !product.active && "opacity-60",
         )}
       >

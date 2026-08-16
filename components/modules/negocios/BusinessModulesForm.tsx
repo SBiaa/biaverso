@@ -4,21 +4,27 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
-  closestCenter,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
   arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  Card,
+  CardTitle,
+  ErrorNote,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import {
@@ -132,6 +138,7 @@ export function BusinessModulesForm({
         modules: items.map((i) => ({ module: i.module, active: i.active })),
       });
       router.refresh();
+      notify("Salvo.");
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
     } catch (e) {
@@ -143,7 +150,7 @@ export function BusinessModulesForm({
   return (
     <Card className="flex flex-col gap-3">
       <div>
-        <h2 className="text-sm font-semibold text-text-primary">Módulos</h2>
+        <CardTitle>Módulos</CardTitle>
         <p className="text-xs text-text-secondary">
           Marque o que este negócio usa. A ordem da lista é a ordem das abas.
         </p>

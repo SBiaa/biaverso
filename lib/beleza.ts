@@ -35,6 +35,7 @@ type RoutineWithSteps = {
   timeOfDay: string;
   active: boolean;
   order: number;
+  checklist: boolean;
   steps: {
     id: string;
     title: string;
@@ -45,7 +46,11 @@ type RoutineWithSteps = {
   }[];
 };
 
-function toRoutineView(routine: RoutineWithSteps, done: boolean): RoutineView {
+function toRoutineView(
+  routine: RoutineWithSteps,
+  done: boolean,
+  doneStepIds: ReadonlySet<string> = new Set(),
+): RoutineView {
   return {
     id: routine.id,
     name: routine.name,
@@ -53,6 +58,7 @@ function toRoutineView(routine: RoutineWithSteps, done: boolean): RoutineView {
     active: routine.active,
     order: routine.order,
     done,
+    checklist: routine.checklist,
     steps: routine.steps.map((s) => ({
       id: s.id,
       title: s.title,
@@ -60,23 +66,31 @@ function toRoutineView(routine: RoutineWithSteps, done: boolean): RoutineView {
       order: s.order,
       productId: s.productId,
       productName: s.product?.name ?? null,
+      done: doneStepIds.has(s.id),
     })),
   };
 }
 
 /** Rotinas ativas do dia, já sabendo quais foram cumpridas na data. */
 export async function getRoutinesForDay(date: Date = todayUtc()): Promise<RoutineView[]> {
-  const [routines, logs] = await Promise.all([
+  const [routines, logs, stepLogs] = await Promise.all([
     prisma.careRoutine.findMany({
       where: { active: true },
       orderBy: [{ order: "asc" }, { name: "asc" }],
       include: routineInclude,
     }),
     prisma.careRoutineLog.findMany({ where: { date, done: true } }),
+    prisma.careRoutineStepLog.findMany({
+      where: { date, done: true },
+      select: { stepId: true },
+    }),
   ]);
 
   const doneIds = new Set(logs.map((l) => l.routineId));
-  return sortRoutineTimes(routines).map((r) => toRoutineView(r, doneIds.has(r.id)));
+  const doneStepIds = new Set(stepLogs.map((l) => l.stepId));
+  return sortRoutineTimes(routines).map((r) =>
+    toRoutineView(r, doneIds.has(r.id), doneStepIds),
+  );
 }
 
 /** Todas as rotinas, ativas e inativas — a tela de gerenciamento. */

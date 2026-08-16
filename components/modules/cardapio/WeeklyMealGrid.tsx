@@ -153,7 +153,7 @@ export function WeeklyMealGrid({
                       type="button"
                       onClick={() => setActive({ dayOfWeek, mealType })}
                       className={cn(
-                        "flex flex-col gap-0.5 rounded-lg border bg-surface p-2 text-left hover:bg-black/[0.03]",
+                        "flex flex-col gap-0.5 rounded-lg border bg-surface p-2 text-left hover:bg-hover",
                         isToday ? "border-accent/40" : "border-border",
                       )}
                     >

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import type { ScheduleView } from "@/lib/beleza-shared";
 import { Field, Modal, fieldClass } from "./shared";
@@ -42,6 +42,7 @@ export function ScheduleFormModal({
         await api.post("/api/beauty/schedules", body);
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -54,46 +55,47 @@ export function ScheduleFormModal({
     <Modal
       title={schedule ? "Editar cronograma" : "Novo cronograma"}
       onClose={onClose}
+      onSubmit={handleSubmit}
     >
       <Field label="Nome">
-        <input
-          placeholder="Cronograma capilar"
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        placeholder="Cronograma capilar"
+        value={form.name}
+        onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <Field label="Descrição (opcional)">
-        <input
-          placeholder="Hidratação, nutrição e reconstrução"
-          value={form.description}
-          onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        placeholder="Hidratação, nutrição e reconstrução"
+        value={form.description}
+        onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       {schedule && (
-        <label className="flex items-center gap-2 text-sm text-text-primary">
-          <input
-            type="checkbox"
-            checked={form.active}
-            onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-          Ativo (aparece na tela de hoje)
-        </label>
+      <label className="flex items-center gap-2 text-sm text-text-primary">
+        <input
+          type="checkbox"
+          checked={form.active}
+          onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
+          className="h-4 w-4 accent-[var(--accent)]"
+        />
+        Ativo (aparece na tela de hoje)
+      </label>
       )}
 
       <ErrorNote message={error} />
 
       <div className="mt-2 flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={onClose}>
-          Cancelar
-        </Button>
+      <Button type="submit" disabled={saving}>
+        Salvar
+      </Button>
+      <Button variant="ghost" onClick={onClose}>
+        Cancelar
+      </Button>
       </div>
     </Modal>
   );

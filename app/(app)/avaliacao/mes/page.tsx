@@ -37,7 +37,7 @@ export default async function AvaliacaoMesPage({
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <MonthPicker month={month} year={year} />
-          <Link href={quarterHref} className="text-xs font-medium text-accent">
+          <Link href={quarterHref} className="-my-2 py-2 text-xs font-medium text-accent">
             Ver trimestre
           </Link>
         </div>

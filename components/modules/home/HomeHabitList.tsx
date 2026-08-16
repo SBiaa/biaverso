@@ -1,34 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle } from "lucide-react";
 import { ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticList } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type HabitItem = { id: string; name: string; done: boolean };
 
-export function HomeHabitList({ items: initialItems }: { items: HabitItem[] }) {
-  const [items, setItems] = useState(initialItems);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const [, startTransition] = useTransition();
+export function HomeHabitList({ items: serverItems }: { items: HabitItem[] }) {
+  const { items, error, update } = useOptimisticList(serverItems);
 
-  async function toggle(id: string) {
-    const previous = items;
-    const nextDone = !items.find((i) => i.id === id)?.done;
-
-    setError(null);
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done: nextDone } : i)));
-
-    try {
-      await api.patch(`/api/habit-logs/${id}`, { done: nextDone });
-      startTransition(() => router.refresh());
-    } catch (e) {
-      setItems(previous);
-      setError(errorMessage(e));
-    }
+  function toggle(id: string) {
+    const done = !items.find((i) => i.id === id)?.done;
+    update(id, { done }, () => api.patch(`/api/habit-logs/${id}`, { done }));
   }
 
   if (items.length === 0) {

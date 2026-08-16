@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Plus, Search, Trash2 } from "lucide-react";
+import { Button, IconButton, Modal } from "@/components/ui";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import {
   buildCostBreakdown,
@@ -178,69 +178,59 @@ function Picker({
   }, [options, query, collectionId]);
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={"Adicionar item"}
+      size="md"
+      onClose={onClose}
     >
-      <div
-        className="flex max-h-[85vh] w-full max-w-md flex-col gap-3 overflow-hidden rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">Adicionar item</h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
-        </div>
 
-        <div className="flex items-center gap-2 rounded-md border border-border px-3">
-          <Search size={14} className="shrink-0 text-text-secondary" />
-          <input
-            autoFocus
-            placeholder="Buscar produto ou peça..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full py-1.5 text-sm outline-none"
-          />
-        </div>
-
-        <div className="-mx-1 flex flex-col gap-3 overflow-y-auto px-1">
-          {groups.length === 0 ? (
-            <p className="py-4 text-sm text-text-secondary">Nada encontrado.</p>
-          ) : (
-            groups.map((group) => (
-              <div key={group.title} className="flex flex-col">
-                <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary/70">
-                  {group.title}
-                </p>
-                {group.items.map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => onPick(option)}
-                    className="flex items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-black/[0.03]"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm text-text-primary">
-                        {option.label}
-                      </span>
-                      <span className="block truncate text-xs text-text-secondary">
-                        {option.sublabel}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-sm text-text-secondary">
-                      {option.unitPrice === null
-                        ? "—"
-                        : formatCurrencyBRL(option.unitPrice)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ))
-          )}
-        </div>
+      <div className="flex items-center gap-2 rounded-md border border-border px-3">
+        <Search size={14} className="shrink-0 text-text-secondary" />
+        <input
+          autoFocus
+          placeholder="Buscar produto ou peça..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full py-1.5 text-sm outline-none"
+        />
       </div>
-    </div>
+
+      <div className="-mx-1 flex flex-col gap-3 overflow-y-auto px-1">
+        {groups.length === 0 ? (
+          <p className="py-4 text-sm text-text-secondary">Nada encontrado.</p>
+        ) : (
+          groups.map((group) => (
+            <div key={group.title} className="flex flex-col">
+              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary/70">
+                {group.title}
+              </p>
+              {group.items.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => onPick(option)}
+                  className="flex items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-hover"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-text-primary">
+                      {option.label}
+                    </span>
+                    <span className="block truncate text-xs text-text-secondary">
+                      {option.sublabel}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm text-text-secondary">
+                    {option.unitPrice === null
+                      ? "—"
+                      : formatCurrencyBRL(option.unitPrice)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ))
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -365,21 +355,21 @@ export function OrderItemsEditor({
                 >
                   {lineMargin === null ? "—" : `${lineMargin.toFixed(0)}%`}
                 </span>
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => setDrafts(drafts.filter((d) => d.key !== draft.key))}
-                  className="rounded-md p-1 text-text-secondary hover:bg-red-50 hover:text-red-600"
                   aria-label={`Remover ${draft.name || "item"}`}
+                  tone="danger"
+                  className="hover:bg-red-50"
                 >
-                  <Trash2 size={14} />
-                </button>
+                  <Trash2 size={15} />
+                </IconButton>
               </li>
             );
           })}
         </ul>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg bg-black/[0.02] px-3 py-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg bg-hover px-3 py-2 text-sm">
         <span className="font-medium text-text-primary">
           Total {formatCurrencyBRL(totals.total)}
         </span>

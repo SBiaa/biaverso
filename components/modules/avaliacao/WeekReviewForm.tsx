@@ -48,7 +48,7 @@ function ButtonGroup({
             "rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
             value === optionValue
               ? "border-accent bg-accent/10 text-accent"
-              : "border-border text-text-secondary hover:bg-black/[0.03]",
+              : "border-border text-text-secondary hover:bg-hover",
           )}
         >
           {label}

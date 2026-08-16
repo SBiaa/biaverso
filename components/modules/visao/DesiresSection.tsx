@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  CardTitle,
+  ErrorNote,
+  IconButton,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { DesireFormModal } from "./DesireFormModal";
 
@@ -45,7 +50,7 @@ export function DesiresSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Desejos &amp; Intenções</h2>
+        <CardTitle>Desejos &amp; Intenções</CardTitle>
         <Button variant="secondary" onClick={() => setCreating(true)}>
           <Plus size={14} />
           Novo desejo
@@ -69,13 +74,13 @@ export function DesiresSection({
                   <p className="text-xs text-text-secondary">{desire.description}</p>
                 )}
               </div>
-              <button
-                type="button"
+              <IconButton
                 onClick={() => handleDelete(desire.id)}
-                className="text-text-secondary opacity-0 group-hover:opacity-100 hover:text-red-600"
+                tone="danger"
+                className="opacity-0 group-hover:opacity-100"
               >
-                <Trash2 size={14} />
-              </button>
+                <Trash2 size={15} />
+              </IconButton>
             </li>
           ))}
         </ul>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import { Button, Card, CardTitle, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 type BusinessOption = { id: string; name: string; color: string };
@@ -65,7 +65,7 @@ export function NewClientForm({ businesses }: { businesses: BusinessOption[] }) 
 
   return (
     <Card className="flex w-full flex-col gap-3">
-      <h2 className="text-sm font-semibold text-text-primary">Novo cliente</h2>
+      <CardTitle>Novo cliente</CardTitle>
 
       <div className="grid gap-2 sm:grid-cols-2">
         <input

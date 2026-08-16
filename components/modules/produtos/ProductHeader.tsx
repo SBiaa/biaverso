@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Pencil, Trash2 } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { Button, Card, confirmAction, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import {
   ProductFormModal,
@@ -44,7 +44,11 @@ export function ProductHeader({
   }
 
   async function handleDelete() {
-    if (!confirm(`Excluir "${product.name}" da central?`)) return;
+    const confirmed = await confirmAction({
+      title: `Excluir "${product.name}" da central?`,
+      destructive: true,
+    });
+    if (!confirmed) return;
     setBusy(true);
     setError(null);
 

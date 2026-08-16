@@ -3,8 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
-import type { ProductCostKind, ProductCostMode } from "@/app/generated/prisma/client";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import type {
+  ProductCostKind,
+  ProductCostMode,
+} from "@/app/generated/prisma/client";
+import {
+  Button,
+  Card,
+  CardTitle,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productCostKindLabels, productCostModeLabels } from "@/lib/labels";
 import { formatCurrencyBRL } from "@/lib/utils";
@@ -123,13 +134,18 @@ export function ProductCostEditor({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Remover esta linha de custo?")) return;
+    const confirmed = await confirmAction({
+      title: "Remover esta linha de custo?",
+      destructive: true,
+    });
+    if (!confirmed) return;
     setBusyId(id);
     setError(null);
 
     try {
       await api.delete(`/api/products/${productId}/cost-items/${id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -140,7 +156,7 @@ export function ProductCostEditor({
   return (
     <Card className="flex flex-col gap-3">
       <div>
-        <h2 className="text-sm font-semibold text-text-primary">Composição do custo</h2>
+        <CardTitle>Composição do custo</CardTitle>
         <p className="text-xs text-text-secondary">
           Uma linha por gasto. Use % para o que muda junto com o preço — taxa de
           maquininha, comissão de marketplace, imposto.
@@ -245,14 +261,14 @@ export function ProductCostEditor({
               <span className="w-40 text-right text-sm text-text-primary">
                 {describe(item, hourlyRate)}
               </span>
-              <button
-                type="button"
+              <IconButton
                 onClick={() => handleDelete(item.id)}
-                className="rounded-md p-1.5 text-text-secondary hover:bg-red-50 hover:text-red-600"
                 aria-label={`Remover ${item.label}`}
+                tone="danger"
+                className="hover:bg-red-50"
               >
                 <Trash2 size={15} />
-              </button>
+              </IconButton>
             </li>
           ))}
         </ul>

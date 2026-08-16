@@ -58,7 +58,7 @@ export function ProjectItems({
                 <button
                   type="button"
                   onClick={() => setEditingTask(task)}
-                  className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-sm hover:bg-black/[0.02]"
+                  className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-sm hover:bg-hover"
                 >
                   <span
                     className={cn(
@@ -93,7 +93,7 @@ export function ProjectItems({
                 <button
                   type="button"
                   onClick={() => setEditingPost(post)}
-                  className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-sm hover:bg-black/[0.02]"
+                  className="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-sm hover:bg-hover"
                 >
                   <span className="text-text-primary">{post.title}</span>
                   <span className="flex shrink-0 items-center gap-2 text-xs text-text-secondary">

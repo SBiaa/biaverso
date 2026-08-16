@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { CommandPalette } from "@/components/layout/CommandPalette";
 import { CalendarSyncPoller } from "@/components/modules/agenda/CalendarSyncPoller";
 import { prisma } from "@/lib/prisma";
 
@@ -16,7 +17,14 @@ async function SidebarWithBusinesses() {
     select: { id: true, name: true, icon: true },
   });
 
-  return <Sidebar businesses={businesses} />;
+  return (
+    <>
+      <Sidebar businesses={businesses} />
+      {/* Solto, e não dentro da sidebar: no celular ela é `hidden`, e um
+          `fixed` dentro de um ancestral escondido não chega a pintar. */}
+      <CommandPalette businesses={businesses} />
+    </>
+  );
 }
 
 export default function AppLayout({ children }: { children: ReactNode }) {

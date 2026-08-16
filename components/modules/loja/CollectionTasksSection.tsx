@@ -3,21 +3,33 @@
 import { useState } from "react";
 import {
   DndContext,
-  closestCenter,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
   arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CheckCircle2, Circle, GripVertical, Plus, Trash2 } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import {
+  CheckCircle2,
+  Circle,
+  GripVertical,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import {
+  Button,
+  Card,
+  CardTitle,
+  ErrorNote,
+  IconButton,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR, todayUtc } from "@/lib/utils";
 
@@ -108,14 +120,14 @@ function SortableTask({
         )}
       </div>
 
-      <button
-        type="button"
+      <IconButton
         onClick={() => onDelete(task.id)}
         aria-label={`Remover ${task.title}`}
-        className="mt-0.5 text-text-secondary hover:text-red-600"
+        tone="danger"
+        className="mt-0.5"
       >
-        <Trash2 size={14} />
-      </button>
+        <Trash2 size={15} />
+      </IconButton>
     </div>
   );
 }
@@ -219,7 +231,7 @@ export function CollectionTasksSection({
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Tarefas</h2>
+        <CardTitle>Tarefas</CardTitle>
         {tasks.length > 0 && (
           <span className="text-xs text-text-secondary">
             {doneCount}/{tasks.length} · {progress}%

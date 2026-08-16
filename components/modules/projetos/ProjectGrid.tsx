@@ -79,7 +79,7 @@ export function ProjectGrid({
               return (
                 <Card
                   key={project.id}
-                  className="relative flex h-full flex-col gap-2 transition-colors hover:bg-black/[0.02]"
+                  className="relative flex h-full flex-col gap-2 transition-colors hover:bg-hover"
                 >
                   {/* O link cobre o card inteiro em vez de embrulhá-lo: assim os
                       botões de editar/apagar ficam por cima sem virar um botão

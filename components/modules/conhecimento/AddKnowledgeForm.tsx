@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import { Button, Card, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { knowledgeAreaLabels, knowledgeTypeLabels } from "@/lib/labels";
 
@@ -44,6 +44,7 @@ export function AddKnowledgeForm() {
         link: "",
       });
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {

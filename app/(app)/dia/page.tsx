@@ -1,9 +1,13 @@
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDay, materializeRoutineTasks, materializeHabits } from "@/lib/day";
+import {
+  getOrCreateDay,
+  materializeHabits,
+  materializeRoutineTasks,
+} from "@/lib/day";
 import { parseDateOnly, toDateInputValue, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, Skeleton } from "@/components/ui";
+import { Card, CardTitle, Skeleton } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
 import { MoodEnergySelector } from "@/components/modules/dia/MoodEnergySelector";
 import { DayTypeToggle } from "@/components/modules/dia/DayTypeToggle";
@@ -212,7 +216,7 @@ async function SelfCareSection({ date }: { date: Date }) {
 
   return (
     <Card>
-      <h2 className="mb-3 text-sm font-semibold text-text-primary">Autocuidado</h2>
+      <CardTitle className="mb-3">Autocuidado</CardTitle>
       <TodayRoutines routines={careRoutines} date={date.toISOString()} />
       <DueCareToday items={dueCare} />
     </Card>
@@ -283,9 +287,9 @@ export default async function DiaPage({
         <div className="grid items-start gap-4 xl:grid-cols-3 xl:gap-6">
           <div className="flex flex-col gap-4 xl:col-span-2 xl:gap-6">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Tarefas de hoje
-              </h2>
+              </CardTitle>
               <TaskListByOrigin
                 dayId={day.id}
                 dayDate={toDateInputValue(day.date)}
@@ -334,9 +338,9 @@ export default async function DiaPage({
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Água
-              </h2>
+              </CardTitle>
               <WaterTracker
                 dayId={day.id}
                 initialCount={day.waterLogs.length}
@@ -345,9 +349,9 @@ export default async function DiaPage({
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Cardápio
-              </h2>
+              </CardTitle>
               <MealChecklist dayId={day.id} initialMeals={meals} />
             </Card>
 
@@ -356,9 +360,9 @@ export default async function DiaPage({
             </Suspense>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Notas do dia
-              </h2>
+              </CardTitle>
               <NotesField dayId={day.id} initialNotes={day.notes} />
             </Card>
           </div>

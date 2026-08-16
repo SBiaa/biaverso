@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { AttentionBadge, Button, Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
 import { ProductionTaskModal, type TaskRecord } from "./ProductionTaskModal";
@@ -107,9 +107,9 @@ export function CalendarBoard({
                           </span>
                         )}
                         {item.overdue && (
-                          <span className="mt-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          <AttentionBadge level="atrasado" className="mt-0.5">
                             Atrasado
-                          </span>
+                          </AttentionBadge>
                         )}
                       </button>
                     ))}

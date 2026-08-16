@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, Circle, Plus } from "lucide-react";
 import {
+  AttentionBadge,
   Badge,
   BusinessBadge,
   Button,
@@ -69,9 +70,9 @@ function TaskRow({ task, onToggle }: { task: TaskItem; onToggle: (id: string) =>
           {task.typeLabel && <Badge>{task.typeLabel}</Badge>}
           {task.business && <BusinessBadge business={task.business} />}
           {task.overdue && !task.done && (
-            <span className="whitespace-nowrap rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+            <AttentionBadge level="atrasado">
               Atrasado
-            </span>
+            </AttentionBadge>
           )}
           <SubtaskToggle
             open={open}

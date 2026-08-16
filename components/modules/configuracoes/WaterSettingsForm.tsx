@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { Button, Card, CardTitle, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import type { UserSettingsValues } from "@/lib/settings-shared";
 
@@ -38,6 +38,7 @@ export function WaterSettingsForm({ initial }: { initial: UserSettingsValues }) 
         waterUnitMl: form.waterUnitMl,
       });
       router.refresh();
+      notify("Salvo.");
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
     } catch (e) {
@@ -48,7 +49,7 @@ export function WaterSettingsForm({ initial }: { initial: UserSettingsValues }) 
 
   return (
     <Card className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-text-primary">Hidratação</h2>
+      <CardTitle>Hidratação</CardTitle>
 
       <div className="grid grid-cols-2 gap-2">
         <div>

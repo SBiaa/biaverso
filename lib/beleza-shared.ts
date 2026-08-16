@@ -153,6 +153,8 @@ export type RoutineStepView = {
   order: number;
   productId: string | null;
   productName: string | null;
+  /** Marcado na data mostrada. Sempre `false` na tela de gerenciamento. */
+  done: boolean;
 };
 
 export type RoutineView = {
@@ -162,6 +164,8 @@ export type RoutineView = {
   active: boolean;
   order: number;
   done: boolean;
+  /** Passos marcáveis um a um; falso = lista numerada só de leitura. */
+  checklist: boolean;
   steps: RoutineStepView[];
 };
 

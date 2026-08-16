@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from "lucide-react";
-import { Badge, Button, Card, ErrorNote } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productCategoryLabels } from "@/lib/labels";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
@@ -42,17 +50,18 @@ function ProductCard({
   }
 
   async function handleDelete() {
-    if (
-      !confirm(
-        `Deletar "${product.name}"? As rotinas que usavam ele continuam, só perdem o vínculo.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Deletar "${product.name}"?`,
+      description: `As rotinas que usavam ele continuam, só perdem o vínculo.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     onError(null);
     try {
       await api.delete(`/api/beauty/products/${product.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       onError(errorMessage(e));
     }
@@ -71,22 +80,19 @@ function ProductCard({
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
+            <IconButton
               title="Editar"
               onClick={() => setEditing(true)}
-              className="text-text-secondary hover:text-text-primary"
             >
-              <Pencil size={14} />
-            </button>
-            <button
-              type="button"
+              <Pencil size={15} />
+            </IconButton>
+            <IconButton
               title="Deletar"
               onClick={handleDelete}
-              className="text-text-secondary hover:text-red-600"
+              tone="danger"
             >
-              <Trash2 size={14} />
-            </button>
+              <Trash2 size={15} />
+            </IconButton>
           </div>
         </div>
 
@@ -183,7 +189,7 @@ export function ProductGrid({
                 "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                 status === filter.key
                   ? "bg-accent/10 text-accent"
-                  : "text-text-secondary hover:bg-black/[0.03]",
+                  : "text-text-secondary hover:bg-hover",
               )}
             >
               {filter.label}

@@ -1,14 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import {
-  CalendarDays,
-  Droplets,
-  ListChecks,
-  Wallet,
-} from "lucide-react";
+import { CalendarDays, Droplets, ListChecks, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, StatCard, type BadgeOrigin } from "@/components/ui";
+import {
+  Card,
+  CardTitle,
+  StatCard,
+  type BadgeOrigin,
+} from "@/components/ui";
 import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightCard";
 import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
 import { HomeHabitList } from "@/components/modules/home/HomeHabitList";
@@ -215,14 +215,18 @@ export default async function HomePage() {
 
         {/* Agenda e Tarefas saem de uma coluna compartilhada para uma cada:
             num container de 1600px, duas colunas davam cards de 780px com uma
-            lista de três linhas dentro. A terceira coluna junta os registros
-            curtos do dia. */}
+            lista de três linhas dentro.
+
+            O Cardápio desceu para a coluna da Agenda: num dia sem evento a
+            Agenda é um card de duas linhas, e sozinha na coluna ela deixava
+            meia tela em branco enquanto a terceira coluna tinha três cards
+            empilhados. Curto com curto de um lado, a lista longa no meio. */}
         <div className="grid flex-1 grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-6 xl:grid-cols-3">
           <div className="flex flex-col gap-4 lg:gap-6">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Agenda de hoje
-              </h2>
+              </CardTitle>
               {events.length === 0 ? (
                 <p className="text-sm text-text-secondary">
                   Nenhum evento para hoje.
@@ -244,36 +248,11 @@ export default async function HomePage() {
                 </ul>
               )}
             </Card>
-          </div>
-
-          <div className="flex flex-col gap-4 lg:gap-6">
-            <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
-                Tarefas de hoje
-              </h2>
-              <HomeTaskList items={tasks} />
-            </Card>
-          </div>
-
-          <div className="flex flex-col gap-4 lg:col-span-2 lg:gap-6 xl:col-span-1">
-            <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
-                Hábitos do dia
-              </h2>
-              <div className="mb-4">
-                <HomeHabitList items={habits} />
-              </div>
-              <WaterTracker
-                dayId={day.id}
-                initialCount={waterCount}
-                settings={settings}
-              />
-            </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Cardápio de hoje
-              </h2>
+              </CardTitle>
               <div className="grid grid-cols-3 gap-3">
                 {meals.map((meal) => (
                   <div key={meal.type} className="flex flex-col gap-1">
@@ -284,6 +263,31 @@ export default async function HomePage() {
                   </div>
                 ))}
               </div>
+            </Card>
+          </div>
+
+          <div className="flex flex-col gap-4 lg:gap-6">
+            <Card>
+              <CardTitle className="mb-3">
+                Tarefas de hoje
+              </CardTitle>
+              <HomeTaskList items={tasks} />
+            </Card>
+          </div>
+
+          <div className="flex flex-col gap-4 lg:col-span-2 lg:gap-6 xl:col-span-1">
+            <Card>
+              <CardTitle className="mb-3">
+                Hábitos do dia
+              </CardTitle>
+              <div className="mb-4">
+                <HomeHabitList items={habits} />
+              </div>
+              <WaterTracker
+                dayId={day.id}
+                initialCount={waterCount}
+                settings={settings}
+              />
             </Card>
 
             <PillarHighlightCard pillar={pillarHighlight} />
@@ -304,9 +308,9 @@ export default async function HomePage() {
         </Suspense>
 
         <Card>
-          <h2 className="mb-1 text-sm font-semibold text-text-primary">
+          <CardTitle className="mb-1">
             Hoje, {formatDateBR(date)}
-          </h2>
+          </CardTitle>
           {events.length === 0 ? (
             <p className="text-sm text-text-secondary">
               Nenhum evento para hoje.
@@ -328,7 +332,7 @@ export default async function HomePage() {
 
         <Card>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Hábitos</h2>
+            <CardTitle>Hábitos</CardTitle>
             <span className="text-sm text-text-secondary">
               {habitsDone}/{habits.length}
             </span>
@@ -337,14 +341,14 @@ export default async function HomePage() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
+          <CardTitle className="mb-3">
             Tarefas de hoje
-          </h2>
+          </CardTitle>
           <HomeTaskList items={tasks} />
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Água</h2>
+          <CardTitle className="mb-3">Água</CardTitle>
           <WaterTracker
             dayId={day.id}
             initialCount={waterCount}
@@ -360,9 +364,9 @@ export default async function HomePage() {
         </Link>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
+          <CardTitle className="mb-3">
             Cardápio de hoje
-          </h2>
+          </CardTitle>
           <div className="flex flex-col gap-2">
             {meals.map((meal) => (
               <div key={meal.type} className="flex items-center justify-between text-sm">

@@ -35,7 +35,7 @@ export function ProductAlerts({
             <Link
               key={product.id}
               href="/beleza/produtos"
-              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 transition-colors hover:bg-black/[0.02]"
+              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 transition-colors hover:bg-hover"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-text-primary">
@@ -65,7 +65,7 @@ export function ProductAlerts({
             <Link
               key={product.id}
               href="/beleza/produtos"
-              className="flex items-center gap-2 rounded-md border border-border px-3 py-2 transition-colors hover:bg-black/[0.02]"
+              className="flex items-center gap-2 rounded-md border border-border px-3 py-2 transition-colors hover:bg-hover"
             >
               <PackageOpen size={15} className="shrink-0 text-text-secondary" />
               <p className="truncate text-sm text-text-primary">

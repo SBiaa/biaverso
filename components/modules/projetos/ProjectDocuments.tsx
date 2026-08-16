@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink, Plus, Trash2 } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { documentTypeColors, documentTypeLabels } from "@/lib/labels";
 import { hexToRgba } from "@/lib/utils";
@@ -101,14 +101,13 @@ export function ProjectDocuments({
                 <p className="mt-1 text-xs text-text-secondary">{doc.notes}</p>
               )}
             </div>
-            <button
-              type="button"
+            <IconButton
               onClick={() => remove(doc.id)}
               aria-label={`Remover ${doc.title}`}
-              className="shrink-0 rounded-md p-1 text-text-secondary hover:bg-black/[0.03] hover:text-red-600"
+              tone="danger"
             >
               <Trash2 size={15} />
-            </button>
+            </IconButton>
           </li>
         ))}
       </ul>

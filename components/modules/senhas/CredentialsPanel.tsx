@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Eye, EyeOff, Link2Off, Lock, Pencil, Plus, User } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { passwordCategoryLabels } from "@/lib/labels";
 import {
@@ -203,7 +203,7 @@ export function CredentialsPanel({
                       type="button"
                       title="Copiar login"
                       onClick={() => copy(entry.login!, `${id}-login`)}
-                      className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+                      className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
                     >
                       {copied === `${id}-login` ? (
                         <Check size={14} className="text-emerald-600" />
@@ -216,7 +216,7 @@ export function CredentialsPanel({
                     type="button"
                     title="Copiar senha"
                     onClick={() => copy(entry.password, `${id}-pass`)}
-                    className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+                    className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
                   >
                     {copied === `${id}-pass` ? (
                       <Check size={14} className="text-emerald-600" />
@@ -224,22 +224,19 @@ export function CredentialsPanel({
                       <Lock size={14} />
                     )}
                   </button>
-                  <button
-                    type="button"
+                  <IconButton
                     title="Editar senha"
                     onClick={() => startEditing(entry)}
-                    className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
                   >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    type="button"
+                    <Pencil size={15} />
+                  </IconButton>
+                  <IconButton
                     title={unlinkLabel}
                     onClick={() => unlink(id)}
-                    className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-red-600"
+                    tone="danger"
                   >
-                    <Link2Off size={14} />
-                  </button>
+                    <Link2Off size={15} />
+                  </IconButton>
                 </div>
               </div>
             )}

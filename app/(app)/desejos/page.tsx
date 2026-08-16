@@ -2,7 +2,7 @@ import { Gift, ListChecks, Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getMonthPlan } from "@/lib/finance";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, StatCard } from "@/components/ui";
+import { Card, CardTitle, StatCard } from "@/components/ui";
 import { WishlistForm } from "@/components/modules/desejos/WishlistForm";
 import { WishlistFilters } from "@/components/modules/desejos/WishlistFilters";
 import { WishlistCard } from "@/components/modules/desejos/WishlistCard";
@@ -135,12 +135,12 @@ export default async function DesejosPage({
         ) : (
           grupos.map((grupo) => (
             <section key={grupo.priority} className="space-y-2">
-              <h2 className="text-sm font-semibold text-text-primary">
+              <CardTitle>
                 {wishPriorityLabels[grupo.priority]}
                 <span className="ml-2 font-normal text-text-secondary">
                   {grupo.itens.length}
                 </span>
-              </h2>
+              </CardTitle>
               <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
                 {grupo.itens.map((item) => (
                   <WishlistCard

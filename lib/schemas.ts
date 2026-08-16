@@ -767,11 +767,13 @@ const createTransaction = z.boolean().default(false);
 export const careRoutineCreateSchema = z.object({
   name: text,
   timeOfDay: z.enum(E.RoutineTime).default("QUALQUER"),
+  checklist: z.boolean().optional(),
 });
 export const careRoutinePatchSchema = z.object({
   name: text.optional(),
   timeOfDay: z.enum(E.RoutineTime).optional(),
   active: z.boolean().optional(),
+  checklist: z.boolean().optional(),
   order: orderIndex.optional(),
 });
 

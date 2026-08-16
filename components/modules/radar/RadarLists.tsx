@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarPlus, ExternalLink, PauseCircle, Trash2, X } from "lucide-react";
-import { BusinessBadge, ErrorNote } from "@/components/ui";
+import { BusinessBadge, confirmAction, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatDateBR, todayInputValue } from "@/lib/utils";
 import { taskTypeLabels } from "@/lib/labels";
@@ -72,7 +72,7 @@ function IconButton({
       aria-label={title}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-md p-1.5 text-text-secondary transition-colors hover:bg-black/[0.03] disabled:pointer-events-none disabled:opacity-40 ${
+      className={`rounded-md p-1.5 text-text-secondary transition-colors hover:bg-hover disabled:pointer-events-none disabled:opacity-40 ${
         danger ? "hover:text-red-600" : "hover:text-text-primary"
       }`}
     >
@@ -115,8 +115,14 @@ export function RadarTasks({ tasks }: { tasks: TaskSignal[] }) {
                 title="Deixar ir (apaga a tarefa)"
                 danger
                 disabled={busy === task.id}
-                onClick={() => {
-                  if (!confirm(`Apagar "${task.title}"? Isso não tem como desfazer.`)) return;
+                onClick={async () => {
+                  const confirmed = await confirmAction({
+                    title: `Apagar "${task.title}"?`,
+                    description: `Isso não tem como desfazer.`,
+                    confirmLabel: "Apagar",
+                    destructive: true,
+                  });
+                  if (!confirmed) return;
                   resolve(task.id, () => api.delete(`/api/tasks/${task.id}`));
                 }}
               >
@@ -163,7 +169,7 @@ export function RadarHabits({ habits }: { habits: HabitSignal[] }) {
                 href="/dia"
                 title="Marcar no dia"
                 aria-label="Marcar no dia"
-                className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+                className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
               >
                 <ExternalLink size={15} />
               </Link>
@@ -221,7 +227,7 @@ export function RadarRoutines({ routines }: { routines: RoutineSignal[] }) {
                 href="/configuracoes"
                 title="Editar a rotina"
                 aria-label="Editar a rotina"
-                className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+                className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
               >
                 <ExternalLink size={15} />
               </Link>
@@ -229,13 +235,13 @@ export function RadarRoutines({ routines }: { routines: RoutineSignal[] }) {
                 title="Deixar ir (tira a rotina dos próximos dias)"
                 danger
                 disabled={busy === routine.id}
-                onClick={() => {
-                  if (
-                    !confirm(
-                      `Tirar "${routine.title}" da rotina? Ela para de aparecer nos próximos dias. O que já foi marcado fica no histórico.`,
-                    )
-                  )
-                    return;
+                onClick={async () => {
+                  const confirmed = await confirmAction({
+                    title: `Tirar "${routine.title}" da rotina?`,
+                    description: `Ela para de aparecer nos próximos dias. O que já foi marcado fica no histórico.`,
+                    destructive: true,
+                  });
+                  if (!confirmed) return;
                   resolve(routine.id, () => api.delete(`/api/tasks/${routine.id}`));
                 }}
               >
@@ -291,7 +297,7 @@ export function RadarProjects({
                 href={`/negocios/${project.businessId}/projetos/${project.id}`}
                 title="Abrir o projeto"
                 aria-label="Abrir o projeto"
-                className="rounded-md p-1.5 text-text-secondary hover:bg-black/[0.03] hover:text-text-primary"
+                className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
               >
                 <ExternalLink size={15} />
               </Link>

@@ -26,7 +26,14 @@ import {
   RotateCw,
   Trash2,
 } from "lucide-react";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR } from "@/lib/utils";
 import type { ProductOption, ScheduleStepView, ScheduleView } from "@/lib/beleza-shared";
@@ -93,22 +100,19 @@ function SortableCycleStep({
         </p>
       </div>
 
-      <button
-        type="button"
+      <IconButton
         title="Editar etapa"
         onClick={onEdit}
-        className="text-text-secondary hover:text-text-primary"
       >
-        <Pencil size={14} />
-      </button>
-      <button
-        type="button"
+        <Pencil size={15} />
+      </IconButton>
+      <IconButton
         title="Deletar etapa"
         onClick={onDelete}
-        className="text-text-secondary hover:text-red-600"
+        tone="danger"
       >
-        <Trash2 size={14} />
-      </button>
+        <Trash2 size={15} />
+      </IconButton>
     </div>
   );
 }
@@ -185,29 +189,36 @@ function ScheduleCard({
   }
 
   async function deleteSchedule() {
-    if (
-      !confirm(
-        `Deletar o cronograma "${schedule.name}"? As etapas e o histórico vão junto.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Deletar o cronograma "${schedule.name}"?`,
+      description: `As etapas e o histórico vão junto.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     onError(null);
     try {
       await api.delete(`/api/beauty/schedules/${schedule.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       onError(errorMessage(e));
     }
   }
 
   async function deleteStep(step: ScheduleStepView) {
-    if (!confirm(`Deletar a etapa "${step.title}"? O histórico dela vai junto.`)) return;
+    const confirmed = await confirmAction({
+      title: `Deletar a etapa "${step.title}"?`,
+      description: `O histórico dela vai junto.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     onError(null);
     try {
       await api.delete(`/api/beauty/schedules/${schedule.id}/steps/${step.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       onError(errorMessage(e));
     }
@@ -244,22 +255,19 @@ function ScheduleCard({
             {currentStep && (
               <UrgencyPill urgency={schedule.urgency} days={schedule.daysUntilNext} />
             )}
-            <button
-              type="button"
+            <IconButton
               title="Editar cronograma"
               onClick={() => setEditingSchedule(true)}
-              className="text-text-secondary hover:text-text-primary"
             >
-              <Pencil size={14} />
-            </button>
-            <button
-              type="button"
+              <Pencil size={15} />
+            </IconButton>
+            <IconButton
               title="Deletar cronograma"
               onClick={deleteSchedule}
-              className="text-text-secondary hover:text-red-600"
+              tone="danger"
             >
-              <Trash2 size={14} />
-            </button>
+              <Trash2 size={15} />
+            </IconButton>
           </div>
         </div>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { toDateInputValue } from "@/lib/utils";
 import { wishCategoryLabels, wishPriorityLabels } from "@/lib/labels";
@@ -95,6 +95,7 @@ export function WishlistForm({
         }));
       }
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {

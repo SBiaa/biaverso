@@ -14,10 +14,14 @@ export function Topbar({ title, action, width = "wide" }: TopbarProps) {
     // Sticky: nas telas longas (financeiro, agenda) o cabeçalho era a única
     // pista de onde você está, e sumia no primeiro scroll. A borda vai de ponta
     // a ponta, mas o conteúdo dela respeita o container da página.
+    //
+    // Antes era `hidden md:block`, e no celular 37 das 46 telas abriam sem
+    // título nenhum: só a barra de baixo dizia onde você estava, e ela só
+    // conhece cinco destinos. Agora vale nos dois tamanhos.
     <header
       className={cn(
-        "sticky top-0 z-10 hidden shrink-0 border-b border-border",
-        "bg-surface/80 backdrop-blur-md md:block",
+        "sticky top-0 z-10 shrink-0 border-b border-border",
+        "bg-surface/80 backdrop-blur-md",
       )}
     >
       <div
@@ -26,7 +30,7 @@ export function Topbar({ title, action, width = "wide" }: TopbarProps) {
           "flex h-14 items-center justify-between gap-4",
         )}
       >
-        <h1 className="truncate text-base font-semibold tracking-tight text-text-primary">
+        <h1 className="truncate text-lg font-semibold tracking-tight text-text-primary md:text-base">
           {title}
         </h1>
         {action}

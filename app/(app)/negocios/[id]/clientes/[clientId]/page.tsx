@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge } from "@/components/ui";
+import { BusinessBadge, Card, CardTitle } from "@/components/ui";
 import { getInitials } from "@/lib/utils";
 import { getMonthlyHistory, getPendingItems, toPostRecord, toTaskRecord } from "@/lib/ace";
 import { ProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ProjectsSection";
@@ -91,7 +91,7 @@ export default async function AceClientProfilePage({
         </Card>
 
         <Card className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-text-primary">Contato</h2>
+          <CardTitle>Contato</CardTitle>
           <p className="text-sm text-text-secondary">E-mail: {client.email ?? "—"}</p>
           <p className="text-sm text-text-secondary">Telefone: {client.phone ?? "—"}</p>
           <p className="text-sm text-text-secondary">Instagram: {client.instagram ?? "—"}</p>

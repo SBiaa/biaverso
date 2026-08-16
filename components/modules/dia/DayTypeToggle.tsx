@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ErrorNote } from "@/components/ui";
+import { confirmAction, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import type { DayType } from "@/app/generated/prisma/client";
@@ -27,9 +27,12 @@ export function DayTypeToggle({ dayId, initialType }: DayTypeToggleProps) {
     if (value === type) return;
 
     const targetLabel = OPTIONS.find((o) => o.value === value)?.label ?? value;
-    const confirmed = window.confirm(
-      `Trocar para ${targetLabel} vai substituir as tarefas de rotina de hoje. Tarefas avulsas serão mantidas. Confirmar?`,
-    );
+    const confirmed = await confirmAction({
+      title: `Trocar para ${targetLabel}?`,
+      description:
+        "As tarefas de rotina de hoje são substituídas. As avulsas ficam.",
+      confirmLabel: "Trocar",
+    });
     if (!confirmed) return;
 
     const previous = type;
@@ -61,7 +64,7 @@ export function DayTypeToggle({ dayId, initialType }: DayTypeToggleProps) {
             "rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60",
             type === option.value
               ? "bg-accent text-white"
-              : "text-text-secondary hover:bg-black/[0.03]",
+              : "text-text-secondary hover:bg-hover",
           )}
         >
           {option.label}

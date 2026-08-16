@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { careTypeLabels } from "@/lib/labels";
 import { toDateInputValue } from "@/lib/utils";
@@ -52,6 +52,7 @@ export function AppointmentFormModal({
         await api.post("/api/beauty/appointments", body);
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -61,83 +62,87 @@ export function AppointmentFormModal({
   }
 
   return (
-    <Modal title={appointment ? "Editar cuidado" : "Novo cuidado"} onClose={onClose}>
+    <Modal
+      title={appointment ? "Editar cuidado" : "Novo cuidado"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+    >
       <Field label="Nome">
-        <input
-          placeholder="Fazer as unhas"
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        placeholder="Fazer as unhas"
+        value={form.name}
+        onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <Field label="Tipo">
-        <select
-          value={form.type}
-          onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
-          className={fieldClass}
-        >
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>
-              {careTypeLabels[t]}
-            </option>
-          ))}
-        </select>
+      <select
+        value={form.type}
+        onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
+        className={fieldClass}
+      >
+        {typeOptions.map((t) => (
+          <option key={t} value={t}>
+            {careTypeLabels[t]}
+          </option>
+        ))}
+      </select>
       </Field>
 
       <Field label="A cada quantos dias">
-        <input
-          type="number"
-          min="1"
-          max="365"
-          value={form.intervalDays}
-          onChange={(e) => setForm((prev) => ({ ...prev, intervalDays: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        type="number"
+        min="1"
+        max="365"
+        value={form.intervalDays}
+        onChange={(e) => setForm((prev) => ({ ...prev, intervalDays: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       <Field label="Última vez que fez (opcional)">
-        <input
-          type="date"
-          value={form.lastDoneAt}
-          onChange={(e) => setForm((prev) => ({ ...prev, lastDoneAt: e.target.value }))}
-          className={fieldClass}
-        />
-        <span className="text-xs text-text-secondary">
-          Preenchendo aqui, a próxima data já sai calculada.
-        </span>
+      <input
+        type="date"
+        value={form.lastDoneAt}
+        onChange={(e) => setForm((prev) => ({ ...prev, lastDoneAt: e.target.value }))}
+        className={fieldClass}
+      />
+      <span className="text-xs text-text-secondary">
+        Preenchendo aqui, a próxima data já sai calculada.
+      </span>
       </Field>
 
       <Field label="Notas (opcional)">
-        <input
-          placeholder="Salão da esquina, esmalte vermelho"
-          value={form.notes}
-          onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-          className={fieldClass}
-        />
+      <input
+        placeholder="Salão da esquina, esmalte vermelho"
+        value={form.notes}
+        onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+        className={fieldClass}
+      />
       </Field>
 
       {appointment && (
-        <label className="flex items-center gap-2 text-sm text-text-primary">
-          <input
-            type="checkbox"
-            checked={form.active}
-            onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-          Ativo
-        </label>
+      <label className="flex items-center gap-2 text-sm text-text-primary">
+        <input
+          type="checkbox"
+          checked={form.active}
+          onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
+          className="h-4 w-4 accent-[var(--accent)]"
+        />
+        Ativo
+      </label>
       )}
 
       <ErrorNote message={error} />
 
       <div className="mt-2 flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={onClose}>
-          Cancelar
-        </Button>
+      <Button type="submit" disabled={saving}>
+        Salvar
+      </Button>
+      <Button variant="ghost" onClick={onClose}>
+        Cancelar
+      </Button>
       </div>
     </Modal>
   );
