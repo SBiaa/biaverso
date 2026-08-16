@@ -594,6 +594,13 @@ export const settingsPatchSchema = z.object({
     .nullable()
     .optional(),
   targetMargin: marginPercent.optional(),
+  // So hexadecimal: a cor entra num bloco de CSS gerado pelo servidor, entao
+  // qualquer coisa fora deste formato seria texto solto dentro de uma folha
+  // de estilo.
+  accentColor: z
+    .string()
+    .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Use uma cor em hexadecimal.")
+    .optional(),
 });
 
 // -------------------------------------------------------------- biblioteca

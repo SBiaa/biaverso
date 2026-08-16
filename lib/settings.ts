@@ -20,6 +20,7 @@ export async function getUserSettings(): Promise<UserSettingsValues> {
       waterUnitMl: true,
       hourlyRate: true,
       targetMargin: true,
+      accentColor: true,
     },
   });
 

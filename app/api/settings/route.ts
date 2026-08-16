@@ -20,6 +20,7 @@ export const PATCH = route(async (request: Request) => {
       waterUnitMl: true,
       hourlyRate: true,
       targetMargin: true,
+      accentColor: true,
     },
   });
 

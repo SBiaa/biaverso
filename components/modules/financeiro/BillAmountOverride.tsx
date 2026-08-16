@@ -80,7 +80,7 @@ export function BillAmountOverride({
           type="button"
           onClick={() => save(Number(value))}
           disabled={saving || !value}
-          className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+          className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-contrast transition-colors hover:bg-accent/90 disabled:opacity-50"
         >
           Salvar
         </button>

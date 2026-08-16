@@ -31,7 +31,7 @@ export default async function AvaliacaoDashboardPage() {
   const avaliarButton = (
     <Link
       href="/avaliacao/semana/nova"
-      className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
+      className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast"
     >
       <CalendarPlus size={16} />
       Avaliar esta semana

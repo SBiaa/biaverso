@@ -63,7 +63,7 @@ export function DayTypeToggle({ dayId, initialType }: DayTypeToggleProps) {
           className={cn(
             "rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60",
             type === option.value
-              ? "bg-accent text-white"
+              ? "bg-accent text-accent-contrast"
               : "text-text-secondary hover:bg-hover",
           )}
         >

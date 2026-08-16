@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-white hover:bg-accent/90",
+  primary: "bg-accent text-accent-contrast hover:bg-accent/90",
   secondary:
     "bg-surface border border-border text-text-primary hover:bg-hover",
   ghost: "text-text-primary hover:bg-hover",

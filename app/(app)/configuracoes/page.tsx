@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardTitle } from "@/components/ui";
 import { Topbar } from "@/components/layout/Topbar";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { AccentColorPicker } from "@/components/modules/configuracoes/AccentColorPicker";
 import { RoutineTemplateList } from "@/components/modules/configuracoes/RoutineTemplateList";
 import { HabitList } from "@/components/modules/configuracoes/HabitList";
 import { GoogleCalendarCard } from "@/components/modules/agenda/GoogleCalendarCard";
@@ -57,6 +58,18 @@ export default async function ConfiguracoesPage({
             </p>
           </div>
           <ThemeToggle />
+        </Card>
+
+        <Card className="flex flex-col gap-3">
+          <div>
+            <CardTitle>Cor do app</CardTitle>
+            <p className="text-sm text-text-secondary">
+              Escolha um tom e o resto acompanha: fundo de item selecionado,
+              hover dos botões e a cor do texto por cima. A tela muda enquanto
+              você experimenta — só vale depois de salvar.
+            </p>
+          </div>
+          <AccentColorPicker initialColor={settings.accentColor} />
         </Card>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

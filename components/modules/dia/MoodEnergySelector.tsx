@@ -73,7 +73,7 @@ export function MoodEnergySelector({
               className={cn(
                 "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                 energy === option.value
-                  ? "bg-accent text-white"
+                  ? "bg-accent text-accent-contrast"
                   : "text-text-secondary hover:bg-hover",
               )}
             >

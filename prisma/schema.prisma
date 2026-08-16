@@ -1497,6 +1497,9 @@ model UserSettings {
   hourlyRate  Float?
   // Margem de lucro desejada, em %. Base do preço sugerido no catálogo.
   targetMargin Float   @default(60)
+  /// Cor de destaque do app, em hexadecimal. As variações (fundo do item
+  /// selecionado, hover do botão, cor do texto por cima) saem desta.
+  accentColor String   @default("#6366f1")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

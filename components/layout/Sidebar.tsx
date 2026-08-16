@@ -72,7 +72,7 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
         href="/"
         className="mb-4 flex items-center gap-2 px-3 text-lg font-semibold tracking-tight text-text-primary"
       >
-        <span className="grid size-7 place-items-center rounded-lg bg-accent text-sm font-bold text-white">
+        <span className="grid size-7 place-items-center rounded-lg bg-accent text-sm font-bold text-accent-contrast">
           b
         </span>
         biaVerso

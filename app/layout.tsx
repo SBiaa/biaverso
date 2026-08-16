@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Lora } from "next/font/google";
 import { ConfirmProvider, ToastProvider } from "@/components/ui";
+import { accentStyle } from "@/lib/accent";
+import { getUserSettings } from "@/lib/settings";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,7 +46,12 @@ try {
 }
 `;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Uma leitura por chave primária numa tabela de uma linha. Vale a pena: com
+  // a cor vindo do servidor já no HTML, não existe lampejo do tom padrão antes
+  // da preferência ser aplicada — que é o que aconteceria lendo no cliente.
+  const { accentColor } = await getUserSettings();
+
   return (
     <html
       lang="pt-BR"
@@ -56,6 +63,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* O valor é validado como hexadecimal na entrada (settingsPatchSchema)
+            e normalizado de novo aqui, então nada além de uma cor chega a virar
+            texto dentro da folha de estilo. */}
+        <style dangerouslySetInnerHTML={{ __html: accentStyle(accentColor) }} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-text-primary">
         {/* Os dois são "use client", mas recebem `children` já renderizados no

@@ -7,6 +7,9 @@
   --text-primary: #1a1a1a;
   --text-secondary: #6b6b6b;
   --accent: #6366f1;
+  /* Cor do texto por cima do acento. Calculada a partir do tom escolhido
+     (ver lib/accent), e sobrescrita pelo <style> que o layout injeta. */
+  --accent-contrast: #ffffff;
 
   /* Fundo da sidebar: um degrau abaixo do branco dos cards, para a navegação
      recuar e o conteúdo vir à frente — no desktop as duas áreas ficam lado a
@@ -51,6 +54,7 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
   --color-sidebar: var(--sidebar);
   --shadow-elevation: var(--elevation);
 

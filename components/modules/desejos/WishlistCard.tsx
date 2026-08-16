@@ -115,7 +115,7 @@ function BuyPanel({
           type="button"
           onClick={confirmPurchase}
           disabled={saving}
-          className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+          className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-contrast hover:bg-accent/90 disabled:opacity-50"
         >
           Confirmar compra
         </button>

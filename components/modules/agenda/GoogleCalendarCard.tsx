@@ -93,7 +93,7 @@ export function GoogleCalendarCard({
             {/* Link comum: o fluxo OAuth é uma navegação, não um fetch. */}
             <a
               href="/api/auth/google"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent/90"
             >
               Conectar Google Calendar
             </a>
