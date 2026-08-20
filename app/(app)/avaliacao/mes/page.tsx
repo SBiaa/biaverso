@@ -68,7 +68,7 @@ export default async function AvaliacaoMesPage({
           )}
         </Card>
 
-        <MonthReviewForm review={review} />
+        <MonthReviewForm key={review.id} review={review} />
       </main>
     </>
   );

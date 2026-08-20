@@ -53,7 +53,7 @@ export default async function AvaliacaoSemanaPage({
           <HabitProgressList items={habitStats} />
         </Card>
 
-        <WeekReviewForm review={review} />
+        <WeekReviewForm key={review.id} review={review} />
       </main>
     </>
   );

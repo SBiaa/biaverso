@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { Card, Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
@@ -59,6 +60,7 @@ function ButtonGroup({
 }
 
 export function WeekReviewForm({ review }: { review: WeekReviewData }) {
+  const router = useRouter();
   const [form, setForm] = useState(review);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,9 +71,15 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
     try {
       await api.patch(`/api/week-reviews/${review.id}`, patch);
       setError(null);
+      // Sem isso, a navegação de volta pra essa semana (ou pra troca de
+      // semana no WeekPicker) podia servir o RSC antigo do Router Cache,
+      // dando a impressão de que o registro não foi salvo.
+      router.refresh();
+      return true;
     } catch (e) {
       // O texto digitado continua na tela — só o aviso muda.
       setError(errorMessage(e));
+      return false;
     }
   }
 
@@ -92,8 +100,11 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
 
   async function handleSaveAll() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    await persist(form);
-    if (error) return;
+    // Checa o retorno de `persist`, não o estado `error`: `setError` só
+    // agenda um re-render, então o `error` capturado aqui ainda seria o
+    // de antes desse clique — um save que falhasse mostraria "Salvo" do
+    // mesmo jeito.
+    if (!(await persist(form))) return;
     setSaved(true);
     if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
     savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);

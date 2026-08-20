@@ -61,7 +61,7 @@ export default async function AvaliacaoTrimestrePage({
           )}
         </Card>
 
-        <QuarterReviewForm review={review} />
+        <QuarterReviewForm key={review.id} review={review} />
       </main>
     </>
   );
