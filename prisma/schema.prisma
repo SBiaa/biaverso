@@ -180,6 +180,10 @@ model Event {
   dayId String?
   day   Day?    @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
+  /// O encontro do coven que criou este evento, quando foi o caso. O lado
+  /// dono da relação é o CovenMeeting.
+  covenMeeting CovenMeeting?
+
   @@index([dayId])
   @@index([date])
   @@index([syncStatus])
@@ -229,6 +233,7 @@ enum EventCategory {
   ACE
   CREATIVE
   SAUDE
+  ESPIRITUAL
   OUTRO
 }
 
@@ -1726,5 +1731,198 @@ enum ProductCategory {
   CORPO
   MAQUIAGEM
   UNHAS
+  OUTRO
+}
+
+// ESPIRITUAL — coven, estudo e prática
+//
+// A Roda do Ano e as fases da lua NÃO estão aqui: são conta, não dado. Ficam
+// em lib/astros.ts, calculadas na hora. Gravar a data de um sabbath numa
+// tabela seria guardar algo que o próprio app sabe deduzir, com o risco de
+// envelhecer errado.
+
+// ENCONTROS — do coven inteiro ou a sós com a mestre.
+model CovenMeeting {
+  id      String           @id @default(cuid())
+  title   String
+  kind    CovenMeetingKind @default(COVEN)
+  date    DateTime
+  time    String?
+  endTime String?
+  place   String?
+  /// O que ela quer tratar, escrito antes: dúvidas, o que levar.
+  agenda  String?
+  /// O que ficou depois — o que foi dito, o que ela sentiu.
+  notes   String?
+  /// Nulo enquanto o encontro não chegou; depois, se foi ou não.
+  attended Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// O mesmo compromisso na Agenda. É por ele que o encontro chega ao Google
+  /// Calendar: o módulo não fala com o Google, só cria o Evento e deixa a
+  /// sincronização que já existe fazer o resto.
+  eventId String? @unique
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  studies SpiritualStudy[]
+
+  @@index([date])
+}
+
+enum CovenMeetingKind {
+  COVEN
+  MESTRE
+  RITUAL_COLETIVO
+  AULA
+  OUTRO
+}
+
+// TEXTOS E EXERCÍCIOS — o material de estudo e o que tem prazo de entrega.
+model SpiritualStudy {
+  id     String      @id @default(cuid())
+  title  String
+  kind   StudyKind   @default(TEXTO)
+  status StudyStatus @default(A_FAZER)
+
+  /// Quando o material foi passado.
+  receivedAt  DateTime?
+  /// O prazo da entrega final — é o que o painel vigia.
+  dueDate     DateTime?
+  deliveredAt DateTime?
+
+  /// O material em si: o texto, ou o enunciado do exercício.
+  content String?
+  /// As anotações dela — a resposta do exercício, o que entendeu do texto.
+  notes   String?
+  link    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// O encontro em que isto foi passado, quando veio de um.
+  meetingId String?
+  meeting   CovenMeeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+
+  @@index([status, dueDate])
+  @@index([meetingId])
+}
+
+enum StudyKind {
+  TEXTO
+  EXERCICIO
+  LEITURA
+  PRATICA
+  PESQUISA
+  OUTRO
+}
+
+enum StudyStatus {
+  A_FAZER
+  EM_ANDAMENTO
+  FEITO
+  ENTREGUE
+}
+
+// DIÁRIO DE RITUAIS E FEITIÇOS
+//
+// A fase da lua não é gravada: sai da data em lib/astros.ts. Guardar a fase
+// junto abriria a chance de o registro dizer "lua cheia" numa data que não era.
+model RitualLog {
+  id    String     @id @default(cuid())
+  title String
+  date  DateTime
+  kind  RitualKind @default(RITUAL)
+
+  /// Para que foi feito.
+  intention String?
+  /// Ervas, velas, cristais, palavras — o que entrou.
+  elements  String?
+  /// Como foi na hora.
+  notes     String?
+  /// O que veio depois. Fica vazio no dia e é preenchido semanas mais tarde —
+  /// é justamente esse intervalo que dá sentido ao registro.
+  outcome   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+enum RitualKind {
+  RITUAL
+  FEITICO
+  MEDITACAO
+  OFERENDA
+  BANHO
+  SABBAT
+  ESBAT
+  OUTRO
+}
+
+// TIRAGENS — tarô, oráculos, runas.
+model Divination {
+  id     String           @id @default(cuid())
+  date   DateTime
+  method DivinationMethod @default(TAROT)
+  /// Qual baralho ou oráculo foi usado.
+  deck   String?
+
+  question String?
+  /// O nome da tiragem: três cartas, cruz celta, o que for.
+  spread   String?
+  /// As cartas que saíram, na ordem em que saíram.
+  cards    String[]
+  reading  String?
+  /// O que se confirmou depois — o mesmo intervalo do RitualLog.
+  outcome  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+enum DivinationMethod {
+  TAROT
+  ORACULO
+  RUNAS
+  PENDULO
+  BUZIOS
+  OUTRO
+}
+
+// ALTAR — ervas, cristais, velas e ferramentas que ela tem em casa.
+model AltarItem {
+  id       String        @id @default(cuid())
+  name     String
+  category AltarCategory @default(ERVA)
+  /// Quanto tem, em texto: "meio pote", "3 velas brancas". Número não serviria
+  /// para erva a granel, e a régua aqui é o olho, não a balança.
+  quantity String?
+  /// Marcado na mão quando está no fim — o app não tem como medir o pote.
+  runningLow Boolean @default(false)
+  /// Para que serve: proteção, prosperidade, limpeza.
+  properties String?
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, name])
+  @@index([runningLow])
+}
+
+enum AltarCategory {
+  ERVA
+  CRISTAL
+  VELA
+  INCENSO
+  OLEO
+  FERRAMENTA
+  BARALHO
+  IMAGEM
   OUTRO
 }

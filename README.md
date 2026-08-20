@@ -1,7 +1,7 @@
 # biaVerso
 
 Central de gestão pessoal: rotina do dia, cardápio, finanças, negócios e clientes,
-avaliações semanais, biblioteca e a Central de Visão.
+avaliações semanais, vida espiritual, biblioteca e a Central de Visão.
 
 Next.js 16 (App Router) · React 19 · Prisma 7 sobre Postgres (Neon) · Tailwind 4.
 
@@ -77,6 +77,24 @@ está lá é ruído.
 **Não protege** contra quem já entrou no app — passou pelo Basic Auth, vê as
 senhas na tela, que é justamente para o que o cofre existe. Quem controlar o
 servidor tem a chave junto. Para esse lado, quem defende é o `APP_PASSWORD`.
+
+## Roda do Ano e fases da lua
+
+O módulo **Espiritual** não guarda em banco nenhuma data de sabbath nem de lua:
+tudo é calculado em `lib/astros.ts`, com as fórmulas do Meeus (*Astronomical
+Algorithms*, cap. 27 e 49), sem rede e sem tabela chumbada. Uma tabela fixa
+erraria: o solstício de junho cai dia 20 em alguns anos e dia 21 em outros.
+
+As datas são as do **hemisfério sul** — Samhain em 30 de abril, Beltane em 31 de
+outubro, Yule no solstício de junho. Trocar de hemisfério é mexer no `WHEEL` de
+`lib/espiritual-shared.ts`, que é onde os oito sabbats estão descritos.
+
+A conta devolve Tempo Dinâmico, hoje ~70 segundos à frente do UTC; a diferença
+só mudaria o dia de um evento que caísse a menos de um minuto da meia-noite.
+
+Os **encontros do coven** não falam com o Google. Cada encontro cria um `Event`
+comum de categoria `ESPIRITUAL`, e a sincronização da agenda leva esse evento ao
+Google Calendar — uma integração só, em vez de duas.
 
 ## Convenção de datas
 

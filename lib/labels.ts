@@ -256,6 +256,7 @@ export const eventCategoryLabels: Record<string, string> = {
   ACE: "Ace",
   CREATIVE: "Creative",
   SAUDE: "Saúde",
+  ESPIRITUAL: "Espiritual",
   OUTRO: "Outro",
 };
 

@@ -875,3 +875,77 @@ export const beautyProductQuerySchema = z.object({
   category: filter(z.enum(E.ProductCategory)),
   status: filter(z.enum(["ativos", "acabados", "todos"])),
 });
+
+// ------------------------------------------------------------- espiritual
+
+const clockTime = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/, "precisa estar no formato HH:MM")
+  .nullish();
+
+export const covenMeetingCreateSchema = z.object({
+  title: text,
+  kind: z.enum(E.CovenMeetingKind).default("COVEN"),
+  date: dateOnly,
+  time: clockTime,
+  endTime: clockTime,
+  place: optionalText,
+  agenda: optionalText,
+  notes: optionalText,
+});
+export const covenMeetingPatchSchema = covenMeetingCreateSchema
+  .partial()
+  // Tri-estado de propósito: nulo é "o encontro ainda não chegou", e não
+  // "faltei". Só depois é que vira true ou false.
+  .extend({ attended: z.boolean().nullish() });
+
+export const spiritualStudyCreateSchema = z.object({
+  title: text,
+  kind: z.enum(E.StudyKind).default("TEXTO"),
+  status: z.enum(E.StudyStatus).default("A_FAZER"),
+  receivedAt: dateOnly.nullish(),
+  dueDate: dateOnly.nullish(),
+  content: z.string().nullish(),
+  notes: z.string().nullish(),
+  link: optionalText,
+  meetingId: optionalId,
+});
+// `deliveredAt` não entra: quem o preenche é a rota, no momento em que o
+// status vira ENTREGUE. Uma data de entrega digitada à mão poderia contradizer
+// o status e as duas ficariam brigando na tela.
+export const spiritualStudyPatchSchema = spiritualStudyCreateSchema.partial();
+
+export const ritualLogCreateSchema = z.object({
+  title: text,
+  date: dateOnly,
+  kind: z.enum(E.RitualKind).default("RITUAL"),
+  intention: z.string().nullish(),
+  elements: z.string().nullish(),
+  notes: z.string().nullish(),
+  outcome: z.string().nullish(),
+});
+export const ritualLogPatchSchema = ritualLogCreateSchema.partial();
+
+export const divinationCreateSchema = z.object({
+  date: dateOnly,
+  method: z.enum(E.DivinationMethod).default("TAROT"),
+  deck: optionalText,
+  question: z.string().nullish(),
+  spread: optionalText,
+  // Uma carta por linha na tela; a rota manda a lista já separada.
+  cards: z.array(z.string().trim().min(1)).default([]),
+  reading: z.string().nullish(),
+  outcome: z.string().nullish(),
+});
+export const divinationPatchSchema = divinationCreateSchema.partial();
+
+export const altarItemCreateSchema = z.object({
+  name: text,
+  category: z.enum(E.AltarCategory).default("ERVA"),
+  quantity: optionalText,
+  properties: optionalText,
+  notes: z.string().nullish(),
+});
+export const altarItemPatchSchema = altarItemCreateSchema
+  .partial()
+  .extend({ runningLow: z.boolean().optional() });
