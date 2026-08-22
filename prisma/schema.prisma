@@ -862,6 +862,23 @@ model ContentPost {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  // Conteúdo mais rico que vem de fora (hoje, o gerador externo de
+  // cronograma de conteúdo) — nulo pra post criado à mão no biaVerso.
+  pilar        ContentPilar?
+  objective    String?
+  hook         String?
+  cta          String?
+  hashtags     String[] @default([])
+  slides       Json?
+  script       Json?
+  visualBrief  Json?
+  storySupport String?
+
+  // Origem de um import externo. `externalSource` + `externalId` juntos
+  // identificam o post lá fora, pra reimportar atualizar em vez de duplicar.
+  externalSource String?
+  externalId     String?
+
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   clientId   String?
@@ -869,10 +886,19 @@ model ContentPost {
   projectId  String?
   project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
+  @@unique([businessId, externalSource, externalId])
   @@index([businessId, status])
   @@index([businessId, publishDate])
   @@index([clientId])
   @@index([projectId])
+}
+
+enum ContentPilar {
+  AUTORIDADE
+  PROVA
+  OFERTA
+  HUMANO
+  CONVERSA
 }
 
 enum PostType {

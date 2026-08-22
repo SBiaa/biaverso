@@ -221,6 +221,15 @@ export const postRecordSelect = {
   notes: true,
   clientId: true,
   projectId: true,
+  pilar: true,
+  objective: true,
+  hook: true,
+  cta: true,
+  hashtags: true,
+  slides: true,
+  script: true,
+  visualBrief: true,
+  storySupport: true,
 } satisfies Prisma.ContentPostSelect;
 
 export const taskRecordSelect = {

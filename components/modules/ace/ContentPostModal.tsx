@@ -11,7 +11,12 @@ import {
   notify,
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { postTypeLabels, socialNetworkLabels, contentStatusLabels } from "@/lib/labels";
+import {
+  postTypeLabels,
+  socialNetworkLabels,
+  contentStatusLabels,
+  contentPilarLabels,
+} from "@/lib/labels";
 import { addUtcDays, formatDateBR, parseDateOnly, toDateInputValue } from "@/lib/utils";
 import { ClientOptions } from "./ClientOptions";
 
@@ -36,8 +41,29 @@ export type PostRecord = {
   /** Null = post interno do próprio negócio. */
   clientId: string | null;
   projectId: string | null;
+  /** Só vêm preenchidos em post importado do gerador externo de conteúdo. */
+  pilar?: string | null;
+  objective?: string | null;
+  hook?: string | null;
+  cta?: string | null;
+  hashtags?: string[];
+  slides?: unknown;
+  script?: unknown;
+  visualBrief?: unknown;
+  storySupport?: string | null;
 };
 type PostInitial = PostRecord;
+
+type Slide = { numero: number; texto: string };
+type RoteiroItem = { tempo: string; acao: string; fala: string };
+type BriefingVisual = {
+  conceito: string;
+  elementos: string[];
+  texto_na_arte: string;
+  paleta: string;
+  referencia: string | null;
+  prompt_imagem: string | null;
+};
 
 /** "" no form = projeto interno; no payload isso vira `null`. */
 export const INTERNAL_CLIENT = "";
@@ -102,6 +128,112 @@ function formFromPost(post: PostInitial) {
     clientId: post.clientId ?? INTERNAL_CLIENT,
     projectId: post.projectId ?? "",
   };
+}
+
+/**
+ * O que veio de um import (gancho, CTA, hashtags, roteiro, briefing visual...)
+ * mostrado somente-leitura — título e legenda já ficam editáveis nos campos
+ * de cima (é onde `gancho`/`copy` caem). Some inteiro pra post criado à mão.
+ */
+function ImportedContentDetails({ post }: { post: PostInitial }) {
+  const hasHashtags = (post.hashtags?.length ?? 0) > 0;
+  const slides = Array.isArray(post.slides) ? (post.slides as Slide[]) : [];
+  const roteiro = Array.isArray(post.script) ? (post.script as RoteiroItem[]) : [];
+  const briefing = post.visualBrief as BriefingVisual | null | undefined;
+
+  const hasContent =
+    post.pilar ||
+    post.objective ||
+    post.hook ||
+    post.cta ||
+    post.storySupport ||
+    hasHashtags ||
+    slides.length > 0 ||
+    roteiro.length > 0 ||
+    briefing;
+
+  if (!hasContent) return null;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-hover/40 p-2.5 text-sm">
+      <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+        Conteúdo importado
+      </p>
+
+      {post.pilar && (
+        <p>
+          <span className="text-text-secondary">Pilar: </span>
+          {contentPilarLabels[post.pilar] ?? post.pilar}
+        </p>
+      )}
+      {post.objective && (
+        <p>
+          <span className="text-text-secondary">Objetivo: </span>
+          {post.objective}
+        </p>
+      )}
+      {post.hook && (
+        <p>
+          <span className="text-text-secondary">Gancho: </span>
+          {post.hook}
+        </p>
+      )}
+      {post.cta && (
+        <p>
+          <span className="text-text-secondary">CTA: </span>
+          {post.cta}
+        </p>
+      )}
+      {post.storySupport && (
+        <p>
+          <span className="text-text-secondary">Story de apoio: </span>
+          {post.storySupport}
+        </p>
+      )}
+      {hasHashtags && (
+        <p className="text-xs text-accent">{post.hashtags!.map((h) => `#${h}`).join(" ")}</p>
+      )}
+
+      {slides.length > 0 && (
+        <div>
+          <p className="text-text-secondary">Slides</p>
+          <ol className="list-decimal pl-4">
+            {slides.map((s) => (
+              <li key={s.numero}>{s.texto}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {roteiro.length > 0 && (
+        <div>
+          <p className="text-text-secondary">Roteiro</p>
+          <ul className="flex flex-col gap-1">
+            {roteiro.map((r, i) => (
+              <li key={i}>
+                <span className="font-medium">{r.tempo}</span> — {r.acao}
+                {r.fala && <span className="italic"> (&quot;{r.fala}&quot;)</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {briefing && (
+        <div>
+          <p className="text-text-secondary">Briefing visual</p>
+          <p>{briefing.conceito}</p>
+          {briefing.elementos?.length > 0 && (
+            <p className="text-xs">Elementos: {briefing.elementos.join(", ")}</p>
+          )}
+          {briefing.texto_na_arte && (
+            <p className="text-xs">Texto na arte: {briefing.texto_na_arte}</p>
+          )}
+          {briefing.paleta && <p className="text-xs">Paleta: {briefing.paleta}</p>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ContentPostModal({
@@ -350,6 +482,8 @@ export function ContentPostModal({
         rows={2}
         className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       />
+
+      {post && <ImportedContentDetails post={post} />}
 
       <ErrorNote message={error} />
 

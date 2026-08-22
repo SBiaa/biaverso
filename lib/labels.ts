@@ -181,6 +181,14 @@ export const socialNetworkLabels: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+export const contentPilarLabels: Record<string, string> = {
+  AUTORIDADE: "Autoridade",
+  PROVA: "Prova",
+  OFERTA: "Oferta",
+  HUMANO: "Humano",
+  CONVERSA: "Conversa",
+};
+
 export const contentStatusLabels: Record<string, string> = {
   PLANEJADO: "Planejado",
   EM_CRIACAO: "Em criação",

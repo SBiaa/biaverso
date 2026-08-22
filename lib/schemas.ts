@@ -411,6 +411,18 @@ export const contentPostCreateSchema = z.object({
   projectId: optionalId,
   caption: optionalText,
   notes: optionalText,
+  // Preenchidos só quando o post vem de um gerador externo de conteúdo.
+  pilar: z.enum(E.ContentPilar).nullish(),
+  objective: optionalText,
+  hook: optionalText,
+  cta: optionalText,
+  hashtags: z.array(z.string()).optional(),
+  slides: z.any().nullish(),
+  script: z.any().nullish(),
+  visualBrief: z.any().nullish(),
+  storySupport: optionalText,
+  externalSource: optionalText,
+  externalId: optionalText,
 });
 export const contentPostPatchSchema = contentPostCreateSchema
   .omit({ businessId: true, status: true })
@@ -447,6 +459,62 @@ export const aceListQuerySchema = z.object({
   from: filter(dateOnly),
   to: filter(dateOnly),
   scope: filter(z.enum(["clientes", "interno"])),
+});
+
+/**
+ * Espelha o `CalendarioMes` do gerador externo de cronograma de conteúdo
+ * (JSON colado pela dona, igual ela já faz hoje noutra ferramenta). Os enums
+ * em português são validados como literais próprios, sem depender dos enums
+ * do Prisma — o formato de origem não tem por que mudar junto com o nosso.
+ */
+const botSlide = z.object({ numero: z.number(), texto: z.string() });
+const botRoteiroItem = z.object({ tempo: z.string(), acao: z.string(), fala: z.string() });
+const botBriefingVisual = z.object({
+  conceito: z.string(),
+  elementos: z.array(z.string()),
+  texto_na_arte: z.string(),
+  paleta: z.string(),
+  referencia: z.string().nullable(),
+  prompt_imagem: z.string().nullable(),
+});
+const botPost = z.object({
+  id: z.string(),
+  data: z.string(),
+  dia_semana: z.string().optional(),
+  formato: z.enum(["carrossel", "estatico", "reels", "story"]),
+  pilar: z.enum(["Autoridade", "Prova", "Oferta", "Humano", "Conversa"]),
+  objetivo: z.string(),
+  gancho: z.string(),
+  copy: z.string(),
+  cta: z.string(),
+  hashtags: z.array(z.string()),
+  slides: z.array(botSlide),
+  roteiro: z.array(botRoteiroItem),
+  briefing_visual: botBriefingVisual,
+  story_apoio: z.string().nullable(),
+  status: z.enum(["rascunho", "aprovado", "produzido", "agendado", "publicado"]),
+  observacao: z.string().nullable(),
+});
+
+export const importCalendarioSchema = z.object({
+  businessId: id,
+  clientId: optionalId,
+  projectId: optionalId,
+  network: z.enum(E.SocialNetwork).default("INSTAGRAM"),
+  calendario: z.object({
+    cliente: z.object({
+      nome: z.string(),
+      nicho: z.string().optional(),
+      cidade: z.string().nullish(),
+      plano: z.string().nullish(),
+      tom_de_voz: z.string().nullish(),
+      oferta_do_mes: z.string().nullish(),
+    }),
+    periodo: z.object({ inicio: z.string(), fim: z.string(), total_posts: z.number() }),
+    pilares: z.array(z.unknown()).optional(),
+    posts: z.array(botPost),
+    lacunas: z.array(z.string()).optional(),
+  }),
 });
 
 // ------------------------------------------------------------------- loja

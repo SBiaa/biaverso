@@ -131,6 +131,15 @@ export function toPostRecord(post: {
   notes: string | null;
   clientId: string | null;
   projectId: string | null;
+  pilar?: string | null;
+  objective?: string | null;
+  hook?: string | null;
+  cta?: string | null;
+  hashtags?: string[];
+  slides?: unknown;
+  script?: unknown;
+  visualBrief?: unknown;
+  storySupport?: string | null;
 }) {
   return {
     id: post.id,
@@ -144,6 +153,15 @@ export function toPostRecord(post: {
     notes: post.notes,
     clientId: post.clientId,
     projectId: post.projectId,
+    pilar: post.pilar ?? null,
+    objective: post.objective ?? null,
+    hook: post.hook ?? null,
+    cta: post.cta ?? null,
+    hashtags: post.hashtags ?? [],
+    slides: post.slides ?? null,
+    script: post.script ?? null,
+    visualBrief: post.visualBrief ?? null,
+    storySupport: post.storySupport ?? null,
   };
 }
 

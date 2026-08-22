@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { LayoutGrid, List, Plus } from "lucide-react";
+import { LayoutGrid, List, Plus, Upload } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -18,6 +18,7 @@ import { api, errorMessage } from "@/lib/client-api";
 import { cn, monthNameBR } from "@/lib/utils";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
 import { ProductionTaskModal, type TaskRecord } from "./ProductionTaskModal";
+import { ImportCalendarioModal } from "./ImportCalendarioModal";
 
 export type CalendarItem = {
   id: string;
@@ -192,6 +193,7 @@ export function CalendarBoard({
   const [editing, setEditing] = useState<CalendarItem | null>(null);
   const [creating, setCreating] = useState<CreatingState | null>(null);
   const [menuDay, setMenuDay] = useState<number | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -253,6 +255,10 @@ export function CalendarBoard({
           <Button variant="secondary" onClick={() => openCreate("task")}>
             <Plus size={14} />
             Nova tarefa
+          </Button>
+          <Button variant="secondary" onClick={() => setImporting(true)}>
+            <Upload size={14} />
+            Importar do bot
           </Button>
         </div>
         <div className="flex overflow-hidden rounded-md border border-border">
@@ -403,6 +409,14 @@ export function CalendarBoard({
           projects={projects}
           defaultDate={creating.date ?? undefined}
           onClose={() => setCreating(null)}
+        />
+      )}
+      {importing && (
+        <ImportCalendarioModal
+          businessId={businessId}
+          clients={clients}
+          projects={projects}
+          onClose={() => setImporting(false)}
         />
       )}
     </div>
