@@ -15,6 +15,7 @@ import {
   KanbanBoard,
   type KanbanItem,
 } from "@/components/modules/ace/KanbanBoard";
+import { MonthlySummary } from "@/components/modules/ace/MonthlySummary";
 import {
   ProjectsSection,
   type ProjectWithItems,
@@ -284,12 +285,27 @@ export default async function BusinessDetailPage({
         })),
     ];
 
+    const postsByNetwork = posts.reduce<Record<string, number>>((acc, p) => {
+      acc[p.network] = (acc[p.network] ?? 0) + 1;
+      return acc;
+    }, {});
+    const postsByStatus = posts.reduce<Record<string, number>>((acc, p) => {
+      acc[p.status] = (acc[p.status] ?? 0) + 1;
+      return acc;
+    }, {});
+
     content = (
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <MonthPicker month={month} year={year} />
           <AceFilterBar clients={clients} />
         </div>
+        <MonthlySummary
+          postsByNetwork={postsByNetwork}
+          postsByStatus={postsByStatus}
+          totalPosts={posts.length}
+          totalTasks={tasks.length}
+        />
         <CalendarBoard
           businessId={id}
           month={month}

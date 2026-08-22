@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { postTypeLabels, socialNetworkLabels, contentStatusLabels } from "@/lib/labels";
+import { addUtcDays, formatDateBR, parseDateOnly, toDateInputValue } from "@/lib/utils";
 import { ClientOptions } from "./ClientOptions";
 
 const typeOptions = Object.keys(postTypeLabels);
@@ -71,6 +72,7 @@ function emptyForm(
   projects: ProjectOption[],
   defaultClientId?: string,
   defaultProjectId?: string,
+  defaultDate?: string,
 ) {
   const clientId = defaultClientId ?? clients[0]?.id ?? INTERNAL_CLIENT;
   return {
@@ -78,7 +80,7 @@ function emptyForm(
     type: typeOptions[0],
     network: networkOptions[0],
     status: "PLANEJADO",
-    publishDate: "",
+    publishDate: defaultDate ?? "",
     completedAt: "",
     caption: "",
     notes: "",
@@ -109,6 +111,7 @@ export function ContentPostModal({
   post,
   defaultClientId,
   defaultProjectId,
+  defaultDate,
   onClose,
 }: {
   businessId: string;
@@ -117,6 +120,8 @@ export function ContentPostModal({
   post?: PostInitial;
   defaultClientId?: string;
   defaultProjectId?: string;
+  /** "YYYY-MM-DD" — preenche a publicação ao criar a partir de um dia do calendário. */
+  defaultDate?: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -125,7 +130,9 @@ export function ContentPostModal({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(
-    post ? formFromPost(post) : emptyForm(clients, projects, defaultClientId, defaultProjectId),
+    post
+      ? formFromPost(post)
+      : emptyForm(clients, projects, defaultClientId, defaultProjectId, defaultDate),
   );
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -162,6 +169,47 @@ export function ContentPostModal({
       else await api.post("/api/ace/posts", payload);
       router.refresh();
       notify("Salvo.");
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Copia o post para a semana seguinte — o jeito rápido de repetir um
+  // formato (ex.: "story de bastidores toda sexta") sem preencher tudo de novo.
+  async function handleDuplicate() {
+    if (!isEdit) return;
+    setSaving(true);
+    setError(null);
+
+    const nextDate = form.publishDate
+      ? toDateInputValue(addUtcDays(parseDateOnly(form.publishDate)!, 7))
+      : "";
+
+    const payload = {
+      title: form.title,
+      type: form.type,
+      network: form.network,
+      status: "PLANEJADO",
+      publishDate: nextDate || null,
+      completedAt: null,
+      caption: form.caption,
+      notes: form.notes,
+      businessId,
+      clientId: form.clientId || null,
+      projectId: form.projectId || null,
+    };
+
+    try {
+      await api.post("/api/ace/posts", payload);
+      router.refresh();
+      notify(
+        nextDate
+          ? `Duplicado para ${formatDateBR(new Date(`${nextDate}T00:00:00Z`))}.`
+          : "Duplicado.",
+      );
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -315,14 +363,19 @@ export function ContentPostModal({
           </Button>
         </div>
         {isEdit && (
-          <Button
-            variant="ghost"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-red-600 hover:bg-red-50"
-          >
-            Excluir
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={handleDuplicate} disabled={saving || deleting}>
+              Duplicar
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-red-600 hover:bg-red-50"
+            >
+              Excluir
+            </Button>
+          </div>
         )}
       </div>
     </Modal>

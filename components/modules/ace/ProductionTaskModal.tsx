@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productionTypeLabels, priorityLabels, productionStatusLabels } from "@/lib/labels";
+import { addUtcDays, formatDateBR, parseDateOnly, toDateInputValue } from "@/lib/utils";
 import {
   INTERNAL_CLIENT,
   projectsForClient,
@@ -65,6 +66,7 @@ function emptyForm(
   projects: ProjectOption[],
   defaultClientId?: string,
   defaultProjectId?: string,
+  defaultDate?: string,
 ) {
   const clientId = defaultClientId ?? clients[0]?.id ?? INTERNAL_CLIENT;
   return {
@@ -73,7 +75,7 @@ function emptyForm(
     description: "",
     priority: "NORMAL",
     status: "A_FAZER",
-    dueDate: "",
+    dueDate: defaultDate ?? "",
     completedAt: "",
     notes: "",
     clientId,
@@ -103,6 +105,7 @@ export function ProductionTaskModal({
   task,
   defaultClientId,
   defaultProjectId,
+  defaultDate,
   onClose,
 }: {
   businessId: string;
@@ -111,6 +114,8 @@ export function ProductionTaskModal({
   task?: TaskInitial;
   defaultClientId?: string;
   defaultProjectId?: string;
+  /** "YYYY-MM-DD" — preenche o prazo ao criar a partir de um dia do calendário. */
+  defaultDate?: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -119,7 +124,9 @@ export function ProductionTaskModal({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(
-    task ? formFromTask(task) : emptyForm(clients, projects, defaultClientId, defaultProjectId),
+    task
+      ? formFromTask(task)
+      : emptyForm(clients, projects, defaultClientId, defaultProjectId, defaultDate),
   );
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -156,6 +163,47 @@ export function ProductionTaskModal({
       else await api.post("/api/ace/tasks", payload);
       router.refresh();
       notify("Salvo.");
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Copia a tarefa para a semana seguinte — útil pra produção recorrente
+  // (ex.: "edição do reels toda semana") sem preencher tudo de novo.
+  async function handleDuplicate() {
+    if (!isEdit) return;
+    setSaving(true);
+    setError(null);
+
+    const nextDate = form.dueDate
+      ? toDateInputValue(addUtcDays(parseDateOnly(form.dueDate)!, 7))
+      : "";
+
+    const payload = {
+      title: form.title,
+      type: form.type,
+      description: form.description,
+      priority: form.priority,
+      status: "A_FAZER",
+      dueDate: nextDate || null,
+      completedAt: null,
+      notes: form.notes,
+      businessId,
+      clientId: form.clientId || null,
+      projectId: form.projectId || null,
+    };
+
+    try {
+      await api.post("/api/ace/tasks", payload);
+      router.refresh();
+      notify(
+        nextDate
+          ? `Duplicado para ${formatDateBR(new Date(`${nextDate}T00:00:00Z`))}.`
+          : "Duplicado.",
+      );
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -310,14 +358,19 @@ export function ProductionTaskModal({
           </Button>
         </div>
         {isEdit && (
-          <Button
-            variant="ghost"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-red-600 hover:bg-red-50"
-          >
-            Excluir
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={handleDuplicate} disabled={saving || deleting}>
+              Duplicar
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-red-600 hover:bg-red-50"
+            >
+              Excluir
+            </Button>
+          </div>
         )}
       </div>
     </Modal>
