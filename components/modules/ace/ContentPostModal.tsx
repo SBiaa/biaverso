@@ -17,8 +17,17 @@ import {
   contentStatusLabels,
   contentPilarLabels,
 } from "@/lib/labels";
-import { addUtcDays, formatDateBR, parseDateOnly, toDateInputValue } from "@/lib/utils";
+import {
+  addUtcDays,
+  formatDateBR,
+  getMonthRange,
+  parseDateOnly,
+  toDateInputValue,
+  todayUtc,
+} from "@/lib/utils";
 import { ClientOptions } from "./ClientOptions";
+
+const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const typeOptions = Object.keys(postTypeLabels);
 const networkOptions = Object.keys(socialNetworkLabels);
@@ -261,6 +270,9 @@ export function ContentPostModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [duplicateDays, setDuplicateDays] = useState<Set<number>>(new Set());
+  const [duplicateUntil, setDuplicateUntil] = useState("");
   const [form, setForm] = useState(
     post
       ? formFromPost(post)
@@ -309,23 +321,57 @@ export function ContentPostModal({
     }
   }
 
-  // Copia o post para a semana seguinte — o jeito rápido de repetir um
-  // formato (ex.: "story de bastidores toda sexta") sem preencher tudo de novo.
+  function duplicateBaseDate() {
+    return (form.publishDate && parseDateOnly(form.publishDate)) || todayUtc();
+  }
+
+  // Abre o painel de repetição já com o dia de semana do post original marcado
+  // e limite até o fim do mês — cobre o caso comum ("story toda sexta") com um clique.
+  function openDuplicatePanel() {
+    if (!isEdit) return;
+    const base = duplicateBaseDate();
+    const { end } = getMonthRange(base);
+    setDuplicateDays(new Set([base.getUTCDay()]));
+    setDuplicateUntil(toDateInputValue(addUtcDays(end, -1)));
+    setDuplicateOpen(true);
+  }
+
+  function toggleDuplicateDay(day: number) {
+    setDuplicateDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return next;
+    });
+  }
+
+  // Todas as datas entre o dia seguinte ao post original e o limite escolhido
+  // cujo dia da semana está marcado — pode virar 1 data (equivalente ao duplicar
+  // antigo) ou uma série inteira (ex.: story todo dia até o fim do mês).
+  function duplicateDates(): string[] {
+    const until = duplicateUntil ? parseDateOnly(duplicateUntil) : null;
+    if (!until || duplicateDays.size === 0) return [];
+    const dates: string[] = [];
+    let cursor = addUtcDays(duplicateBaseDate(), 1);
+    while (cursor.getTime() <= until.getTime()) {
+      if (duplicateDays.has(cursor.getUTCDay())) dates.push(toDateInputValue(cursor));
+      cursor = addUtcDays(cursor, 1);
+    }
+    return dates;
+  }
+
   async function handleDuplicate() {
     if (!isEdit) return;
+    const dates = duplicateDates();
+    if (dates.length === 0) return;
     setSaving(true);
     setError(null);
 
-    const nextDate = form.publishDate
-      ? toDateInputValue(addUtcDays(parseDateOnly(form.publishDate)!, 7))
-      : "";
-
-    const payload = {
+    const basePayload = {
       title: form.title,
       type: form.type,
       network: form.network,
       status: "PLANEJADO",
-      publishDate: nextDate || null,
       completedAt: null,
       caption: form.caption,
       notes: form.notes,
@@ -335,13 +381,16 @@ export function ContentPostModal({
     };
 
     try {
-      await api.post("/api/ace/posts", payload);
+      await Promise.all(
+        dates.map((publishDate) => api.post("/api/ace/posts", { ...basePayload, publishDate })),
+      );
       router.refresh();
       notify(
-        nextDate
-          ? `Duplicado para ${formatDateBR(new Date(`${nextDate}T00:00:00Z`))}.`
-          : "Duplicado.",
+        dates.length === 1
+          ? `Duplicado para ${formatDateBR(new Date(`${dates[0]}T00:00:00Z`))}.`
+          : `Duplicado para ${dates.length} dias.`,
       );
+      setDuplicateOpen(false);
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -485,6 +534,64 @@ export function ContentPostModal({
 
       {post && <ImportedContentDetails post={post} />}
 
+      {isEdit && duplicateOpen && (
+        <div className="flex flex-col gap-2 rounded-md border border-border bg-hover/40 p-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+              Repetir nos dias
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setDuplicateDays(
+                  duplicateDays.size === 7 ? new Set() : new Set([0, 1, 2, 3, 4, 5, 6]),
+                )
+              }
+              className="text-xs text-accent hover:underline"
+            >
+              {duplicateDays.size === 7 ? "Limpar" : "Todo dia"}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {WEEKDAY_LABELS.map((label, day) => (
+              <label key={day} className="flex items-center gap-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={duplicateDays.has(day)}
+                  onChange={() => toggleDuplicateDay(day)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-text-secondary">até</p>
+            <input
+              type="date"
+              value={duplicateUntil}
+              onChange={(e) => setDuplicateUntil(e.target.value)}
+              className="rounded-md border border-border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleDuplicate}
+              disabled={saving || duplicateDates().length === 0}
+            >
+              Duplicar para {duplicateDates().length}{" "}
+              {duplicateDates().length === 1 ? "dia" : "dias"}
+            </Button>
+            <Button variant="ghost" onClick={() => setDuplicateOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+
       <ErrorNote message={error} />
 
       <div className="mt-2 flex items-center justify-between gap-2">
@@ -498,8 +605,12 @@ export function ContentPostModal({
         </div>
         {isEdit && (
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleDuplicate} disabled={saving || deleting}>
-              Duplicar
+            <Button
+              variant="secondary"
+              onClick={() => (duplicateOpen ? setDuplicateOpen(false) : openDuplicatePanel())}
+              disabled={saving || deleting}
+            >
+              {duplicateOpen ? "Fechar" : "Duplicar"}
             </Button>
             <Button
               variant="ghost"
