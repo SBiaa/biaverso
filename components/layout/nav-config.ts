@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   CalendarDays,
   Compass,
+  Droplet,
   FolderKanban,
   Gift,
   GraduationCap,
@@ -70,6 +71,7 @@ export const navGroups: NavGroup[] = [
       { href: "/desejos", label: "Lista de desejos", icon: Gift },
       { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
       { href: "/beleza", label: "Beleza", icon: Sparkles },
+      { href: "/ciclo", label: "Ciclo", icon: Droplet },
       // Coven, roda do ano, estudos e diário. Fica na Vida, e não na
       // Biblioteca, porque tem calendário e prazo — é rotina, não acervo.
       { href: "/espiritual", label: "Espiritual", icon: Moon },

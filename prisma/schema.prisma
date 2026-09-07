@@ -1986,3 +1986,56 @@ enum AltarCategory {
   IMAGEM
   OUTRO
 }
+
+// CICLO — registro menstrual, no espírito de um app tipo Flo.
+//
+// Só o fato do dia mora aqui: fluxo, sintomas, humor. Fase do ciclo, previsão
+// da próxima menstruação, ovulação e janela fértil são conta a partir do
+// histórico — o mesmo princípio de lib/astros.ts para a lua. Gravar a previsão
+// junto arriscaria mostrar uma data que não bate mais assim que um ciclo novo
+// muda a média; quem calcula é lib/ciclo-shared.ts, na hora.
+model CycleLog {
+  id        String         @id @default(cuid())
+  date      DateTime       @unique
+  /// Nulo = sem sangramento registrado no dia (só sintoma e/ou humor).
+  flow      CycleFlow?
+  symptoms  CycleSymptom[] @default([])
+  mood      CycleMood?
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([date])
+}
+
+enum CycleFlow {
+  BORRIFO
+  LEVE
+  MODERADO
+  INTENSO
+}
+
+enum CycleSymptom {
+  COLICA
+  DOR_CABECA
+  INCHACO
+  SENSIBILIDADE_MAMAS
+  ACNE
+  CANSACO
+  ENJOO
+  DOR_COSTAS
+  INSONIA
+  APETITE_AUMENTADO
+  LIBIDO_ALTA
+  OUTRO
+}
+
+enum CycleMood {
+  OTIMO
+  BEM
+  NORMAL
+  IRRITADA
+  SENSIVEL
+  ANSIOSA
+  TRISTE
+}

@@ -1035,3 +1035,18 @@ export const altarItemCreateSchema = z.object({
 export const altarItemPatchSchema = altarItemCreateSchema
   .partial()
   .extend({ runningLow: z.boolean().optional() });
+
+// ----------------------------------------------------------------- ciclo
+
+/**
+ * Registro de um dia do ciclo. Campo ausente = "não mexe" (para não apagar o
+ * que já estava salvo num PATCH parcial); `null` explícito limpa. `date` é
+ * sempre obrigatório: é ele que identifica o dia a gravar.
+ */
+export const cycleLogUpsertSchema = z.object({
+  date: dateOnly,
+  flow: z.enum(E.CycleFlow).nullish(),
+  symptoms: z.array(z.enum(E.CycleSymptom)).optional(),
+  mood: z.enum(E.CycleMood).nullish(),
+  notes: optionalText,
+});

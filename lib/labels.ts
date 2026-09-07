@@ -340,3 +340,42 @@ export const productCostModeLabels: Record<string, string> = {
   TEMPO: "minutos × valor/hora",
   INSUMO: "insumo da biblioteca",
 };
+
+export const cycleFlowLabels: Record<string, string> = {
+  BORRIFO: "Borrifo",
+  LEVE: "Leve",
+  MODERADO: "Moderado",
+  INTENSO: "Intenso",
+};
+
+export const cycleSymptomLabels: Record<string, string> = {
+  COLICA: "Cólica",
+  DOR_CABECA: "Dor de cabeça",
+  INCHACO: "Inchaço",
+  SENSIBILIDADE_MAMAS: "Sensibilidade nas mamas",
+  ACNE: "Acne",
+  CANSACO: "Cansaço",
+  ENJOO: "Enjoo",
+  DOR_COSTAS: "Dor nas costas",
+  INSONIA: "Insônia",
+  APETITE_AUMENTADO: "Apetite aumentado",
+  LIBIDO_ALTA: "Libido alta",
+  OUTRO: "Outro",
+};
+
+export const cycleMoodLabels: Record<string, string> = {
+  OTIMO: "Ótimo",
+  BEM: "Bem",
+  NORMAL: "Normal",
+  IRRITADA: "Irritada",
+  SENSIVEL: "Sensível",
+  ANSIOSA: "Ansiosa",
+  TRISTE: "Triste",
+};
+
+export const cyclePhaseLabels: Record<string, string> = {
+  MENSTRUAL: "Menstrual",
+  FOLICULAR: "Folicular",
+  OVULATORIA: "Ovulatória",
+  LUTEA: "Lútea",
+};
