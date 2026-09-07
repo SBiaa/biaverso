@@ -2,17 +2,19 @@ import Link from "next/link";
 import { CalendarPlus } from "lucide-react";
 import {
   getRecentWeekReviews,
-  getHabitMonthStats,
+  getMonthSummary,
   getBiggestBlockStats,
   getOrCreateMonthReview,
 } from "@/lib/avaliacao";
-import { todayUtc, formatMonthYearBR } from "@/lib/utils";
+import { getBusinessPeriodSummary } from "@/lib/avaliacao-negocios";
+import { todayUtc, formatMonthYearBR, getMonthRange } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
 import { EffectivenessTimeline } from "@/components/modules/avaliacao/EffectivenessTimeline";
-import { HabitProgressList } from "@/components/modules/avaliacao/HabitProgressList";
 import { BiggestBlocksSummary } from "@/components/modules/avaliacao/BiggestBlocksSummary";
+import { MonthSummaryCards } from "@/components/modules/avaliacao/MonthSummaryCards";
+import { BusinessPeriodSummaryCard } from "@/components/modules/avaliacao/BusinessPeriodSummary";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +23,11 @@ export default async function AvaliacaoDashboardPage() {
   const month = today.getUTCMonth() + 1;
   const year = today.getUTCFullYear();
 
-  const [recentWeeks, habitMonthStats, blockStats, monthReview] = await Promise.all([
+  const monthRange = getMonthRange(today);
+  const [recentWeeks, summary, businesses, blockStats, monthReview] = await Promise.all([
     getRecentWeekReviews(12),
-    getHabitMonthStats(today),
+    getMonthSummary(month, year),
+    getBusinessPeriodSummary(monthRange.start, monthRange.end),
     getBiggestBlockStats(8),
     getOrCreateMonthReview(month, year),
   ]);
@@ -55,17 +59,18 @@ export default async function AvaliacaoDashboardPage() {
 
           <Card>
             <h2 className="mb-3 text-base font-semibold text-text-primary">
-              Hábitos do mês
-            </h2>
-            <HabitProgressList items={habitMonthStats} />
-          </Card>
-
-          <Card>
-            <h2 className="mb-3 text-base font-semibold text-text-primary">
               Maiores travas (últimas 8 semanas)
             </h2>
             <BiggestBlocksSummary stats={blockStats} />
           </Card>
+
+          {/* O mesmo resumo da aba Mês, para o mês corrente: hábitos, casa,
+              humor e negócios. */}
+          <MonthSummaryCards summary={summary} />
+          <BusinessPeriodSummaryCard
+            title={`Negócios em ${formatMonthYearBR(month, year)}`}
+            businesses={businesses}
+          />
 
           <Card className="flex flex-col gap-3">
             <div className="flex items-center justify-between">

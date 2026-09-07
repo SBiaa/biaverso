@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { getWeekRange, getHabitWeekStats, getOrCreateWeekReview } from "@/lib/avaliacao";
-import { parseDateOnly, todayUtc } from "@/lib/utils";
+import { getBusinessPeriodSummary } from "@/lib/avaliacao-negocios";
+import { getTrends, weeklyBuckets } from "@/lib/avaliacao-tendencias";
+import { nextUtcDay, parseDateOnly, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
 import { WeekPicker } from "@/components/modules/avaliacao/WeekPicker";
 import { WeekReviewForm } from "@/components/modules/avaliacao/WeekReviewForm";
 import { HabitProgressList } from "@/components/modules/avaliacao/HabitProgressList";
+import { BusinessPeriodSummaryCard } from "@/components/modules/avaliacao/BusinessPeriodSummary";
+import { TrendsPanel } from "@/components/modules/avaliacao/TrendsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +27,11 @@ export default async function AvaliacaoSemanaPage({
     (params.week ? parseDateOnly(params.week) : null) ?? todayUtc();
   const { weekStart, weekEnd } = getWeekRange(referenceDate);
 
-  const [review, habitStats] = await Promise.all([
+  const [review, habitStats, businesses, trends] = await Promise.all([
     getOrCreateWeekReview(weekStart, weekEnd),
     getHabitWeekStats(weekStart, weekEnd),
+    getBusinessPeriodSummary(weekStart, nextUtcDay(weekEnd)),
+    getTrends(weeklyBuckets(weekStart)),
   ]);
 
   const monthHref = `/avaliacao/mes?month=${weekStart.getUTCMonth() + 1}&year=${weekStart.getUTCFullYear()}`;
@@ -52,6 +58,14 @@ export default async function AvaliacaoSemanaPage({
           </h2>
           <HabitProgressList items={habitStats} />
         </Card>
+
+        <BusinessPeriodSummaryCard title="Negócios na semana" businesses={businesses} />
+
+        <TrendsPanel
+          trends={trends}
+          periodNoun="a semana"
+          subtitle="Esta semana comparada com as 11 anteriores, semana a semana."
+        />
 
         <WeekReviewForm key={review.id} review={review} />
       </main>

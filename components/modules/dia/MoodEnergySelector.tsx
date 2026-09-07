@@ -4,9 +4,8 @@ import { ErrorNote } from "@/components/ui";
 import { useOptimisticValue } from "@/hooks/useOptimistic";
 import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
+import { moodScale } from "@/lib/labels";
 import type { Energy } from "@/app/generated/prisma/client";
-
-const MOODS = ["😔", "😕", "😐", "🙂", "😄"];
 
 const ENERGY_OPTIONS: { value: Energy; label: string }[] = [
   { value: "BAIXA", label: "Baixa" },
@@ -46,7 +45,7 @@ export function MoodEnergySelector({
           Como estou
         </p>
         <div className="flex gap-2">
-          {MOODS.map((emoji) => (
+          {moodScale.map((emoji) => (
             <button
               key={emoji}
               type="button"

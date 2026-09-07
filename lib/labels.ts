@@ -70,6 +70,17 @@ export const clientStatusLabels: Record<string, string> = {
 
 export const starsValues = ["UM", "DOIS", "TRES", "QUATRO", "CINCO"];
 
+/**
+ * Escala de humor do dia, do pior ao melhor. A posição é o que vale: o seletor
+ * do /dia grava o emoji, e a revisão do mês lê a posição como nota de 1 a 5.
+ */
+export const moodScale = ["😔", "😕", "😐", "🙂", "😄"] as const;
+
+export const dayTypeLabels: Record<string, string> = {
+  NORMAL: "Dia normal",
+  FAXINA: "Dia de faxina",
+};
+
 export const energyLabels: Record<string, string> = {
   BAIXA: "Baixa",
   MEDIA: "Média",
