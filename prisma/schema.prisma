@@ -239,18 +239,52 @@ enum EventCategory {
 
 // CARDÁPIO E RECEITAS
 model Recipe {
-  id          String         @id @default(cuid())
-  title       String
-  description String?
-  category    RecipeCategory
-  ingredients String
-  steps       String
-  prepTime    Int?
-  imageUrl    String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  mealPlans   MealPlan[]
-  mealLogs    MealLog[]
+  id              String             @id @default(cuid())
+  title           String
+  description     String?
+  // Lista, não valor único: a mesma receita serve de almoço e de janta, ou de
+  // café e de lanche. A grade usa isto só para sugerir, não para restringir.
+  categories      RecipeCategory[]   @default([])
+  // Texto livre que existia antes dos itens ligados à despensa. Fica opcional
+  // para as receitas antigas continuarem legíveis até serem convertidas.
+  ingredientsText String?
+  steps           String
+  prepTime        Int?
+  imageUrl        String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  mealPlans       MealPlan[]
+  mealLogs        MealLog[]
+  items           RecipeIngredient[]
+}
+
+// DESPENSA
+// Um ingrediente existe uma vez só e é compartilhado entre receitas: é isso
+// que permite marcar "tem em casa" num lugar e ver, em cada receita e na
+// semana planejada, o que falta comprar.
+model Ingredient {
+  id        String             @id @default(cuid())
+  name      String             @unique
+  inStock   Boolean            @default(false)
+  notes     String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  recipes   RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  id           String     @id @default(cuid())
+  recipeId     String
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  // Texto livre ("2 xícaras", "a gosto"): quantidade estruturada não paga a
+  // conversão de unidade que exigiria.
+  quantity     String?
+  position     Int        @default(0)
+
+  @@unique([recipeId, ingredientId])
+  @@index([ingredientId])
 }
 
 enum RecipeCategory {

@@ -90,13 +90,31 @@ export const routinePatchSchema = z.object({
 });
 
 // -------------------------------------------------------------- cardápio
+/** Um ingrediente da receita, pelo nome: o servidor acha (ou cria) na despensa. */
+export const recipeItemSchema = z.object({
+  name: text,
+  quantity: optionalText,
+});
+
 export const recipeSchema = z.object({
   title: text,
-  category: z.enum(E.RecipeCategory),
+  categories: z.array(z.enum(E.RecipeCategory)).min(1, "escolha pelo menos uma refeição"),
   description: optionalText,
-  ingredients: text,
+  ingredientsText: optionalText,
+  items: z.array(recipeItemSchema).default([]),
   steps: text,
   prepTime: z.coerce.number().int().positive().nullish(),
+});
+
+export const ingredientCreateSchema = z.object({
+  name: text,
+  inStock: z.boolean().default(false),
+  notes: optionalText,
+});
+export const ingredientPatchSchema = z.object({
+  name: text.optional(),
+  inStock: z.boolean().optional(),
+  notes: z.string().trim().nullable().optional(),
 });
 
 export const mealPlanSchema = z.object({

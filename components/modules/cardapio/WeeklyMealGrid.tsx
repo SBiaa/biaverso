@@ -11,11 +11,11 @@ import {
   todayIndexInWeek,
 } from "@/lib/cardapio";
 import { mealTypeLabels } from "@/lib/labels";
-import { RecipePickerModal } from "./RecipePickerModal";
+import { RecipePickerModal, type PickerRecipe } from "./RecipePickerModal";
 
 const MEAL_TYPES = ["CAFE_DA_MANHA", "ALMOCO", "JANTAR"] as const;
 
-type Recipe = { id: string; title: string; category: string };
+type Recipe = PickerRecipe;
 
 type PlanEntry = {
   dayOfWeek: number;
@@ -114,6 +114,9 @@ export function WeeklyMealGrid({
         mealType: slot.mealType,
         recipeId,
       });
+      // A lista de compras logo abaixo é calculada no servidor a partir do
+      // plano: sem isto ela só acompanhava a grade depois de recarregar.
+      router.refresh();
     } catch (e) {
       setPlan(previous);
       setError(errorMessage(e));
@@ -175,6 +178,7 @@ export function WeeklyMealGrid({
       {active && (
         <RecipePickerModal
           recipes={recipes}
+          mealType={active.mealType}
           onSelect={handleSelect}
           onClose={() => setActive(null)}
         />
