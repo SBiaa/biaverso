@@ -43,6 +43,7 @@ import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
 import { ProjectGrid } from "@/components/modules/projetos/ProjectGrid";
 import { ProjectFilterBar } from "@/components/modules/projetos/ProjectFilterBar";
 import { getProjectsOverview } from "@/lib/projects";
+import { getClientColor } from "@/lib/client-visuals";
 import { projectSortOptions, type ProjectSort } from "@/lib/projects-shared";
 import {
   contentStatusLabels,
@@ -267,6 +268,7 @@ export default async function BusinessDetailPage({
           statusLabel: contentStatusLabels[p.status],
           statusColor: contentStatusColors[p.status],
           clientName: p.client?.name ?? null,
+          clientColor: p.client ? getClientColor(p.client) : null,
           overdue: isPostOverdue(p),
           record: toPostRecord(p),
         })),
@@ -280,6 +282,7 @@ export default async function BusinessDetailPage({
           statusLabel: productionStatusLabels[t.status],
           statusColor: productionStatusColors[t.status],
           clientName: t.client?.name ?? null,
+          clientColor: t.client ? getClientColor(t.client) : null,
           overdue: isTaskOverdue(t),
           record: toTaskRecord(t),
         })),
@@ -340,6 +343,7 @@ export default async function BusinessDetailPage({
           title: p.title,
           typeLabel: postTypeLabels[p.type],
           clientName: p.client?.name ?? null,
+          clientColor: p.client ? getClientColor(p.client) : null,
           date: p.publishDate ? p.publishDate.toISOString() : null,
           overdue: isPostOverdue(p),
           column,
@@ -355,6 +359,7 @@ export default async function BusinessDetailPage({
           title: t.title,
           typeLabel: productionTypeLabels[t.type],
           clientName: t.client?.name ?? null,
+          clientColor: t.client ? getClientColor(t.client) : null,
           date: t.dueDate ? t.dueDate.toISOString() : null,
           overdue: isTaskOverdue(t),
           column,

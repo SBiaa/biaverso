@@ -5,10 +5,14 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Button, CardTitle, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
+import { cn } from "@/lib/utils";
+import { CLIENT_COLORS, autoClientColor, getClientColor } from "@/lib/client-visuals";
 
 type Client = {
   id: string;
   name: string;
+  /** Nula = cor automática, derivada do nome. */
+  color: string | null;
   email: string | null;
   phone: string | null;
   instagram: string | null;
@@ -25,6 +29,7 @@ export function ClientContactForm({ client }: { client: Client }) {
     phone: client.phone ?? "",
     instagram: client.instagram ?? "",
     notes: client.notes ?? "",
+    color: client.color ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +71,15 @@ export function ClientContactForm({ client }: { client: Client }) {
         <p className="text-sm text-text-secondary">Telefone: {client.phone ?? "—"}</p>
         <p className="text-sm text-text-secondary">
           Instagram: {client.instagram ?? "—"}
+        </p>
+        <p className="flex items-center gap-1.5 text-sm text-text-secondary">
+          Cor no calendário:
+          <span
+            aria-hidden
+            className="inline-block size-3.5 rounded-full"
+            style={{ backgroundColor: getClientColor(client) }}
+          />
+          {client.color ? null : <span className="text-xs">(automática)</span>}
         </p>
         {client.notes && (
           <p className="text-sm text-text-secondary">Notas: {client.notes}</p>
@@ -115,6 +129,44 @@ export function ClientContactForm({ client }: { client: Client }) {
         className={inputClass}
       />
 
+      <div>
+        <p className="mb-1.5 text-xs font-medium text-text-secondary">Cor no calendário</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {CLIENT_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              aria-label={`Cor ${color}`}
+              onClick={() => update("color", color)}
+              className={cn(
+                "size-7 rounded-full ring-offset-2 ring-offset-surface",
+                form.color.toLowerCase() === color.toLowerCase() && "ring-2 ring-accent",
+              )}
+              style={{ backgroundColor: color }}
+            />
+          ))}
+          {/* Qualquer outra cor, fora da paleta. */}
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-text-secondary">
+            <input
+              type="color"
+              value={form.color || autoClientColor(form.name || client.name)}
+              onChange={(e) => update("color", e.target.value)}
+              className="size-7 cursor-pointer rounded-full border-0 bg-transparent p-0"
+            />
+            Outra
+          </label>
+          {form.color && (
+            <button
+              type="button"
+              onClick={() => update("color", "")}
+              className="text-xs text-text-secondary underline-offset-2 hover:underline"
+            >
+              Voltar pra automática
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="flex gap-2">
         <Button onClick={save} disabled={saving || !form.name.trim()}>
           Salvar
@@ -129,6 +181,7 @@ export function ClientContactForm({ client }: { client: Client }) {
               phone: client.phone ?? "",
               instagram: client.instagram ?? "",
               notes: client.notes ?? "",
+              color: client.color ?? "",
             });
           }}
         >

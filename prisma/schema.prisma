@@ -82,25 +82,25 @@ model WaterLog {
 }
 
 model Task {
-  id         String    @id @default(cuid())
-  title      String
-  done       Boolean   @default(false)
-  type       TaskType  @default(AVULSA)
-  origin     Origin    @default(PESSOAL)
-  dueDate    DateTime?
-  order      Int       @default(0)
-  createdAt  DateTime  @default(now())
+  id          String    @id @default(cuid())
+  title       String
+  done        Boolean   @default(false)
+  type        TaskType  @default(AVULSA)
+  origin      Origin    @default(PESSOAL)
+  dueDate     DateTime?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
   // Quando foi concluída — igual ProductionTask e CollectionTask, que já
   // tinham. Sem isto, marcar como feita não deixava rastro de quando, e um
   // projeto tocado ontem parecia parado para o radar. Nulo em tudo que foi
   // concluído antes deste campo existir: não dá para inventar a data.
   completedAt DateTime?
-  dayId      String?
-  day        Day?      @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  businessId String?
-  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
-  projectId  String?
-  project    Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  dayId       String?
+  day         Day?      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  businessId  String?
+  business    Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   // Cópia de rotina: aponta para o template que a gerou. Sem isso a cópia só
   // podia ser reconhecida pelo título, e renomear um template duplicava a
@@ -111,18 +111,18 @@ model Task {
 
   subtasks Subtask[]
 
-  @@index([dayId])
-  @@index([businessId])
-  @@index([projectId])
-  @@index([templateId])
-  // Templates de rotina são as tarefas com dayId nulo.
-  @@index([type, dayId])
   // Uma cópia de cada rotina por dia. Sem isto, dois carregamentos simultâneos
   // do /dia materializavam o mesmo template duas vezes e a lista aparecia
   // duplicada, sem nada acusando o erro. No Postgres nulo não conflita com
   // nulo, então templates (dayId nulo) e tarefas avulsas (templateId nulo)
   // continuam livres.
   @@unique([dayId, templateId])
+  @@index([dayId])
+  @@index([businessId])
+  @@index([projectId])
+  @@index([templateId])
+  // Templates de rotina são as tarefas com dayId nulo.
+  @@index([type, dayId])
 }
 
 enum TaskType {
@@ -514,17 +514,17 @@ enum PayMethod {
 }
 
 model FixedBill {
-  id     String        @id @default(cuid())
-  name   String
-  amount Float
-  dueDay Int
-  type   FixedBillType
+  id            String         @id @default(cuid())
+  name          String
+  amount        Float
+  dueDay        Int
+  type          FixedBillType
   // Conta paga no cartão entra sozinha na fatura do mês — não precisa (nem deve)
   // ter um CreditCardEntry manual, senão o valor conta duas vezes.
-  paymentMethod PayMethod @default(PIX_DEBITO)
-  active        Boolean   @default(true)
+  paymentMethod PayMethod      @default(PIX_DEBITO)
+  active        Boolean        @default(true)
   notes         String?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime       @default(now())
   monthlyLogs   FixedBillLog[]
 
   @@index([active, paymentMethod])
@@ -537,18 +537,18 @@ enum FixedBillType {
 }
 
 model FixedBillLog {
-  id          String     @id @default(cuid())
-  month       Int
-  year        Int
+  id             String     @id @default(cuid())
+  month          Int
+  year           Int
   // Data real do vencimento naquele mês (gerada a partir de FixedBill.dueDay).
-  dueDate     DateTime
-  status      BillStatus @default(PENDENTE)
+  dueDate        DateTime
+  status         BillStatus @default(PENDENTE)
   // Valor só daquele mês, quando difere do padrão da conta (reajuste, consumo
   // variável). Nulo = usa FixedBill.amount.
   amountOverride Float?
-  paidAt      DateTime?
-  fixedBillId String
-  fixedBill   FixedBill  @relation(fields: [fixedBillId], references: [id], onDelete: Cascade)
+  paidAt         DateTime?
+  fixedBillId    String
+  fixedBill      FixedBill  @relation(fields: [fixedBillId], references: [id], onDelete: Cascade)
 
   @@unique([fixedBillId, month, year])
   @@index([year, month, status])
@@ -852,6 +852,10 @@ model Client {
   phone         String?
   instagram     String?
   notes         String?
+  /// Cor da clienta no calendário e nos cards do Ace. Nula = cor automática,
+  /// derivada do nome (ver lib/client-visuals.ts) — assim cada uma já nasce
+  /// diferente das outras sem ninguém precisar escolher.
+  color         String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   businessLinks ClientBusiness[]
@@ -902,7 +906,7 @@ model ContentPost {
   objective    String?
   hook         String?
   cta          String?
-  hashtags     String[] @default([])
+  hashtags     String[]      @default([])
   slides       Json?
   script       Json?
   visualBrief  Json?
@@ -1143,20 +1147,20 @@ enum CollectionStatus {
 // Aqui mora a BASE (o item físico e o que custa produzir uma unidade). A arte
 // aplicada e o preço daquela temporada ficam no CollectionProduct.
 model Product {
-  id          String  @id @default(cuid())
-  name        String
-  description String?
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
   // Agrupador livre para filtrar a lista: "Canecas", "Vestuário", "Decoração".
-  category    String?
-  imageUrl    String?
+  category     String?
+  imageUrl     String?
   // Preço de venda padrão. Cada coleção pode sobrescrever.
-  basePrice   Float?
+  basePrice    Float?
   // Margem desejada deste produto, em %. Sem valor, usa a das configurações.
   targetMargin Float?
-  active      Boolean @default(true)
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active       Boolean  @default(true)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Nulo = produto disponível para qualquer negócio (o caso normal).
   businessId String?
@@ -1180,13 +1184,13 @@ model Product {
 // produto que usa transfer recalcula a margem sozinho. Sem isso, o mesmo número
 // estaria copiado à mão em oito produtos e nenhum ficaria certo por muito tempo.
 model Material {
-  id   String  @id @default(cuid())
-  name String
+  id           String   @id @default(cuid())
+  name         String
   // A unidade que o produto consome: "folha", "metro", "ml", "un".
-  unit String?
+  unit         String?
   // Como você compra: preço do pacote e quantas unidades vêm nele.
   packPrice    Float
-  packQuantity Float   @default(1)
+  packQuantity Float    @default(1)
   supplier     String?
   notes        String?
   createdAt    DateTime @default(now())
@@ -1203,16 +1207,16 @@ model Material {
 // tempo, a taxa da maquininha. Lista aberta em vez de campos fixos porque cada
 // produto tem uma composição diferente — chinelo não tem sublimação de caneca.
 model ProductCostItem {
-  id    String          @id @default(cuid())
-  label String
-  kind  ProductCostKind @default(MATERIAL)
-  mode  ProductCostMode @default(FIXO)
+  id        String          @id @default(cuid())
+  label     String
+  kind      ProductCostKind @default(MATERIAL)
+  mode      ProductCostMode @default(FIXO)
   // O que `amount` significa depende do modo: reais (FIXO), porcentagem do
   // preço de venda (PERCENTUAL), minutos de trabalho (TEMPO) ou quantas
   // unidades do insumo a peça consome (INSUMO).
-  amount Float
-  order  Int      @default(0)
-  createdAt DateTime @default(now())
+  amount    Float
+  order     Int             @default(0)
+  createdAt DateTime        @default(now())
 
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -1248,7 +1252,7 @@ enum ProductCostMode {
 // Sem unique em (collectionId, productId): a mesma caneca aparece várias vezes
 // na coleção, uma por arte ("Caneca Rick", "Caneca Morty").
 model CollectionProduct {
-  id String @id @default(cuid())
+  id          String   @id @default(cuid())
   // Nome da peça nesta coleção ("Caneca Rick"). Vazio = usa o nome da base.
   name        String?
   description String?
@@ -1256,12 +1260,12 @@ model CollectionProduct {
   notes       String?
   // Preço nesta coleção. Nulo = herda o basePrice do produto, então reajustar
   // a base propaga para todas as coleções que não pediram preço próprio.
-  price     Float?
+  price       Float?
   // Custo que só existe nesta peça: arte exclusiva, tag bordada, embalagem
   // especial. Soma ao custo da base em vez de substituí-lo.
-  extraCost Float?
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  extraCost   Float?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
 
   collectionId String
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
@@ -1553,20 +1557,20 @@ enum MoodboardType {
 
 // PREFERÊNCIAS DO APP — registro único (id fixo USER_SETTINGS_ID).
 model UserSettings {
-  id          String   @id
+  id           String   @id
   // Quantas garrafas/copos por dia e quantos ml cada um tem.
-  waterGoal   Int      @default(8)
-  waterUnitMl Int      @default(300)
+  waterGoal    Int      @default(8)
+  waterUnitMl  Int      @default(300)
   // Quanto vale uma hora do seu trabalho — vira o custo dos itens em modo
   // TEMPO. Nulo = você ainda não definiu, e o app avisa em vez de contar zero.
-  hourlyRate  Float?
+  hourlyRate   Float?
   // Margem de lucro desejada, em %. Base do preço sugerido no catálogo.
-  targetMargin Float   @default(60)
+  targetMargin Float    @default(60)
   /// Cor de destaque do app, em hexadecimal. As variações (fundo do item
   /// selecionado, hover do botão, cor do texto por cima) saem desta.
-  accentColor String   @default("#6366f1")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  accentColor  String   @default("#6366f1")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // BELEZA E AUTOCUIDADO
@@ -1803,17 +1807,17 @@ enum ProductCategory {
 
 // ENCONTROS — do coven inteiro ou a sós com a mestre.
 model CovenMeeting {
-  id      String           @id @default(cuid())
-  title   String
-  kind    CovenMeetingKind @default(COVEN)
-  date    DateTime
-  time    String?
-  endTime String?
-  place   String?
+  id       String           @id @default(cuid())
+  title    String
+  kind     CovenMeetingKind @default(COVEN)
+  date     DateTime
+  time     String?
+  endTime  String?
+  place    String?
   /// O que ela quer tratar, escrito antes: dúvidas, o que levar.
-  agenda  String?
+  agenda   String?
   /// O que ficou depois — o que foi dito, o que ela sentiu.
-  notes   String?
+  notes    String?
   /// Nulo enquanto o encontro não chegou; depois, se foi ou não.
   attended Boolean?
 
@@ -1956,14 +1960,14 @@ enum DivinationMethod {
 
 // ALTAR — ervas, cristais, velas e ferramentas que ela tem em casa.
 model AltarItem {
-  id       String        @id @default(cuid())
-  name     String
-  category AltarCategory @default(ERVA)
+  id         String        @id @default(cuid())
+  name       String
+  category   AltarCategory @default(ERVA)
   /// Quanto tem, em texto: "meio pote", "3 velas brancas". Número não serviria
   /// para erva a granel, e a régua aqui é o olho, não a balança.
-  quantity String?
+  quantity   String?
   /// Marcado na mão quando está no fim — o app não tem como medir o pote.
-  runningLow Boolean @default(false)
+  runningLow Boolean       @default(false)
   /// Para que serve: proteção, prosperidade, limpeza.
   properties String?
   notes      String?

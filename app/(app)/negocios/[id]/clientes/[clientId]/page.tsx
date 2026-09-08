@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
 import { BusinessBadge, Card, CardTitle } from "@/components/ui";
-import { getInitials } from "@/lib/utils";
+import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
 import { getMonthlyHistory, getPendingItems, toPostRecord, toTaskRecord } from "@/lib/ace";
 import { ProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ProjectsSection";
 import { MonthlyHistorySection } from "@/components/modules/ace/MonthlyHistorySection";
@@ -85,9 +85,7 @@ export default async function AceClientProfilePage({
       />
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Card className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-lg font-semibold text-accent">
-            {getInitials(client.name)}
-          </div>
+          <ClientAvatar client={client} size="lg" />
           <div>
             <p className="text-lg font-semibold text-text-primary">{client.name}</p>
             <div className="mt-1 flex flex-wrap gap-1">

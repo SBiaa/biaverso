@@ -6,7 +6,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { BusinessBadge, Card, CardTitle } from "@/components/ui";
 import { ClientContactForm } from "@/components/modules/clientes/ClientContactForm";
 import { ClientBusinessLinks } from "@/components/modules/clientes/ClientBusinessLinks";
-import { getInitials } from "@/lib/utils";
+import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export default async function ClientDetailPage({
       select: {
         id: true,
         name: true,
+        color: true,
         email: true,
         phone: true,
         instagram: true,
@@ -65,9 +66,7 @@ export default async function ClientDetailPage({
         </Link>
 
         <Card className="flex items-center gap-4">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent/10 text-lg font-semibold text-accent">
-            {getInitials(client.name)}
-          </div>
+          <ClientAvatar client={client} size="lg" />
           <div className="min-w-0">
             <p className="text-lg font-semibold text-text-primary">{client.name}</p>
             <div className="mt-1 flex flex-wrap gap-1">

@@ -14,6 +14,8 @@ export type KanbanItem = {
   typeLabel: string;
   /** Null = item interno do negócio, sem cliente do outro lado. */
   clientName: string | null;
+  /** Cor efetiva da clienta; null quando interno. */
+  clientColor: string | null;
   date: string | null;
   overdue: boolean;
   column: string;
@@ -59,10 +61,16 @@ export function KanbanBoard({
                         <span
                           className={cn(
                             "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                            item.clientName
-                              ? "bg-accent/10 text-accent"
-                              : "bg-violet-100 text-violet-700",
+                            !item.clientName && "bg-violet-100 text-violet-700",
                           )}
+                          style={
+                            item.clientColor
+                              ? {
+                                  color: item.clientColor,
+                                  backgroundColor: `color-mix(in srgb, ${item.clientColor} 14%, transparent)`,
+                                }
+                              : undefined
+                          }
                         >
                           {item.clientName ?? "Interno"}
                         </span>

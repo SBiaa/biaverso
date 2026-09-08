@@ -196,6 +196,7 @@ export function toTaskRecord(task: {
 export type ClientOverview = {
   id: string;
   name: string;
+  color: string | null;
   activeProjectCount: number;
   nextDelivery: { date: string; title: string; kind: AceItemKind } | null;
 };

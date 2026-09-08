@@ -29,9 +29,19 @@ export type CalendarItem = {
   statusColor: string;
   /** Null = item interno do negócio, sem cliente do outro lado. */
   clientName: string | null;
+  /** Cor efetiva da clienta (escolhida ou automática); null quando interno. */
+  clientColor: string | null;
   overdue: boolean;
   record: PostRecord | TaskRecord;
 };
+
+/** Fundo e borda do card na cor da clienta — a mistura deixa o texto legível em qualquer tema. */
+function clientCardStyle(color: string) {
+  return {
+    borderLeftColor: color,
+    backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`,
+  };
+}
 
 type CreatingState = { kind: "post" | "task"; date: string | null };
 
@@ -61,8 +71,13 @@ function ItemCard({ item, onOpen }: { item: CalendarItem; onOpen: () => void }) 
     data: { item },
   });
 
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+  const style = {
+    ...(transform ? { transform: CSS.Translate.toString(transform) } : {}),
+    ...(item.clientColor ? clientCardStyle(item.clientColor) : {}),
+  };
 
+  // Item de clienta: o card é da cor dela e o status vira uma etiqueta pequena.
+  // Item interno: continua pintado pelo status, como sempre foi.
   return (
     <button
       ref={setNodeRef}
@@ -72,14 +87,21 @@ function ItemCard({ item, onOpen }: { item: CalendarItem; onOpen: () => void }) 
       type="button"
       onClick={onOpen}
       className={cn(
-        "flex touch-none cursor-grab flex-col items-start rounded px-1.5 py-1 text-left text-[11px] leading-tight active:cursor-grabbing",
-        item.statusColor,
+        "flex touch-none cursor-grab flex-col items-start gap-0.5 rounded px-1.5 py-1 text-left text-[11px] leading-tight active:cursor-grabbing",
+        item.clientColor ? "border-l-[3px] text-text-primary" : item.statusColor,
         isDragging && "relative z-20 opacity-60 shadow-md",
       )}
     >
       <span className="line-clamp-2 font-medium">{item.title}</span>
       {item.clientName ? (
-        <span className="opacity-80">{item.clientName}</span>
+        <span className="flex w-full flex-wrap items-center justify-between gap-x-1">
+          <span className="font-medium" style={{ color: item.clientColor ?? undefined }}>
+            {item.clientName}
+          </span>
+          <span className={cn("rounded-sm px-1 text-[9px] font-medium", item.statusColor)}>
+            {item.statusLabel}
+          </span>
+        </span>
       ) : (
         <span className="rounded-sm bg-black/10 px-1 text-[10px] font-semibold uppercase tracking-wide">
           Interno
@@ -362,7 +384,14 @@ export function CalendarBoard({
                           {item.title}
                         </span>
                         {item.clientName && (
-                          <span className="shrink-0 text-xs text-text-secondary">{item.clientName}</span>
+                          <span className="flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
+                            <span
+                              aria-hidden
+                              className="size-2 rounded-full"
+                              style={{ backgroundColor: item.clientColor ?? undefined }}
+                            />
+                            {item.clientName}
+                          </span>
                         )}
                         {item.overdue && <AttentionBadge level="atrasado">Atrasado</AttentionBadge>}
                       </button>

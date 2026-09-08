@@ -331,6 +331,13 @@ export const clientCreateSchema = z.object({
   phone: optionalText,
   instagram: optionalText,
   notes: optionalText,
+  // Cor no calendário. Só hexadecimal, porque vai direto num `style` do card.
+  // Vazio/nulo = volta pra cor automática.
+  color: z
+    .string()
+    .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Use uma cor em hexadecimal.")
+    .nullish()
+    .or(z.literal("").transform(() => null)),
   // O cadastro global cria o cliente solto ou já ligado a vários negócios; o
   // form de dentro do negócio continua mandando um `businessId` só. Os dois
   // caminhos são aceitos e a rota junta tudo.

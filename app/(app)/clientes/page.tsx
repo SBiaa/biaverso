@@ -5,7 +5,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card, BusinessBadge, StatCard } from "@/components/ui";
 import { NewClientForm } from "@/components/modules/clientes/NewClientForm";
 import { ClientFilterBar } from "@/components/modules/clientes/ClientFilterBar";
-import { getInitials } from "@/lib/utils";
+import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +42,7 @@ export default async function ClientesPage({
       select: {
         id: true,
         name: true,
+        color: true,
         email: true,
         phone: true,
         instagram: true,
@@ -102,9 +103,7 @@ export default async function ClientesPage({
                 <Link key={client.id} href={`/clientes/${client.id}`}>
                   <Card className="flex flex-wrap items-center justify-between gap-3 transition-colors hover:bg-hover">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-semibold text-accent">
-                        {getInitials(client.name)}
-                      </div>
+                      <ClientAvatar client={client} />
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-text-primary">
                           {client.name}

@@ -69,6 +69,7 @@ export async function getClientsOverview(
     return {
       id: client.id,
       name: client.name,
+      color: client.color,
       activeProjectCount: client.projects.filter((p) => p.status === "EM_ANDAMENTO").length,
       nextDelivery: upcoming
         ? { date: upcoming.date.toISOString(), title: upcoming.title, kind: upcoming.kind }
@@ -246,15 +247,15 @@ export const taskRecordSelect = {
   projectId: true,
 } satisfies Prisma.ProductionTaskSelect;
 
-// Das telas que mostram o cliente ao lado do item, só o nome é lido.
+// Das telas que mostram o cliente ao lado do item, só nome e cor são lidos.
 export const postWithClientSelect = {
   ...postRecordSelect,
-  client: { select: { name: true } },
+  client: { select: { name: true, color: true } },
 } satisfies Prisma.ContentPostSelect;
 
 export const taskWithClientSelect = {
   ...taskRecordSelect,
-  client: { select: { name: true } },
+  client: { select: { name: true, color: true } },
 } satisfies Prisma.ProductionTaskSelect;
 
 /**
