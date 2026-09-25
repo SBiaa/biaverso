@@ -23,6 +23,7 @@ import {
 import { Card, CardTitle, MonthPicker, StatCard } from "@/components/ui";
 import {
   getClientsOverview,
+  getProspectsOverview,
   getKanbanColumn,
   isPostOverdue,
   isTaskOverdue,
@@ -147,8 +148,11 @@ export default async function BusinessDetailPage({
       />
     );
   } else if (tab === "clientes") {
-    const overview = await getClientsOverview(id, sp.status);
-    content = <ClientesTab businessId={id} clients={overview} />;
+    const [overview, prospects] = await Promise.all([
+      getClientsOverview(id, sp.status),
+      getProspectsOverview(id),
+    ]);
+    content = <ClientesTab businessId={id} clients={overview} prospects={prospects} />;
   } else if (tab === "interno") {
     const [internalProjects, loosePosts, looseTasks] = await Promise.all([
       prisma.project.findMany({

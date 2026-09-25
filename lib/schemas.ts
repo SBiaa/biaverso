@@ -343,13 +343,29 @@ export const clientCreateSchema = z.object({
   // caminhos são aceitos e a rota junta tudo.
   businessId: optionalId,
   businessIds: z.array(id).optional(),
+  // Status aplicado ao(s) vínculo(s) criado(s) agora — o quadro de prospecção
+  // cadastra já como PROSPECT. Ausente = ATIVO, o padrão de sempre.
+  status: z.enum(E.ClientStatus).optional(),
+  source: z.enum(E.LeadSource).nullish(),
 });
 export const clientPatchSchema = clientCreateSchema
-  .omit({ businessId: true, businessIds: true })
+  .omit({ businessId: true, businessIds: true, status: true, source: true })
   .partial();
 
 export const businessLinkSchema = z.object({ businessId: id });
-export const clientBusinessPatchSchema = z.object({ status: z.enum(E.ClientStatus) });
+// Convenção de PATCH ausente-não-mexe vale aqui também: o quadro de
+// prospecção manda só o que mudou (etapa, sem tocar em status; ou os dois
+// juntos ao ganhar/perder).
+export const clientBusinessPatchSchema = z.object({
+  status: z.enum(E.ClientStatus).optional(),
+  prospectStage: z.enum(E.ProspectStage).nullish(),
+  source: z.enum(E.LeadSource).nullish(),
+  nextFollowUpAt: dateOnly.nullish(),
+  lastContactAt: dateOnly.nullish(),
+  proposalValue: money.nullish(),
+  lostReason: optionalText,
+  notes: optionalText,
+});
 
 export const projectCreateSchema = z.object({
   name: text,

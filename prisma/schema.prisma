@@ -875,14 +875,47 @@ model ClientBusiness {
   clientId   String
   client     Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
+  /// Pipeline de prospecção. Só faz sentido enquanto `status = PROSPECT`, mas o
+  /// valor fica gravado depois de virar cliente ou de ser perdido — assim dá
+  /// pra medir de onde vêm os fechamentos sem precisar de outra tabela.
+  prospectStage  ProspectStage?
+  source         LeadSource?
+  nextFollowUpAt DateTime?
+  lastContactAt  DateTime?
+  proposalValue  Float?
+  lostReason     String?
+
   @@unique([clientId, businessId])
   @@index([businessId, status])
+  @@index([businessId, nextFollowUpAt])
 }
 
 enum ClientStatus {
+  PROSPECT
   ATIVO
   PAUSADO
   INATIVO
+}
+
+/// Etapas do pipeline de prospecção de um `ClientBusiness`. As quatro primeiras
+/// são as colunas do quadro; GANHO/PERDIDO são o desfecho — quando chegam lá o
+/// `status` já mudou para ATIVO/INATIVO e o cartão sai do quadro sozinho.
+enum ProspectStage {
+  NOVO_CONTATO
+  CONTATO_FEITO
+  PROPOSTA_ENVIADA
+  NEGOCIACAO
+  GANHO
+  PERDIDO
+}
+
+enum LeadSource {
+  INDICACAO
+  PROSPECCAO_ATIVA
+  INSTAGRAM
+  SITE
+  EVENTO
+  OUTRO
 }
 
 // CRONOGRAMA DE CONTEÚDO E PRODUÇÃO

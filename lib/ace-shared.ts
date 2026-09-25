@@ -201,6 +201,25 @@ export type ClientOverview = {
   nextDelivery: { date: string; title: string; kind: AceItemKind } | null;
 };
 
+/** Um cartão do quadro de prospecção — o `ClientBusiness` com status PROSPECT. */
+export type ProspectOverview = {
+  linkId: string;
+  clientId: string;
+  name: string;
+  color: string | null;
+  email: string | null;
+  phone: string | null;
+  instagram: string | null;
+  stage: string;
+  source: string | null;
+  nextFollowUpAt: string | null;
+  lastContactAt: string | null;
+  proposalValue: number | null;
+  notes: string | null;
+  /** Desde quando é prospect deste negócio. */
+  joinedAt: string;
+};
+
 export type PendingItem = {
   id: string;
   kind: AceItemKind;

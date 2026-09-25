@@ -3,16 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Link2Off } from "lucide-react";
-import { BusinessBadge, Button, ErrorNote, IconButton } from "@/components/ui";
+import { AttentionBadge, attentionFromDueDate, BusinessBadge, Button, ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { clientStatusLabels } from "@/lib/labels";
-import { formatDateBR } from "@/lib/utils";
+import { clientStatusLabels, leadSourceLabels, prospectStageLabels } from "@/lib/labels";
+import { formatDateBR, todayUtc } from "@/lib/utils";
 
 type Link = {
   id: string;
   businessId: string;
   status: string;
   joinedAt: string;
+  prospectStage: string | null;
+  nextFollowUpAt: string | null;
+  source: string | null;
   business: { name: string; color: string };
 };
 
@@ -97,36 +100,53 @@ export function ClientBusinessLinks({
       )}
 
       {items.map((link) => (
-        <div key={link.id} className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <BusinessBadge business={link.business} />
-            <span className="text-xs text-text-secondary">
-              desde {formatDateBR(new Date(link.joinedAt))}
-            </span>
+        <div key={link.id} className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <BusinessBadge business={link.business} />
+              <span className="text-xs text-text-secondary">
+                desde {formatDateBR(new Date(link.joinedAt))}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <select
+                value={link.status}
+                onChange={(e) => changeStatus(link.id, e.target.value)}
+                aria-label={`Status em ${link.business.name}`}
+                className="rounded-md border border-border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
+              >
+                {statusOptions.map((s) => (
+                  <option key={s} value={s}>
+                    {clientStatusLabels[s]}
+                  </option>
+                ))}
+              </select>
+              <IconButton
+                onClick={() => removeLink(link.id)}
+                title={`Desvincular de ${link.business.name}`}
+                aria-label={`Desvincular de ${link.business.name}`}
+                tone="danger"
+              >
+                <Link2Off size={15} />
+              </IconButton>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <select
-              value={link.status}
-              onChange={(e) => changeStatus(link.id, e.target.value)}
-              aria-label={`Status em ${link.business.name}`}
-              className="rounded-md border border-border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
-            >
-              {statusOptions.map((s) => (
-                <option key={s} value={s}>
-                  {clientStatusLabels[s]}
-                </option>
-              ))}
-            </select>
-            <IconButton
-              onClick={() => removeLink(link.id)}
-              title={`Desvincular de ${link.business.name}`}
-              aria-label={`Desvincular de ${link.business.name}`}
-              tone="danger"
-            >
-              <Link2Off size={15} />
-            </IconButton>
-          </div>
+          {link.status === "PROSPECT" && (
+            <div className="flex flex-wrap items-center gap-1.5 pl-1 text-xs text-text-secondary">
+              <span>{prospectStageLabels[link.prospectStage ?? "NOVO_CONTATO"]}</span>
+              {link.source && <span>· {leadSourceLabels[link.source]}</span>}
+              {link.nextFollowUpAt && (
+                <span className="flex items-center gap-1">
+                  · Follow-up {formatDateBR(new Date(link.nextFollowUpAt))}
+                  {attentionFromDueDate(link.nextFollowUpAt, todayUtc()) === "atrasado" && (
+                    <AttentionBadge level="atrasado">Atrasado</AttentionBadge>
+                  )}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       ))}
 

@@ -78,6 +78,15 @@ export function ClientFilterBar({ businesses }: { businesses: BusinessOption[] }
         ))}
         <option value="__none__">Sem negócio</option>
       </select>
+
+      <select
+        value={searchParams.get("kind") ?? ""}
+        onChange={(e) => setParam("kind", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      >
+        <option value="">Clientes e prospects</option>
+        <option value="prospect">Só prospects</option>
+      </select>
     </div>
   );
 }
