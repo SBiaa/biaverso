@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getOrCreateDay } from "@/lib/day";
 import { getAllCategories, getDayTimeTracking, getRunningEntry } from "@/lib/time-tracking";
 import { instantToMinutes } from "@/lib/time-tracking-shared";
@@ -71,7 +72,12 @@ export default async function HorasPage({
         </Card>
 
         <Card>
-          <CardTitle className="mb-3">Blocos planejados</CardTitle>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <CardTitle>Blocos planejados</CardTitle>
+            <Link href="/horas/semana" className="text-xs font-medium text-accent hover:underline">
+              Ver semana
+            </Link>
+          </div>
           <TimeBlockPlanner dayId={day.id} categories={activeCategories} blocks={blocks} />
         </Card>
 

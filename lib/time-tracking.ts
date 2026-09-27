@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { getOrCreateDay } from "@/lib/day";
 import { BUSINESS_COLORS } from "@/lib/business-visuals";
+import { addUtcDays, toDateInputValue } from "@/lib/utils";
 import type { ActivityCategory, TimeBlock, TimeEntry } from "@/app/generated/prisma/client";
 import type {
   ActivityCategoryDTO,
@@ -82,4 +84,28 @@ export async function getDayTimeTracking(dayId: string) {
 export async function getRunningEntry(): Promise<TimeEntryDTO | null> {
   const entry = await prisma.timeEntry.findFirst({ where: { endedAt: null } });
   return entry ? serializeTimeEntry(entry) : null;
+}
+
+export type WeekDayBlocks = {
+  dayId: string;
+  date: string;
+  blocks: TimeBlockDTO[];
+};
+
+/** Os blocos planejados dos 7 dias a partir de `weekStart` — para a grade da semana. */
+export async function getWeekPlannedBlocks(weekStart: Date): Promise<WeekDayBlocks[]> {
+  const days = await Promise.all(
+    Array.from({ length: 7 }, (_, i) => getOrCreateDay(addUtcDays(weekStart, i))),
+  );
+
+  const blocks = await prisma.timeBlock.findMany({
+    where: { dayId: { in: days.map((d) => d.id) } },
+    orderBy: { startTime: "asc" },
+  });
+
+  return days.map((day) => ({
+    dayId: day.id,
+    date: toDateInputValue(day.date),
+    blocks: blocks.filter((b) => b.dayId === day.id).map(serializeTimeBlock),
+  }));
 }
