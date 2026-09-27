@@ -3,6 +3,7 @@ import {
   BookOpen,
   CalendarCheck,
   CalendarDays,
+  Clock,
   Compass,
   GraduationCap,
   Home,
@@ -33,6 +34,7 @@ export const navGroups: NavGroup[] = [
       { href: "/", label: "Home", icon: Home },
       { href: "/dia", label: "Dia a dia", icon: CalendarCheck },
       { href: "/agenda", label: "Agenda", icon: CalendarDays },
+      { href: "/horas", label: "Controle de horas", icon: Clock },
     ],
   },
   {

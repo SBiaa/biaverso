@@ -439,3 +439,64 @@ export const eventPatchSchema = z.object({
   allDay: z.boolean().optional(),
   category: z.enum(E.EventCategory).optional(),
 });
+
+// ------------------------------------------------------- controle de horas
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "precisa ser uma cor #RRGGBB");
+
+/**
+ * "HH:mm" obrigatório — diferente de `timeOfDay` (usado pelo Event, que aceita
+ * vazio/ausente), bloco e registro de tempo sempre têm início e fim.
+ */
+const requiredTimeOfDay = z
+  .string()
+  .trim()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "hora inválida (HH:mm)");
+
+export const activityCategoryCreateSchema = z.object({
+  name: text,
+  color: hexColor.optional(),
+});
+
+export const activityCategoryPatchSchema = z.object({
+  name: text.optional(),
+  color: hexColor.optional(),
+  active: z.boolean().optional(),
+  order: z.coerce.number().int().optional(),
+});
+
+export const timeBlockCreateSchema = z.object({
+  dayId: id,
+  categoryId: id,
+  title: optionalText,
+  startTime: requiredTimeOfDay,
+  endTime: requiredTimeOfDay,
+});
+
+export const timeBlockPatchSchema = z.object({
+  categoryId: id.optional(),
+  title: patchText,
+  startTime: requiredTimeOfDay.optional(),
+  endTime: requiredTimeOfDay.optional(),
+});
+
+/** Inicia o cronômetro "agora" — sempre no dia de hoje. */
+export const timeEntryStartSchema = z.object({
+  categoryId: id,
+  title: optionalText,
+});
+
+/** Registro manual de tempo já concluído (esqueceu de apertar iniciar). */
+export const timeEntryCreateSchema = z.object({
+  dayId: id,
+  categoryId: id,
+  title: optionalText,
+  startTime: requiredTimeOfDay,
+  endTime: requiredTimeOfDay,
+});
+
+export const timeEntryPatchSchema = z.object({
+  categoryId: id.optional(),
+  title: patchText,
+  startTime: requiredTimeOfDay.optional(),
+  endTime: requiredTimeOfDay.optional(),
+});

@@ -163,6 +163,25 @@ export function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/**
+ * Dia-calendário (meia-noite UTC) + "HH:mm" → instante real, no fuso do app.
+ * Usa offset fixo "-03:00" porque o Brasil não tem mais horário de verão desde
+ * 2019 — sem isso precisaria de uma lib de fuso horário só para esta conta.
+ */
+export function combineDateAndTime(date: Date, time: string): Date {
+  return new Date(`${toDateInputValue(date)}T${time}:00-03:00`);
+}
+
+/** Minutos totais → "1h30", "45min", "2h" — duração de bloco/registro de tempo. */
+export function formatDurationMinutes(totalMinutes: number) {
+  const minutes = Math.max(0, Math.round(totalMinutes));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest}min`;
+  if (rest === 0) return `${hours}h`;
+  return `${hours}h${String(rest).padStart(2, "0")}`;
+}
+
 export function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
   const initials = parts.length > 1 ? [parts[0], parts[parts.length - 1]] : [parts[0]];
