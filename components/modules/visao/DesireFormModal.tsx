@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+
+import { Button, ErrorNote, Modal } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 type DesireFormModalProps = {
@@ -49,47 +49,35 @@ export function DesireFormModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={mode === "create" ? "Novo desejo" : "Editar desejo"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {mode === "create" ? "Novo desejo" : "Editar desejo"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
-        </div>
 
-        <input
-          placeholder="Título"
-          value={form.title}
-          onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <textarea
-          placeholder="Descrição (opcional)"
-          value={form.description}
-          onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-          className="min-h-[80px] resize-none rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+      <input
+        placeholder="Título"
+        value={form.title}
+        onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+      <textarea
+        placeholder="Descrição (opcional)"
+        value={form.description}
+        onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+        className="min-h-[80px] resize-none rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
 
-        <ErrorNote message={error} />
+      <ErrorNote message={error} />
 
-        <div className="mt-2 flex gap-2">
-          <Button onClick={handleSubmit} disabled={saving}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-        </div>
+      <div className="mt-2 flex gap-2">
+        <Button type="submit" disabled={saving}>
+          Salvar
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Cancelar
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

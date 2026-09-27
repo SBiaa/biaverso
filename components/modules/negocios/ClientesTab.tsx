@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui";
-import { getInitials, formatDateBR } from "@/lib/utils";
+import { formatDateBR } from "@/lib/utils";
+import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
 import { ClientStatusFilter } from "./ClientStatusFilter";
 import { AddClientForm } from "./AddClientForm";
 import type { ClientOverview } from "@/lib/ace";
@@ -25,11 +26,9 @@ export function ClientesTab({
         <div className="flex flex-col gap-2">
           {clients.map((client) => (
             <Link key={client.id} href={`/negocios/${businessId}/clientes/${client.id}`}>
-              <Card className="flex items-center justify-between transition-colors hover:bg-black/[0.02]">
+              <Card className="flex items-center justify-between transition-colors hover:bg-hover">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-sm font-semibold text-accent">
-                    {getInitials(client.name)}
-                  </div>
+                  <ClientAvatar client={client} />
                   <div>
                     <p className="text-sm font-medium text-text-primary">{client.name}</p>
                     <p className="text-xs text-text-secondary">

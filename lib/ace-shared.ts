@@ -7,6 +7,23 @@ import type { ContentStatus, ProductionStatus } from "@/app/generated/prisma/cli
 
 export type AceItemKind = "post" | "task";
 
+/** Escopo do cronograma: conteúdo de cliente, interno do negócio, ou os dois. */
+export const SCOPE_OPTIONS = [
+  { key: "", label: "Todos" },
+  { key: "clientes", label: "Clientes" },
+  { key: "interno", label: "Interno" },
+] as const;
+
+/**
+ * Filtro de `clientId` para um escopo. `undefined` = sem filtro, `null` = só o
+ * que não tem cliente (interno).
+ */
+export function scopeClientFilter(scope?: string) {
+  if (scope === "interno") return null;
+  if (scope === "clientes") return { not: null };
+  return undefined;
+}
+
 export const KANBAN_COLUMNS = [
   { key: "A_FAZER", label: "A fazer" },
   { key: "EM_ANDAMENTO", label: "Em andamento" },
@@ -97,9 +114,89 @@ export function resolveTaskCompletedAt(
   return previousCompletedAt;
 }
 
+/**
+ * Linha do banco → o formato que os modais editam (datas em ISO). As telas
+ * montavam esse objeto à mão em cada lugar; um campo novo ficava faltando em
+ * uma delas.
+ */
+export function toPostRecord(post: {
+  id: string;
+  title: string;
+  type: string;
+  network: string;
+  status: string;
+  publishDate: Date | null;
+  completedAt: Date | null;
+  caption: string | null;
+  notes: string | null;
+  clientId: string | null;
+  projectId: string | null;
+  pilar?: string | null;
+  objective?: string | null;
+  hook?: string | null;
+  cta?: string | null;
+  hashtags?: string[];
+  slides?: unknown;
+  script?: unknown;
+  visualBrief?: unknown;
+  storySupport?: string | null;
+}) {
+  return {
+    id: post.id,
+    title: post.title,
+    type: post.type,
+    network: post.network,
+    status: post.status,
+    publishDate: post.publishDate ? post.publishDate.toISOString() : null,
+    completedAt: post.completedAt ? post.completedAt.toISOString() : null,
+    caption: post.caption,
+    notes: post.notes,
+    clientId: post.clientId,
+    projectId: post.projectId,
+    pilar: post.pilar ?? null,
+    objective: post.objective ?? null,
+    hook: post.hook ?? null,
+    cta: post.cta ?? null,
+    hashtags: post.hashtags ?? [],
+    slides: post.slides ?? null,
+    script: post.script ?? null,
+    visualBrief: post.visualBrief ?? null,
+    storySupport: post.storySupport ?? null,
+  };
+}
+
+export function toTaskRecord(task: {
+  id: string;
+  title: string;
+  type: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  dueDate: Date | null;
+  completedAt: Date | null;
+  notes: string | null;
+  clientId: string | null;
+  projectId: string | null;
+}) {
+  return {
+    id: task.id,
+    title: task.title,
+    type: task.type,
+    description: task.description,
+    priority: task.priority,
+    status: task.status,
+    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+    completedAt: task.completedAt ? task.completedAt.toISOString() : null,
+    notes: task.notes,
+    clientId: task.clientId,
+    projectId: task.projectId,
+  };
+}
+
 export type ClientOverview = {
   id: string;
   name: string;
+  color: string | null;
   activeProjectCount: number;
   nextDelivery: { date: string; title: string; kind: AceItemKind } | null;
 };

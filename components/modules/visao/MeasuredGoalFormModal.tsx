@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+
+import { Button, ErrorNote, Modal } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { measuredGoalStatusLabels } from "@/lib/labels";
 
@@ -76,88 +76,76 @@ export function MeasuredGoalFormModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={mode === "create" ? "Novo objetivo metrificado" : "Editar objetivo metrificado"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {mode === "create" ? "Novo objetivo metrificado" : "Editar objetivo metrificado"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
-        </div>
 
-        <input
-          placeholder="Título"
-          value={form.title}
-          onChange={(e) => update("title", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <input
-          placeholder="Meta (ex: R$10k/mês, 5x por semana)"
-          value={form.target}
-          onChange={(e) => update("target", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+      <input
+        placeholder="Título"
+        value={form.title}
+        onChange={(e) => update("title", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+      <input
+        placeholder="Meta (ex: R$10k/mês, 5x por semana)"
+        value={form.target}
+        onChange={(e) => update("target", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
 
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <p className="mb-1 text-xs text-text-secondary">Prazo</p>
-            <input
-              type="date"
-              value={form.deadline}
-              onChange={(e) => update("deadline", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div className="flex-1">
-            <p className="mb-1 text-xs text-text-secondary">Status</p>
-            <select
-              value={form.status}
-              onChange={(e) => update("status", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            >
-              {statusOptions.map((s) => (
-                <option key={s} value={s}>
-                  {measuredGoalStatusLabels[s]}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-1 flex items-center justify-between text-xs text-text-secondary">
-            <span>Progresso</span>
-            <span>{form.progress}%</span>
-          </div>
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <p className="mb-1 text-xs text-text-secondary">Prazo</p>
           <input
-            type="range"
-            min={0}
-            max={100}
-            value={form.progress}
-            onChange={(e) => update("progress", Number(e.target.value))}
-            className="w-full accent-accent"
+            type="date"
+            value={form.deadline}
+            onChange={(e) => update("deadline", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex gap-2">
-          <Button onClick={handleSubmit} disabled={saving}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
+        <div className="flex-1">
+          <p className="mb-1 text-xs text-text-secondary">Status</p>
+          <select
+            value={form.status}
+            onChange={(e) => update("status", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          >
+            {statusOptions.map((s) => (
+              <option key={s} value={s}>
+                {measuredGoalStatusLabels[s]}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
-    </div>
+
+      <div>
+        <div className="mb-1 flex items-center justify-between text-xs text-text-secondary">
+          <span>Progresso</span>
+          <span>{form.progress}%</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={form.progress}
+          onChange={(e) => update("progress", Number(e.target.value))}
+          className="w-full accent-accent"
+        />
+      </div>
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex gap-2">
+        <Button type="submit" disabled={saving}>
+          Salvar
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Cancelar
+        </Button>
+      </div>
+    </Modal>
   );
 }

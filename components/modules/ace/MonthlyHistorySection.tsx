@@ -1,10 +1,10 @@
-import { Card } from "@/components/ui";
+import { Card, CardTitle } from "@/components/ui";
 import type { MonthlyHistoryEntry } from "@/lib/ace";
 
 export function MonthlyHistorySection({ months }: { months: MonthlyHistoryEntry[] }) {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-text-primary">Histórico mensal</h2>
+      <CardTitle>Histórico mensal</CardTitle>
       <div className="flex flex-col gap-2">
         {months.map((month) => (
           <Card key={`${month.year}-${month.month}`} className="flex flex-col gap-2">

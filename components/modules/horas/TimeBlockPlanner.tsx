@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, confirmAction, ErrorNote, IconButton, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import type { ActivityCategoryDTO, TimeBlockDTO } from "@/lib/time-tracking-shared";
 
@@ -46,6 +46,7 @@ export function TimeBlockPlanner({
       setStartTime("");
       setEndTime("");
       router.refresh();
+      notify("Bloco adicionado.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -54,11 +55,19 @@ export function TimeBlockPlanner({
   }
 
   async function handleDelete(block: TimeBlockDTO) {
+    const category = categoryById.get(block.categoryId);
+    const confirmed = await confirmAction({
+      title: `Excluir bloco de ${category?.name ?? "categoria removida"}?`,
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     setDeletingId(block.id);
     setError(null);
     try {
       await api.delete(`/api/time-blocks/${block.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -91,15 +100,14 @@ export function TimeBlockPlanner({
                     <span className="truncate text-xs text-text-secondary">{block.title}</span>
                   )}
                 </div>
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => handleDelete(block)}
                   disabled={deletingId === block.id}
                   aria-label={`Excluir bloco ${category?.name ?? ""}`}
-                  className="shrink-0 rounded p-1 text-text-secondary hover:bg-black/[0.03] disabled:opacity-50"
+                  tone="danger"
                 >
-                  <Trash2 size={14} />
-                </button>
+                  <Trash2 size={15} />
+                </IconButton>
               </li>
             );
           })}

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+
+import { Button, ErrorNote, Modal, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { PILLAR_COLORS, PILLAR_ICONS } from "@/lib/vision-visuals";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,7 @@ export function PillarFormModal({ mode, initial, onClose }: PillarFormModalProps
         await api.patch(`/api/vision/pillars/${initial.id}`, form);
       }
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       // O modal fica aberto com o que foi digitado, para não perder o texto.
@@ -55,84 +56,72 @@ export function PillarFormModal({ mode, initial, onClose }: PillarFormModalProps
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title={mode === "create" ? "Novo pilar" : "Editar pilar"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {mode === "create" ? "Novo pilar" : "Editar pilar"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
-        </div>
 
-        <input
-          placeholder="Nome"
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <input
-          placeholder="Descrição (opcional)"
-          value={form.description}
-          onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+      <input
+        placeholder="Nome"
+        value={form.name}
+        onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+      <input
+        placeholder="Descrição (opcional)"
+        value={form.description}
+        onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
 
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-text-secondary">Cor</p>
-          <div className="flex flex-wrap gap-2">
-            {PILLAR_COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, color }))}
-                className={cn(
-                  "h-7 w-7 rounded-full ring-offset-2",
-                  form.color === color && "ring-2 ring-accent",
-                )}
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-text-secondary">Ícone</p>
-          <div className="flex flex-wrap gap-2">
-            {iconOptions.map(([name, Icon]) => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, icon: name }))}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-md border border-border",
-                  form.icon === name && "border-accent bg-accent/10 text-accent",
-                )}
-              >
-                <Icon size={16} />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex gap-2">
-          <Button onClick={handleSubmit} disabled={saving}>
-            Salvar
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
+      <div>
+        <p className="mb-1.5 text-xs font-medium text-text-secondary">Cor</p>
+        <div className="flex flex-wrap gap-2">
+          {PILLAR_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, color }))}
+              className={cn(
+                "h-7 w-7 rounded-full ring-offset-2",
+                form.color === color && "ring-2 ring-accent",
+              )}
+              style={{ backgroundColor: color }}
+            />
+          ))}
         </div>
       </div>
-    </div>
+
+      <div>
+        <p className="mb-1.5 text-xs font-medium text-text-secondary">Ícone</p>
+        <div className="flex flex-wrap gap-2">
+          {iconOptions.map(([name, Icon]) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, icon: name }))}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-md border border-border",
+                form.icon === name && "border-accent bg-accent/10 text-accent",
+              )}
+            >
+              <Icon size={16} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex gap-2">
+        <Button type="submit" disabled={saving}>
+          Salvar
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Cancelar
+        </Button>
+      </div>
+    </Modal>
   );
 }

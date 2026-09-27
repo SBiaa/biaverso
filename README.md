@@ -1,7 +1,7 @@
 # biaVerso
 
 Central de gestão pessoal: rotina do dia, cardápio, finanças, negócios e clientes,
-avaliações semanais, biblioteca e a Central de Visão.
+avaliações semanais, vida espiritual, biblioteca e a Central de Visão.
 
 Next.js 16 (App Router) · React 19 · Prisma 7 sobre Postgres (Neon) · Tailwind 4.
 
@@ -32,6 +32,69 @@ O app inteiro — páginas e API — fica atrás de Basic Auth (`middleware.ts`)
 Defina `APP_PASSWORD` no `.env` para ligar; `APP_USER` é opcional e o padrão é
 `bia`. Sem a variável, o app roda em desenvolvimento mas **responde 503 em
 produção**, para não subir aberto por esquecimento.
+
+## Criptografia
+
+As senhas do cofre e os tokens do Google ficam **cifrados no banco** com
+AES-256-GCM (`lib/crypto.ts`). Gere a chave e guarde no `.env`:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+```env
+ENCRYPTION_KEY=a-chave-gerada-acima
+```
+
+A mesma chave precisa estar nas variáveis de ambiente da Vercel — o app não
+sobe sem ela: gravar uma senha nova ou renovar o token do Google falha com uma
+mensagem dizendo o que fazer.
+
+> ⚠️ **Guarde uma cópia da chave fora do `.env`** — gerenciador de senhas, papel
+> na gaveta, o que for. Sem ela o cofre não volta: é matemática, não tem
+> "esqueci minha senha". Um `.env` que se perde numa formatação levaria tudo
+> junto.
+
+### Converter o que já estava salvo
+
+Quem já tinha senhas gravadas antes disso roda uma vez:
+
+```bash
+npx tsx prisma/encrypt-existing.ts
+```
+
+Pode rodar de novo sem medo: o que já está cifrado é reconhecido pelo prefixo
+`v1:` e fica como está. E o app funciona antes e depois da conversão — um valor
+sem o prefixo é tratado como texto simples —, então não existe janela em que as
+telas quebram.
+
+### O que isto protege (e o que não protege)
+
+**Protege** o banco vazar sozinho: um dump, um backup, a connection string
+parando onde não devia, alguém abrindo o console do Neon. Sem a chave, o que
+está lá é ruído.
+
+**Não protege** contra quem já entrou no app — passou pelo Basic Auth, vê as
+senhas na tela, que é justamente para o que o cofre existe. Quem controlar o
+servidor tem a chave junto. Para esse lado, quem defende é o `APP_PASSWORD`.
+
+## Roda do Ano e fases da lua
+
+O módulo **Espiritual** não guarda em banco nenhuma data de sabbath nem de lua:
+tudo é calculado em `lib/astros.ts`, com as fórmulas do Meeus (*Astronomical
+Algorithms*, cap. 27 e 49), sem rede e sem tabela chumbada. Uma tabela fixa
+erraria: o solstício de junho cai dia 20 em alguns anos e dia 21 em outros.
+
+As datas são as do **hemisfério sul** — Samhain em 30 de abril, Beltane em 31 de
+outubro, Yule no solstício de junho. Trocar de hemisfério é mexer no `WHEEL` de
+`lib/espiritual-shared.ts`, que é onde os oito sabbats estão descritos.
+
+A conta devolve Tempo Dinâmico, hoje ~70 segundos à frente do UTC; a diferença
+só mudaria o dia de um evento que caísse a menos de um minuto da meia-noite.
+
+Os **encontros do coven** não falam com o Google. Cada encontro cria um `Event`
+comum de categoria `ESPIRITUAL`, e a sincronização da agenda leva esse evento ao
+Google Calendar — uma integração só, em vez de duas.
 
 ## Convenção de datas
 
@@ -66,15 +129,32 @@ No [Google Cloud Console](https://console.cloud.google.com):
 2. **Ativar a Google Calendar API** — _APIs e serviços_ → _Biblioteca_ → busque
    por **Google Calendar API** → _Ativar_.
 3. **Configurar a tela de consentimento** — _APIs e serviços_ → _Tela de permissão
-   OAuth_ → tipo **Externo** → preencha nome do app e e-mail de contato. Enquanto
-   o app estiver em modo **Teste**, adicione a sua conta Google em
-   _Usuários de teste_, senão o Google recusa o login.
+   OAuth_ → tipo **Externo** → preencha nome do app e e-mail de contato. Em
+   seguida clique em **Publicar app**, para o status sair de _Teste_ e ir para
+   _Em produção_ (veja o porquê logo abaixo).
 4. **Criar as credenciais OAuth 2.0** — _APIs e serviços_ → _Credenciais_ →
    _Criar credenciais_ → _ID do cliente OAuth_ → tipo **Aplicativo da Web**.
 5. **Adicionar os URIs de redirecionamento autorizados**:
    - `http://localhost:3000/api/auth/callback/google` (desenvolvimento)
    - `https://SEU-DOMINIO/api/auth/callback/google` (produção)
 6. **Copiar o Client ID e o Client Secret** para o `.env`.
+
+#### Por que publicar em vez de deixar em "Teste"
+
+Com a tela de consentimento em **Teste**, o Google emite refresh tokens que
+**expiram em 7 dias**. Na prática a sincronização pararia toda semana e você
+teria que reconectar. (O app não quebra quando isso acontece: o refresh falha,
+a conexão é apagada e a tela de Configurações volta a mostrar
+_Conectar Google Calendar_ — mas é chato refazer isso a cada 7 dias.)
+
+Publicando em produção o token deixa de expirar. Em compensação, como os escopos
+de Calendar são classificados pelo Google como **sensíveis**, na hora de conectar
+aparece uma tela dizendo que o app não foi verificado: clique em **Avançado** →
+**Acessar biaVerso (não seguro)**. Esse "não seguro" só quer dizer que o Google
+não auditou o app — que é seu, roda na sua máquina e acessa só a sua conta.
+
+Mandar o app para verificação só faria sentido se outras pessoas fossem usá-lo.
+Sem verificação, o limite é de 100 usuários.
 
 ### 2. Variáveis de ambiente
 

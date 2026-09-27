@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { addUtcDays, formatDateLongBR, toDateInputValue } from "@/lib/utils";
+import { IconButton } from "@/components/ui";
 
 type DayPickerProps = {
   date: string;
@@ -23,14 +24,13 @@ export function DayPicker({ date }: DayPickerProps) {
 
   return (
     <div className="flex items-center gap-3">
-      <button
-        type="button"
+      <IconButton
         onClick={() => go(-1)}
-        className="rounded-md border border-border p-1.5 hover:bg-black/[0.03]"
         aria-label="Dia anterior"
+        className="border border-border"
       >
         <ChevronLeft size={16} />
-      </button>
+      </IconButton>
       <button
         type="button"
         onClick={goToday}
@@ -38,14 +38,13 @@ export function DayPicker({ date }: DayPickerProps) {
       >
         {formatDateLongBR(new Date(date))}
       </button>
-      <button
-        type="button"
+      <IconButton
         onClick={() => go(1)}
-        className="rounded-md border border-border p-1.5 hover:bg-black/[0.03]"
         aria-label="Próximo dia"
+        className="border border-border"
       >
         <ChevronRight size={16} />
-      </button>
+      </IconButton>
     </div>
   );
 }

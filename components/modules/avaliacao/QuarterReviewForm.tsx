@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { Card, Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
@@ -13,6 +14,7 @@ type QuarterReviewData = {
 };
 
 export function QuarterReviewForm({ review }: { review: QuarterReviewData }) {
+  const router = useRouter();
   const [form, setForm] = useState(review);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,9 +25,12 @@ export function QuarterReviewForm({ review }: { review: QuarterReviewData }) {
     try {
       await api.patch(`/api/quarter-reviews/${review.id}`, patch);
       setError(null);
+      router.refresh();
+      return true;
     } catch (e) {
       // O texto digitado continua na tela — só o aviso muda.
       setError(errorMessage(e));
+      return false;
     }
   }
 
@@ -40,8 +45,7 @@ export function QuarterReviewForm({ review }: { review: QuarterReviewData }) {
 
   async function handleSaveAll() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    await persist(form);
-    if (error) return;
+    if (!(await persist(form))) return;
     setSaved(true);
     if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
     savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);

@@ -1,21 +1,46 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { CommandPalette } from "@/components/layout/CommandPalette";
 import { CalendarSyncPoller } from "@/components/modules/agenda/CalendarSyncPoller";
 import { prisma } from "@/lib/prisma";
 
-export default async function AppLayout({ children }: { children: ReactNode }) {
+// A lista de negócios é o único dado de runtime do layout. Enquanto ela era
+// aguardada aqui em cima, TODA navegação ficava bloqueada nela: o `loading.tsx`
+// de uma rota não cobre o layout que a envolve, então a tela antiga continuava
+// congelada até o banco responder. Isolada num filho com Suspense, a navegação
+// pinta na hora e só a lista de negócios chega depois.
+async function SidebarWithBusinesses() {
   const businesses = await prisma.business.findMany({
     where: { active: true },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, icon: true },
+    select: { id: true, name: true, icon: true, showInNav: true },
   });
 
   return (
+    <>
+      {/* A barra mostra só os negócios marcados; a busca conhece todos. Tirar
+          do menu é para parar de ocupar linha, não para ficar inalcançável. */}
+      <Sidebar businesses={businesses.filter((b) => b.showInNav)} />
+      {/* Solto, e não dentro da sidebar: no celular ela é `hidden`, e um
+          `fixed` dentro de um ancestral escondido não chega a pintar. */}
+      <CommandPalette businesses={businesses} />
+    </>
+  );
+}
+
+export default function AppLayout({ children }: { children: ReactNode }) {
+  return (
     <div className="flex min-h-screen w-full">
       <CalendarSyncPoller />
-      <Sidebar businesses={businesses} />
-      <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
+      {/* O fallback é a própria sidebar sem os negócios: os links fixos já
+          aparecem no lugar certo e nada salta quando a lista chega. */}
+      <Suspense fallback={<Sidebar businesses={[]} />}>
+        <SidebarWithBusinesses />
+      </Suspense>
+      {/* `min-w-0`: sem isso um filho largo (tabela, linha sem quebra) estica o
+          item de flex e empurra a sidebar para fora da tela. */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-16 md:pb-0">
         {children}
       </div>
       <BottomNav />

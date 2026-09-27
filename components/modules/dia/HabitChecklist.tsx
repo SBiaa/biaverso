@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { CheckCircle2, Circle } from "lucide-react";
 import { ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticList } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type HabitItem = { id: string; name: string; done: boolean };
@@ -12,28 +12,16 @@ type HabitChecklistProps = {
   items: HabitItem[];
 };
 
-export function HabitChecklist({ items: initialItems }: HabitChecklistProps) {
-  const [items, setItems] = useState(initialItems);
-  const [error, setError] = useState<string | null>(null);
+export function HabitChecklist({ items: serverItems }: HabitChecklistProps) {
+  const { items, error, update } = useOptimisticList(serverItems);
 
   const done = items.filter((i) => i.done).length;
   const total = items.length;
   const progress = total === 0 ? 0 : Math.round((done / total) * 100);
 
-  async function toggle(id: string) {
-    const previous = items;
-    const nextDone = !items.find((i) => i.id === id)?.done;
-
-    setError(null);
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done: nextDone } : i)));
-
-    try {
-      await api.patch(`/api/habit-logs/${id}`, { done: nextDone });
-    } catch (e) {
-      // Sem isso o check ficava verde mesmo com o salvamento falhando.
-      setItems(previous);
-      setError(errorMessage(e));
-    }
+  function toggle(id: string) {
+    const done = !items.find((i) => i.id === id)?.done;
+    update(id, { done }, () => api.patch(`/api/habit-logs/${id}`, { done }));
   }
 
   return (

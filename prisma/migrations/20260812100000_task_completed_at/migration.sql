@@ -1,0 +1,12 @@
+-- Quando a tarefa foi concluída.
+--
+-- ProductionTask e CollectionTask já tinham `completedAt`; a Task do dia a dia
+-- era a única sem — marcar como feita não guardava o quando. Isso impedia que
+-- uma tarefa concluída contasse como sinal de vida de um projeto no radar, e
+-- jogava fora qualquer estatística de "em quanto tempo eu concluo as coisas".
+--
+-- Fica nulo no que já estava concluído: a data não existe em lugar nenhum para
+-- ser recuperada. De agora em diante acumula.
+--
+-- AlterTable
+ALTER TABLE "Task" ADD COLUMN "completedAt" TIMESTAMP(3);

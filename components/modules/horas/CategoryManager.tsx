@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw, Trash2, Plus } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { BUSINESS_COLORS } from "@/lib/business-visuals";
 import { cn } from "@/lib/utils";
@@ -130,14 +130,13 @@ export function CategoryManager({ initialItems }: { initialItems: ActivityCatego
                 onChange={(e) => handleEditName(item.id, e.target.value)}
                 className="flex-1 bg-transparent text-sm text-text-primary outline-none"
               />
-              <button
-                type="button"
+              <IconButton
                 onClick={() => toggleActive(item.id, false)}
-                className="shrink-0 text-text-secondary hover:text-red-600"
                 title="Desativar categoria"
+                tone="danger"
               >
-                <Trash2 size={14} />
-              </button>
+                <Trash2 size={15} />
+              </IconButton>
             </div>
           ))}
         </div>
@@ -186,14 +185,13 @@ export function CategoryManager({ initialItems }: { initialItems: ActivityCatego
                 style={{ backgroundColor: item.color }}
               />
               <span className="flex-1 text-sm text-text-secondary line-through">{item.name}</span>
-              <button
-                type="button"
+              <IconButton
                 onClick={() => toggleActive(item.id, true)}
-                className="text-text-secondary hover:text-accent"
                 title="Reativar categoria"
+                className="hover:text-accent"
               >
-                <RotateCcw size={14} />
-              </button>
+                <RotateCcw size={15} />
+              </IconButton>
             </div>
           ))}
         </div>

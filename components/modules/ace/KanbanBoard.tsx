@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui";
-import { formatDateBR } from "@/lib/utils";
+import { AttentionBadge, Card } from "@/components/ui";
+import { cn, formatDateBR } from "@/lib/utils";
 import { KANBAN_COLUMNS } from "@/lib/ace-shared";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
 import { ProductionTaskModal, type TaskRecord } from "./ProductionTaskModal";
@@ -12,7 +12,10 @@ export type KanbanItem = {
   kind: "post" | "task";
   title: string;
   typeLabel: string;
-  clientName: string;
+  /** Null = item interno do negócio, sem cliente do outro lado. */
+  clientName: string | null;
+  /** Cor efetiva da clienta; null quando interno. */
+  clientColor: string | null;
   date: string | null;
   overdue: boolean;
   column: string;
@@ -50,21 +53,34 @@ export function KanbanBoard({
                   columnItems.map((item) => (
                     <Card
                       key={`${item.kind}-${item.id}`}
-                      className="flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-black/[0.02]"
+                      className="flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-hover"
                       onClick={() => setEditing(item)}
                     >
                       <p className="text-sm font-medium text-text-primary">{item.title}</p>
                       <div className="flex flex-wrap items-center gap-1">
-                        <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
-                          {item.clientName}
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                            !item.clientName && "bg-violet-100 text-violet-700",
+                          )}
+                          style={
+                            item.clientColor
+                              ? {
+                                  color: item.clientColor,
+                                  backgroundColor: `color-mix(in srgb, ${item.clientColor} 14%, transparent)`,
+                                }
+                              : undefined
+                          }
+                        >
+                          {item.clientName ?? "Interno"}
                         </span>
                         <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
                           {item.typeLabel}
                         </span>
                         {item.overdue && (
-                          <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+                          <AttentionBadge level="atrasado">
                             Atrasado
-                          </span>
+                          </AttentionBadge>
                         )}
                       </div>
                       {item.date && (

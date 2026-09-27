@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { addUtcDays, toDateInputValue, todayUtc } from "@/lib/utils";
+import { calendarClient, getAuthClient } from "@/lib/google-calendar";
 import type { Event } from "@/app/generated/prisma/client";
 import type { AgendaEvent, GoogleSyncStatus } from "@/lib/agenda-shared";
 
@@ -31,6 +32,39 @@ export async function getAgendaEvents(): Promise<AgendaEvent[]> {
   });
 
   return events.map(serializeEvent);
+}
+
+/**
+ * Apaga um evento no app e também no Google.
+ *
+ * Sem apagar lá, a próxima sincronização traz o evento de volta. Mora aqui, e
+ * não na rota, porque o encontro do coven também precisa disto quando é
+ * excluído: ele tem um evento espelho na agenda.
+ *
+ * Devolve se o Google foi mesmo limpo — desconectado, evento já removido lá ou
+ * calendário somente leitura fazem o app seguir em frente do mesmo jeito.
+ */
+export async function deleteEventEverywhere(id: string): Promise<{ googleDeleted: boolean }> {
+  const event = await prisma.event.findUnique({ where: { id } });
+  if (!event) return { googleDeleted: true };
+
+  let googleDeleted = true;
+
+  if (event.googleEventId) {
+    try {
+      const calendar = calendarClient(await getAuthClient());
+      await calendar.events.delete({
+        calendarId: event.googleCalendarId ?? "primary",
+        eventId: event.googleEventId,
+      });
+    } catch {
+      googleDeleted = false;
+    }
+  }
+
+  await prisma.event.delete({ where: { id } });
+
+  return { googleDeleted };
 }
 
 /** Estado da conexão com o Google — alimenta a tela de configurações e a rota de status. */

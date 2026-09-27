@@ -52,7 +52,32 @@ export const taskCreateSchema = z.object({
   dayId: optionalId,
   dueDate: dateOnly.nullish(),
 });
-export const taskPatchSchema = z.object({ done: z.boolean() });
+// Campo ausente = "não mexe". `dueDate` com data reancora a tarefa naquele dia
+// (é o "trazer para hoje" do radar); com `null` explícito, tira o prazo.
+export const taskPatchSchema = z.object({
+  title: text.optional(),
+  done: z.boolean().optional(),
+  dueDate: dateOnly.nullish(),
+});
+
+// Uma subtarefa pende de UMA tarefa — do dia, de produção ou de coleção. O
+// banco aceita os três campos nulos; aqui não.
+export const subtaskCreateSchema = z
+  .object({
+    title: text,
+    taskId: optionalId,
+    productionTaskId: optionalId,
+    collectionTaskId: optionalId,
+  })
+  .refine(
+    (v) => [v.taskId, v.productionTaskId, v.collectionTaskId].filter(Boolean).length === 1,
+    { message: "informe a tarefa dona da subtarefa", path: ["taskId"] },
+  );
+
+export const subtaskPatchSchema = z.object({
+  title: text.optional(),
+  done: z.boolean().optional(),
+});
 
 export const routineCreateSchema = z.object({
   title: text,
@@ -65,13 +90,31 @@ export const routinePatchSchema = z.object({
 });
 
 // -------------------------------------------------------------- cardápio
+/** Um ingrediente da receita, pelo nome: o servidor acha (ou cria) na despensa. */
+export const recipeItemSchema = z.object({
+  name: text,
+  quantity: optionalText,
+});
+
 export const recipeSchema = z.object({
   title: text,
-  category: z.enum(E.RecipeCategory),
+  categories: z.array(z.enum(E.RecipeCategory)).min(1, "escolha pelo menos uma refeição"),
   description: optionalText,
-  ingredients: text,
+  ingredientsText: optionalText,
+  items: z.array(recipeItemSchema).default([]),
   steps: text,
   prepTime: z.coerce.number().int().positive().nullish(),
+});
+
+export const ingredientCreateSchema = z.object({
+  name: text,
+  inStock: z.boolean().default(false),
+  notes: optionalText,
+});
+export const ingredientPatchSchema = z.object({
+  name: text.optional(),
+  inStock: z.boolean().optional(),
+  notes: z.string().trim().nullable().optional(),
 });
 
 export const mealPlanSchema = z.object({
@@ -124,19 +167,44 @@ export const transactionSchema = z.object({
   payMethod: z.enum(E.PayMethod).nullish(),
   businessId: optionalId,
   notes: optionalText,
+  // Entrada prevista nasce `false` e só conta no saldo depois de marcada.
+  received: z.boolean().default(true),
 });
+
+/** Marcar que a entrada caiu na conta (ou desmarcar). */
+export const transactionReceivedSchema = z.object({ received: z.boolean() });
 
 export const fixedBillSchema = z.object({
   name: text,
   amount: money,
   dueDay: dayOfMonth,
   type: z.enum(E.FixedBillType),
+  paymentMethod: z.enum(E.PayMethod).default("PIX_DEBITO"),
   notes: optionalText,
 });
 
 export const fixedBillLogPatchSchema = z.object({
   status: z.enum(E.BillStatus).optional(),
   dueDate: dateOnly.optional(),
+  // `null` explícito volta a valer o valor padrão da conta.
+  amountOverride: money.nullish(),
+});
+
+/** Mês/ano de fatura vindos da query string das telas do financeiro. */
+export const invoiceMonthQuerySchema = z.object({
+  month: monthNumber,
+  year: yearNumber,
+});
+
+/** Marcar/desmarcar a fatura do mês como paga. */
+export const invoicePaymentSchema = z.object({
+  month: monthNumber,
+  year: yearNumber,
+  status: z.enum(E.InvoiceStatus),
+  paidAt: dateOnly.optional(),
+  paidAmount: money.optional(),
+  /** Lança junto a saída no caixa, ligada a esta fatura. */
+  createTransaction: z.boolean().default(false),
 });
 
 export const creditCardSchema = z.object({
@@ -170,6 +238,19 @@ export const creditCardEntryPatchSchema = z.object({
   notes: optionalText,
 });
 
+/** Compra parcelada: uma chamada gera a parcela de cada fatura futura. */
+export const installmentPurchaseSchema = z.object({
+  description: text,
+  totalAmount: money.positive(),
+  installments: z.coerce.number().int().min(2).max(72),
+  firstInvoiceMonth: monthNumber,
+  firstInvoiceYear: yearNumber,
+  purchaseDate: dateOnly.optional(),
+  category: z.enum(E.TransactionCategory),
+  businessId: optionalId,
+  notes: optionalText,
+});
+
 export const financialRecordCreateSchema = z.object({
   name: text,
   type: z.enum(E.FinancialRecordType),
@@ -193,15 +274,55 @@ export const financialRecordPatchSchema = z.object({
   notes: z.string().nullish(),
 });
 
+// ------------------------------------------------------ lista de desejos
+export const wishlistItemCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  url: optionalText,
+  imageUrl: optionalText,
+  price: money.nullish(),
+  priority: z.enum(E.WishPriority).default("QUERO"),
+  category: z.enum(E.WishCategory).default("OUTRO"),
+  targetDate: dateOnly.nullish(),
+  notes: optionalText,
+  // Nulo = pessoal/casa, como no resto do app.
+  businessId: optionalId,
+});
+
+export const wishlistItemPatchSchema = wishlistItemCreateSchema.partial().extend({
+  status: z.enum(E.WishStatus).optional(),
+});
+
+/** Marcar como comprado, com o preço que de fato saiu. */
+export const wishlistPurchaseSchema = z.object({
+  boughtPrice: money.optional(),
+  boughtAt: dateOnly.optional(),
+  /** Lança a saída no financeiro junto. */
+  createTransaction: z.boolean().default(false),
+});
+
 // -------------------------------------------------------------- negócios
 export const businessCreateSchema = z.object({
   name: text,
   description: optionalText,
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "precisa ser uma cor #RRGGBB").optional(),
   icon: optionalText,
+  // Ausente = deixa como está (no create, cai nos módulos padrão).
+  modules: z.array(z.enum(E.ModuleType)).optional(),
 });
 export const businessPatchSchema = businessCreateSchema.partial().extend({
   active: z.boolean().optional(),
+  showInNav: z.boolean().optional(),
+});
+
+/** Lista inteira dos módulos do negócio: a ordem do array vira `order`. */
+export const businessModulesPatchSchema = z.object({
+  modules: z.array(
+    z.object({
+      module: z.enum(E.ModuleType),
+      active: z.boolean(),
+    }),
+  ),
 });
 
 export const clientCreateSchema = z.object({
@@ -210,9 +331,22 @@ export const clientCreateSchema = z.object({
   phone: optionalText,
   instagram: optionalText,
   notes: optionalText,
-  businessId: id,
+  // Cor no calendário. Só hexadecimal, porque vai direto num `style` do card.
+  // Vazio/nulo = volta pra cor automática.
+  color: z
+    .string()
+    .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Use uma cor em hexadecimal.")
+    .nullish()
+    .or(z.literal("").transform(() => null)),
+  // O cadastro global cria o cliente solto ou já ligado a vários negócios; o
+  // form de dentro do negócio continua mandando um `businessId` só. Os dois
+  // caminhos são aceitos e a rota junta tudo.
+  businessId: optionalId,
+  businessIds: z.array(id).optional(),
 });
-export const clientPatchSchema = clientCreateSchema.omit({ businessId: true }).partial();
+export const clientPatchSchema = clientCreateSchema
+  .omit({ businessId: true, businessIds: true })
+  .partial();
 
 export const businessLinkSchema = z.object({ businessId: id });
 export const clientBusinessPatchSchema = z.object({ status: z.enum(E.ClientStatus) });
@@ -225,14 +359,67 @@ export const projectCreateSchema = z.object({
   endDate: dateOnly.nullish(),
   businessId: id,
   clientId: optionalId,
+  isInternal: z.boolean().default(false),
 });
 export const projectPatchSchema = projectCreateSchema
   .omit({ businessId: true, clientId: true })
-  .partial();
+  .partial()
+  // A documentação é texto livre: string vazia é um valor legítimo ("limpei o
+  // conteúdo"), então aqui não vale o `optionalText` que troca "" por null.
+  .extend({ content: z.string().nullish(), clientId: optionalId });
 
 export const projectTaskCreateSchema = z.object({
   title: text,
   dueDate: dateOnly.nullish(),
+});
+
+// ------------------------------------------------- documentos do projeto
+export const projectDocumentCreateSchema = z.object({
+  title: text,
+  url: text,
+  type: z.enum(E.DocumentType).default("LINK"),
+  notes: optionalText,
+});
+export const projectDocumentPatchSchema = projectDocumentCreateSchema.partial();
+
+// -------------------------------- credenciais (projeto e negócio) do cofre
+export const credentialLinkSchema = z.object({
+  passwordEntryId: id,
+});
+export const projectCredentialCreateSchema = credentialLinkSchema;
+export const businessCredentialCreateSchema = credentialLinkSchema;
+
+// -------------------------------------------- tabela de preços do projeto
+export const projectPriceCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  price: money,
+  unit: optionalText,
+});
+export const projectPricePatchSchema = projectPriceCreateSchema
+  .partial()
+  .extend({ order: z.coerce.number().int().min(0).optional() });
+
+// ------------------------------------------------- tarefas das coleções
+export const collectionTaskCreateSchema = z.object({
+  title: text,
+  description: optionalText,
+  dueDate: dateOnly.nullish(),
+});
+export const collectionTaskPatchSchema = collectionTaskCreateSchema
+  .partial()
+  .extend({
+    done: z.boolean().optional(),
+    order: z.coerce.number().int().min(0).optional(),
+  });
+
+/** Reordenação por drag-and-drop: a lista inteira na ordem nova. */
+export const reorderSchema = z.object({
+  ids: z.array(id).min(1),
+});
+
+export const projectsOverviewQuerySchema = z.object({
+  businessId: filter(id),
 });
 
 // -------------------------------------------------------------------- ace
@@ -244,10 +431,23 @@ export const contentPostCreateSchema = z.object({
   publishDate: dateOnly.nullish(),
   completedAt: z.coerce.date().nullish(),
   businessId: id,
-  clientId: id,
+  // Sem cliente = conteúdo interno do próprio negócio.
+  clientId: optionalId,
   projectId: optionalId,
   caption: optionalText,
   notes: optionalText,
+  // Preenchidos só quando o post vem de um gerador externo de conteúdo.
+  pilar: z.enum(E.ContentPilar).nullish(),
+  objective: optionalText,
+  hook: optionalText,
+  cta: optionalText,
+  hashtags: z.array(z.string()).optional(),
+  slides: z.any().nullish(),
+  script: z.any().nullish(),
+  visualBrief: z.any().nullish(),
+  storySupport: optionalText,
+  externalSource: optionalText,
+  externalId: optionalText,
 });
 export const contentPostPatchSchema = contentPostCreateSchema
   .omit({ businessId: true, status: true })
@@ -263,7 +463,8 @@ export const productionTaskCreateSchema = z.object({
   dueDate: dateOnly.nullish(),
   completedAt: z.coerce.date().nullish(),
   businessId: id,
-  clientId: id,
+  // Sem cliente = tarefa interna do próprio negócio.
+  clientId: optionalId,
   projectId: optionalId,
   notes: optionalText,
 });
@@ -282,6 +483,218 @@ export const aceListQuerySchema = z.object({
   priority: filter(z.enum(E.Priority)),
   from: filter(dateOnly),
   to: filter(dateOnly),
+  scope: filter(z.enum(["clientes", "interno"])),
+});
+
+/**
+ * Espelha o `CalendarioMes` do gerador externo de cronograma de conteúdo
+ * (JSON colado pela dona, igual ela já faz hoje noutra ferramenta). Os enums
+ * em português são validados como literais próprios, sem depender dos enums
+ * do Prisma — o formato de origem não tem por que mudar junto com o nosso.
+ */
+const botSlide = z.object({ numero: z.number(), texto: z.string() });
+const botRoteiroItem = z.object({ tempo: z.string(), acao: z.string(), fala: z.string() });
+const botBriefingVisual = z.object({
+  conceito: z.string(),
+  elementos: z.array(z.string()),
+  texto_na_arte: z.string(),
+  paleta: z.string(),
+  referencia: z.string().nullable(),
+  prompt_imagem: z.string().nullable(),
+});
+const botPost = z.object({
+  id: z.string(),
+  data: z.string(),
+  dia_semana: z.string().optional(),
+  formato: z.enum(["carrossel", "estatico", "reels", "story"]),
+  pilar: z.enum(["Autoridade", "Prova", "Oferta", "Humano", "Conversa"]),
+  objetivo: z.string(),
+  gancho: z.string(),
+  copy: z.string(),
+  cta: z.string(),
+  hashtags: z.array(z.string()),
+  slides: z.array(botSlide),
+  roteiro: z.array(botRoteiroItem),
+  briefing_visual: botBriefingVisual,
+  story_apoio: z.string().nullable(),
+  status: z.enum(["rascunho", "aprovado", "produzido", "agendado", "publicado"]),
+  observacao: z.string().nullable(),
+});
+
+export const importCalendarioSchema = z.object({
+  businessId: id,
+  clientId: optionalId,
+  projectId: optionalId,
+  network: z.enum(E.SocialNetwork).default("INSTAGRAM"),
+  calendario: z.object({
+    cliente: z.object({
+      nome: z.string(),
+      nicho: z.string().optional(),
+      cidade: z.string().nullish(),
+      plano: z.string().nullish(),
+      tom_de_voz: z.string().nullish(),
+      oferta_do_mes: z.string().nullish(),
+    }),
+    periodo: z.object({ inicio: z.string(), fim: z.string(), total_posts: z.number() }),
+    pilares: z.array(z.unknown()).optional(),
+    posts: z.array(botPost),
+    lacunas: z.array(z.string()).optional(),
+  }),
+});
+
+// ------------------------------------------------------------------- loja
+// A linha do pedido. Preço e custo chegam prontos da tela porque são um
+// retrato do dia: recalcular a partir do catálogo aqui apagaria justamente o
+// histórico que o congelamento existe para guardar.
+export const orderItemSchema = z.object({
+  name: text,
+  quantity: z.coerce.number().int().min(1).max(9999),
+  unitPrice: money,
+  unitCost: money.default(0),
+  notes: optionalText,
+  productId: optionalId,
+  collectionProductId: optionalId,
+});
+
+export const orderCreateSchema = z.object({
+  orderNumber: optionalText,
+  customerName: text,
+  customerContact: optionalText,
+  items: z.array(orderItemSchema).default([]),
+  status: z.enum(E.OrderStatus).default("PENDENTE"),
+  orderDate: dateOnly,
+  dueDate: dateOnly.nullish(),
+  completedAt: z.coerce.date().nullish(),
+  notes: optionalText,
+  businessId: id,
+  collectionId: optionalId,
+});
+export const orderPatchSchema = orderCreateSchema
+  .omit({ businessId: true, status: true, orderDate: true, items: true })
+  .partial()
+  .extend({
+    status: z.enum(E.OrderStatus).optional(),
+    orderDate: dateOnly.optional(),
+    // Ausente = não mexe nos itens (arrastar no kanban só muda o status).
+    // Presente = substitui a lista inteira, que é como o formulário salva.
+    items: z.array(orderItemSchema).optional(),
+  });
+
+export const orderListQuerySchema = z.object({
+  businessId: filter(id),
+  collectionId: filter(id),
+  status: filter(z.enum(E.OrderStatus)),
+});
+
+export const collectionCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  season: optionalText,
+  status: z.enum(E.CollectionStatus).default("IDEIA"),
+  launchDate: dateOnly.nullish(),
+  businessId: id,
+});
+export const collectionPatchSchema = collectionCreateSchema
+  .omit({ businessId: true, status: true })
+  .partial()
+  .extend({ status: z.enum(E.CollectionStatus).optional() });
+
+export const collectionListQuerySchema = z.object({
+  businessId: filter(id),
+  status: filter(z.enum(E.CollectionStatus)),
+});
+
+// Só http(s): um "javascript:" aqui viraria src executável no card do produto.
+const imageUrl = z
+  .union([z.url(), z.literal("")])
+  .nullish()
+  .transform((v) => v || null)
+  .refine((v) => !v || /^https?:\/\//i.test(v), "o link precisa começar com http:// ou https://");
+
+/** Margem em %: acima de 99 o preço sugerido explode, abaixo de 0 é prejuízo. */
+const marginPercent = z.coerce.number().min(0).max(99);
+
+// A peça da coleção: só a arte e o preço da temporada. O que ela custa vem do
+// produto base — por isso não existe `cost` aqui, só o extra desta peça.
+export const collectionProductCreateSchema = z.object({
+  productId: id,
+  name: optionalText,
+  description: optionalText,
+  price: money.nullish(),
+  extraCost: money.nullish(),
+  imageUrl,
+  notes: optionalText,
+});
+export const collectionProductPatchSchema = collectionProductCreateSchema
+  .omit({ productId: true })
+  .partial();
+
+// ----------------------------------------------------- central de produtos
+export const productCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+  category: optionalText,
+  imageUrl,
+  basePrice: money.nullish(),
+  targetMargin: marginPercent.nullish(),
+  active: z.boolean().default(true),
+  notes: optionalText,
+  // Nulo = produto de todos os negócios, que é o caso normal.
+  businessId: optionalId,
+});
+export const productPatchSchema = productCreateSchema.partial();
+
+export const productListQuerySchema = z.object({
+  businessId: filter(id),
+  category: filter(z.string()),
+  active: filter(z.enum(["true", "false"])),
+});
+
+export const productCostItemCreateSchema = z.object({
+  label: text,
+  kind: z.enum(E.ProductCostKind).default("MATERIAL"),
+  mode: z.enum(E.ProductCostMode).default("FIXO"),
+  // Percentual, minutos e quantidade de insumo passam pelo mesmo campo — o modo
+  // diz o que ele é.
+  amount: z.coerce.number().finite().nonnegative(),
+  // Só no modo INSUMO; nos outros fica nulo.
+  materialId: optionalId,
+});
+export const productCostItemPatchSchema = productCostItemCreateSchema.partial();
+
+// ---------------------------------------------------- biblioteca de insumos
+export const materialCreateSchema = z.object({
+  name: text,
+  unit: optionalText,
+  packPrice: money,
+  // Pacote com 0 unidades tornaria o custo por unidade uma divisão por zero.
+  packQuantity: z.coerce.number().finite().positive(),
+  supplier: optionalText,
+  notes: optionalText,
+});
+export const materialPatchSchema = materialCreateSchema.partial();
+
+// ---------------------------------------------------------- configurações
+export const settingsPatchSchema = z.object({
+  // Tetos de sanidade: mais que isso é engano de digitação.
+  waterGoal: z.coerce.number().int().min(1).max(30).optional(),
+  waterUnitMl: z.coerce.number().int().min(50).max(2000).optional(),
+  // Vazio = "ainda não defini": os custos por tempo ficam avisando na tela.
+  // A string vazia vem primeiro na união porque `z.coerce.number()` engoliria
+  // "" como 0 — e 0/hora não é a mesma coisa que "sem valor definido".
+  hourlyRate: z
+    .union([z.literal(""), z.coerce.number().finite().nonnegative()])
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .optional(),
+  targetMargin: marginPercent.optional(),
+  // So hexadecimal: a cor entra num bloco de CSS gerado pelo servidor, entao
+  // qualquer coisa fora deste formato seria texto solto dentro de uma folha
+  // de estilo.
+  accentColor: z
+    .string()
+    .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Use uma cor em hexadecimal.")
+    .optional(),
 });
 
 // -------------------------------------------------------------- biblioteca
@@ -305,7 +718,7 @@ export const knowledgeCreateSchema = z.object({
   source: optionalText,
   type: z.enum(E.KnowledgeType),
   area: z.enum(E.KnowledgeArea),
-  status: z.enum(E.StudyStatus).default("QUERO_ESTUDAR"),
+  status: z.enum(E.KnowledgeStudyStatus).default("QUERO_ESTUDAR"),
   summary: optionalText,
   link: optionalText,
 });
@@ -315,7 +728,7 @@ export const knowledgePatchSchema = z.object({
   source: optionalText,
   type: z.enum(E.KnowledgeType).optional(),
   area: z.enum(E.KnowledgeArea).optional(),
-  status: z.enum(E.StudyStatus).optional(),
+  status: z.enum(E.KnowledgeStudyStatus).optional(),
   summary: optionalText,
   link: optionalText,
 });
@@ -510,4 +923,209 @@ export const timeEntryPatchSchema = z.object({
   title: patchText,
   startTime: requiredTimeOfDay.optional(),
   endTime: requiredTimeOfDay.optional(),
+});
+
+// ------------------------------------------------------------------ beleza
+/** Tetos de sanidade: intervalo de cuidado em dias e PAO em meses. */
+const intervalDays = z.coerce.number().int().min(1).max(365);
+const paoMonths = z.coerce.number().int().min(1).max(120);
+const orderIndex = z.coerce.number().int().min(0);
+
+/**
+ * Gasto de beleza pode virar lançamento no financeiro. É opt-in: só cria a
+ * Transaction quando a tela marca a caixinha, para registrar custo não sair
+ * mexendo no caixa sem a dona pedir.
+ */
+const createTransaction = z.boolean().default(false);
+
+export const careRoutineCreateSchema = z.object({
+  name: text,
+  timeOfDay: z.enum(E.RoutineTime).default("QUALQUER"),
+  checklist: z.boolean().optional(),
+});
+export const careRoutinePatchSchema = z.object({
+  name: text.optional(),
+  timeOfDay: z.enum(E.RoutineTime).optional(),
+  active: z.boolean().optional(),
+  checklist: z.boolean().optional(),
+  order: orderIndex.optional(),
+});
+
+export const careRoutineStepCreateSchema = z.object({
+  title: text,
+  notes: optionalText,
+  productId: optionalId,
+});
+export const careRoutineStepPatchSchema = careRoutineStepCreateSchema
+  .partial()
+  .extend({ order: orderIndex.optional() });
+
+/** Reordenação por arrastar: a posição no array vira o `order`. */
+export const stepsReorderSchema = z.object({ ids: z.array(id).min(1) });
+
+/** Marcar a rotina do dia. Sem `date`, o servidor usa hoje. */
+export const careRoutineLogSchema = z.object({
+  date: dateOnly.optional(),
+  done: z.boolean().default(true),
+});
+
+export const careScheduleCreateSchema = z.object({
+  name: text,
+  description: optionalText,
+});
+export const careSchedulePatchSchema = careScheduleCreateSchema.partial().extend({
+  active: z.boolean().optional(),
+  currentStep: orderIndex.optional(),
+});
+
+export const careScheduleStepCreateSchema = z.object({
+  title: text,
+  description: optionalText,
+  intervalDays: intervalDays.default(7),
+  productId: optionalId,
+});
+export const careScheduleStepPatchSchema = careScheduleStepCreateSchema
+  .partial()
+  .extend({ order: orderIndex.optional() });
+
+/**
+ * Registrar a etapa atual do ciclo. `stepId` só é aceito para corrigir a mão —
+ * sem ele vale o `currentStep` gravado no cronograma.
+ */
+export const careScheduleLogSchema = z.object({
+  date: dateOnly.optional(),
+  stepId: optionalId,
+  notes: optionalText,
+});
+
+export const careAppointmentCreateSchema = z.object({
+  name: text,
+  type: z.enum(E.CareType).default("OUTRO"),
+  intervalDays,
+  lastDoneAt: dateOnly.nullish(),
+  notes: optionalText,
+});
+export const careAppointmentPatchSchema = careAppointmentCreateSchema
+  .partial()
+  .extend({ active: z.boolean().optional() });
+
+export const careAppointmentLogSchema = z.object({
+  date: dateOnly.optional(),
+  cost: money.nullish(),
+  notes: optionalText,
+  createTransaction,
+});
+
+export const beautyProductCreateSchema = z.object({
+  name: text,
+  brand: optionalText,
+  category: z.enum(E.ProductCategory).default("OUTRO"),
+  openedAt: dateOnly.nullish(),
+  // Ignorado quando `openedAt` + `pao` existem: aí a validade é derivada.
+  expiresAt: dateOnly.nullish(),
+  pao: paoMonths.nullish(),
+  cost: money.nullish(),
+  notes: optionalText,
+  createTransaction,
+});
+export const beautyProductPatchSchema = beautyProductCreateSchema
+  .omit({ createTransaction: true })
+  .partial()
+  .extend({
+    finished: z.boolean().optional(),
+    runningLow: z.boolean().optional(),
+  });
+
+export const beautyProductQuerySchema = z.object({
+  category: filter(z.enum(E.ProductCategory)),
+  status: filter(z.enum(["ativos", "acabados", "todos"])),
+});
+
+// ------------------------------------------------------------- espiritual
+
+const clockTime = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/, "precisa estar no formato HH:MM")
+  .nullish();
+
+export const covenMeetingCreateSchema = z.object({
+  title: text,
+  kind: z.enum(E.CovenMeetingKind).default("COVEN"),
+  date: dateOnly,
+  time: clockTime,
+  endTime: clockTime,
+  place: optionalText,
+  agenda: optionalText,
+  notes: optionalText,
+});
+export const covenMeetingPatchSchema = covenMeetingCreateSchema
+  .partial()
+  // Tri-estado de propósito: nulo é "o encontro ainda não chegou", e não
+  // "faltei". Só depois é que vira true ou false.
+  .extend({ attended: z.boolean().nullish() });
+
+export const spiritualStudyCreateSchema = z.object({
+  title: text,
+  kind: z.enum(E.StudyKind).default("TEXTO"),
+  status: z.enum(E.StudyStatus).default("A_FAZER"),
+  receivedAt: dateOnly.nullish(),
+  dueDate: dateOnly.nullish(),
+  content: z.string().nullish(),
+  notes: z.string().nullish(),
+  link: optionalText,
+  meetingId: optionalId,
+});
+// `deliveredAt` não entra: quem o preenche é a rota, no momento em que o
+// status vira ENTREGUE. Uma data de entrega digitada à mão poderia contradizer
+// o status e as duas ficariam brigando na tela.
+export const spiritualStudyPatchSchema = spiritualStudyCreateSchema.partial();
+
+export const ritualLogCreateSchema = z.object({
+  title: text,
+  date: dateOnly,
+  kind: z.enum(E.RitualKind).default("RITUAL"),
+  intention: z.string().nullish(),
+  elements: z.string().nullish(),
+  notes: z.string().nullish(),
+  outcome: z.string().nullish(),
+});
+export const ritualLogPatchSchema = ritualLogCreateSchema.partial();
+
+export const divinationCreateSchema = z.object({
+  date: dateOnly,
+  method: z.enum(E.DivinationMethod).default("TAROT"),
+  deck: optionalText,
+  question: z.string().nullish(),
+  spread: optionalText,
+  // Uma carta por linha na tela; a rota manda a lista já separada.
+  cards: z.array(z.string().trim().min(1)).default([]),
+  reading: z.string().nullish(),
+  outcome: z.string().nullish(),
+});
+export const divinationPatchSchema = divinationCreateSchema.partial();
+
+export const altarItemCreateSchema = z.object({
+  name: text,
+  category: z.enum(E.AltarCategory).default("ERVA"),
+  quantity: optionalText,
+  properties: optionalText,
+  notes: z.string().nullish(),
+});
+export const altarItemPatchSchema = altarItemCreateSchema
+  .partial()
+  .extend({ runningLow: z.boolean().optional() });
+
+// ----------------------------------------------------------------- ciclo
+
+/**
+ * Registro de um dia do ciclo. Campo ausente = "não mexe" (para não apagar o
+ * que já estava salvo num PATCH parcial); `null` explícito limpa. `date` é
+ * sempre obrigatório: é ele que identifica o dia a gravar.
+ */
+export const cycleLogUpsertSchema = z.object({
+  date: dateOnly,
+  flow: z.enum(E.CycleFlow).nullish(),
+  symptoms: z.array(z.enum(E.CycleSymptom)).optional(),
+  mood: z.enum(E.CycleMood).nullish(),
+  notes: optionalText,
 });

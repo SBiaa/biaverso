@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge } from "@/components/ui";
-import { getInitials } from "@/lib/utils";
-import { getMonthlyHistory, getPendingItems } from "@/lib/ace";
-import { ClientProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ClientProjectsSection";
+import { BusinessBadge, Card, CardTitle } from "@/components/ui";
+import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
+import { getMonthlyHistory, getPendingItems, toPostRecord, toTaskRecord } from "@/lib/ace";
+import { ProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ProjectsSection";
 import { MonthlyHistorySection } from "@/components/modules/ace/MonthlyHistorySection";
 import { PendingItemsSection } from "@/components/modules/ace/PendingItemsSection";
 
@@ -23,8 +23,9 @@ export default async function AceClientProfilePage({
   });
   if (!client) notFound();
 
-  const isLinkedToBusiness = client.businessLinks.some((link) => link.businessId === businessId);
-  if (!isLinkedToBusiness) notFound();
+  const link = client.businessLinks.find((l) => l.businessId === businessId);
+  if (!link) notFound();
+  const businessName = link.business.name;
 
   const [projects, businessClients, businessProjects, monthlyHistory, pending] = await Promise.all([
     prisma.project.findMany({
@@ -35,10 +36,15 @@ export default async function AceClientProfilePage({
       },
       orderBy: { createdAt: "desc" },
     }),
+    // Todos os clientes, com a marca de quem já é deste negócio — mesma regra
+    // do select da página do negócio.
     prisma.client.findMany({
-      where: { businessLinks: { some: { businessId } } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        businessLinks: { where: { businessId }, select: { id: true } },
+      },
     }),
     prisma.project.findMany({
       where: { businessId },
@@ -56,32 +62,8 @@ export default async function AceClientProfilePage({
     status: p.status,
     startDate: p.startDate ? p.startDate.toISOString() : null,
     endDate: p.endDate ? p.endDate.toISOString() : null,
-    posts: p.contentPosts.map((post) => ({
-      id: post.id,
-      title: post.title,
-      type: post.type,
-      network: post.network,
-      status: post.status,
-      publishDate: post.publishDate ? post.publishDate.toISOString() : null,
-      completedAt: post.completedAt ? post.completedAt.toISOString() : null,
-      caption: post.caption,
-      notes: post.notes,
-      clientId: post.clientId,
-      projectId: post.projectId,
-    })),
-    tasks: p.productionTasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      type: task.type,
-      description: task.description,
-      priority: task.priority,
-      status: task.status,
-      dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-      completedAt: task.completedAt ? task.completedAt.toISOString() : null,
-      notes: task.notes,
-      clientId: task.clientId,
-      projectId: task.projectId,
-    })),
+    posts: p.contentPosts.map(toPostRecord),
+    tasks: p.productionTasks.map(toTaskRecord),
   }));
 
   const projectOptions = businessProjects.map((p) => ({
@@ -93,12 +75,17 @@ export default async function AceClientProfilePage({
 
   return (
     <>
-      <Topbar title={client.name} />
-      <main className="flex-1 space-y-4 p-4 md:max-w-3xl md:p-6">
+      <Topbar
+        width="narrow"
+        title={client.name}
+        trail={[
+          { label: "Negócios", href: "/negocios" },
+          { label: businessName, href: `/negocios/${businessId}` },
+        ]}
+      />
+      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Card className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-lg font-semibold text-accent">
-            {getInitials(client.name)}
-          </div>
+          <ClientAvatar client={client} size="lg" />
           <div>
             <p className="text-lg font-semibold text-text-primary">{client.name}</p>
             <div className="mt-1 flex flex-wrap gap-1">
@@ -110,17 +97,21 @@ export default async function AceClientProfilePage({
         </Card>
 
         <Card className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-text-primary">Contato</h2>
+          <CardTitle>Contato</CardTitle>
           <p className="text-sm text-text-secondary">E-mail: {client.email ?? "—"}</p>
           <p className="text-sm text-text-secondary">Telefone: {client.phone ?? "—"}</p>
           <p className="text-sm text-text-secondary">Instagram: {client.instagram ?? "—"}</p>
         </Card>
 
-        <ClientProjectsSection
+        <ProjectsSection
           businessId={businessId}
           clientId={clientId}
           projects={projectsWithItems}
-          clients={businessClients}
+          clients={businessClients.map((c) => ({
+            id: c.id,
+            name: c.name,
+            linked: c.businessLinks.length > 0,
+          }))}
           projectOptions={projectOptions}
         />
 

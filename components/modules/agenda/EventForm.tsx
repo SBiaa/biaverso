@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { eventCategoryLabels } from "@/lib/labels";
 import { todayInputValue } from "@/lib/utils";
@@ -91,6 +91,7 @@ export function EventForm({
     if (!isEdit) setForm(emptyForm());
     onClose?.();
     router.refresh();
+    notify("Salvo.");
   }
 
   if (!open) {

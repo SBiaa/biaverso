@@ -8,7 +8,10 @@ type Params = { params: Promise<{ id: string }> };
 
 export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { status, dueDate } = await parseBody(request, fixedBillLogPatchSchema);
+  const { status, dueDate, amountOverride } = await parseBody(
+    request,
+    fixedBillLogPatchSchema,
+  );
 
   const current = await prisma.fixedBillLog.findUniqueOrThrow({ where: { id } });
 
@@ -23,7 +26,10 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
       dueDate: nextDueDate,
       status: nextStatus,
       paidAt: nextStatus === "PAGO" ? (current.paidAt ?? new Date()) : null,
+      // Ausente = não mexe; `null` = volta a valer o valor padrão da conta.
+      ...(amountOverride === undefined ? {} : { amountOverride }),
     },
+    include: { fixedBill: true },
   });
 
   return NextResponse.json(log);

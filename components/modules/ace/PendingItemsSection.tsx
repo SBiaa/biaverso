@@ -1,11 +1,11 @@
-import { Card } from "@/components/ui";
+import { AttentionBadge, Card, CardTitle } from "@/components/ui";
 import { formatDateBR } from "@/lib/utils";
 import type { PendingItem } from "@/lib/ace";
 
 export function PendingItemsSection({ items }: { items: PendingItem[] }) {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-text-primary">Pendentes</h2>
+      <CardTitle>Pendentes</CardTitle>
       {items.length === 0 ? (
         <p className="text-sm text-text-secondary">Nada pendente para este cliente.</p>
       ) : (
@@ -29,9 +29,9 @@ export function PendingItemsSection({ items }: { items: PendingItem[] }) {
               </div>
               <div className="flex items-center gap-2">
                 {item.overdue && (
-                  <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-medium text-white">
+                  <AttentionBadge level="atrasado">
                     Atrasado
-                  </span>
+                  </AttentionBadge>
                 )}
                 <span className="text-xs text-text-secondary">
                   {item.dueOrPublishDate ? formatDateBR(new Date(item.dueOrPublishDate)) : "Sem data"}

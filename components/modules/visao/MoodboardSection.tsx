@@ -3,21 +3,21 @@
 import { useState } from "react";
 import {
   DndContext,
-  closestCenter,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
+  arrayMove,
   rectSortingStrategy,
   useSortable,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { Button, CardTitle, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { MoodboardItemModal } from "./MoodboardItemModal";
 
@@ -182,7 +182,7 @@ export function MoodboardSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Moodboard</h2>
+        <CardTitle>Moodboard</CardTitle>
         <Button variant="secondary" onClick={() => setCreating(true)}>
           <Plus size={14} />
           Adicionar

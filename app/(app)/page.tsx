@@ -1,19 +1,25 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import {
-  CalendarDays,
-  CheckCircle2,
-  Circle,
-  Droplets,
-  ListChecks,
-  Wallet,
-} from "lucide-react";
+import { CalendarDays, Droplets, ListChecks, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, Badge, StatCard, type BadgeOrigin } from "@/components/ui";
+import {
+  Card,
+  CardTitle,
+  StatCard,
+  type BadgeOrigin,
+} from "@/components/ui";
 import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightCard";
 import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
+import { HomeHabitList } from "@/components/modules/home/HomeHabitList";
+import { HomeTaskList } from "@/components/modules/home/HomeTaskList";
+import { QuickCaptureForm } from "@/components/modules/ideias/QuickCaptureForm";
+import { RadarHomeNote } from "@/components/modules/radar/RadarHomeNote";
+import { WaterTracker } from "@/components/modules/dia/WaterTracker";
+import { getOrCreateDay } from "@/lib/day";
+import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
+import { getUserSettings } from "@/lib/settings";
 import {
-  cn,
   dayOfYear,
   formatCurrencyBRL,
   formatDateBR,
@@ -41,20 +47,40 @@ export const dynamic = "force-dynamic";
 async function getDashboardData() {
   const date = todayUtc();
 
-  const day = await prisma.day.findUnique({
-    where: { date },
-    include: {
-      events: { orderBy: { time: "asc" } },
-      tasks: { orderBy: { order: "asc" } },
-      habits: { include: { habit: true } },
-      waterLogs: true,
-      mealLogs: { include: { recipe: true } },
-    },
-  });
+  // Antes era `findUnique`, e num dia ainda sem registro a home não tinha
+  // `dayId` nenhum para pendurar a água. O upsert garante o Day de hoje.
+  const today = await getOrCreateDay(date);
 
   const { start: monthStart, end: monthEnd } = getMonthRange(date);
 
-  const [entradas, saidas] = await Promise.all([
+  // `select` no lugar de `include`: as relações inteiras traziam a linha
+  // completa de Recipe, Habit e Pillar para exibir um punhado de campos.
+  const [day, mealPlans, entradas, saidas, pillars, settings, businesses] = await Promise.all([
+    prisma.day.findUniqueOrThrow({
+      where: { id: today.id },
+      select: {
+        id: true,
+        events: {
+          orderBy: { time: "asc" },
+          select: { id: true, time: true, title: true, syncStatus: true },
+        },
+        tasks: {
+          orderBy: { order: "asc" },
+          select: { id: true, title: true, done: true, origin: true },
+        },
+        habits: {
+          select: { id: true, done: true, habit: { select: { name: true } } },
+        },
+        waterLogs: { select: { id: true } },
+        mealLogs: {
+          select: { mealType: true, recipe: { select: { title: true } } },
+        },
+      },
+    }),
+    prisma.mealPlan.findMany({
+      where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
+      select: { mealType: true, recipe: { select: { title: true } } },
+    }),
     prisma.transaction.aggregate({
       _sum: { amount: true },
       where: { type: "ENTRADA", date: { gte: monthStart, lt: monthEnd } },
@@ -63,17 +89,33 @@ async function getDashboardData() {
       _sum: { amount: true },
       where: { type: "SAIDA", date: { gte: monthStart, lt: monthEnd } },
     }),
+    prisma.pillar.findMany({
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        icon: true,
+        conceptualGoals: {
+          select: {
+            measuredGoals: {
+              where: { status: "EM_ANDAMENTO" },
+              orderBy: { deadline: "asc" },
+              select: { title: true, progress: true },
+            },
+          },
+        },
+      },
+    }),
+    getUserSettings(),
+    // Só para o destino da captura rápida de ideias.
+    prisma.business.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
   ]);
 
   const saldo = (entradas._sum.amount ?? 0) - (saidas._sum.amount ?? 0);
-
-  const pillars = await prisma.pillar.findMany({
-    include: {
-      conceptualGoals: {
-        include: { measuredGoals: { where: { status: "EM_ANDAMENTO" }, orderBy: { deadline: "asc" } } },
-      },
-    },
-  });
 
   const pillarHighlight = pillars
     .map((pillar) => {
@@ -92,23 +134,29 @@ async function getDashboardData() {
     .filter((pillar) => pillar.inProgressCount > 0)
     .sort((a, b) => b.inProgressCount - a.inProgressCount)[0] ?? null;
 
-  return { day, saldo, date, pillarHighlight };
+  return { day, saldo, date, pillarHighlight, settings, mealPlans, businesses };
 }
 
 export default async function HomePage() {
-  const { day, saldo, date, pillarHighlight } = await getDashboardData();
+  const { day, saldo, date, pillarHighlight, settings, mealPlans, businesses } =
+    await getDashboardData();
 
-  const events = day?.events ?? [];
-  const tasks = day?.tasks ?? [];
-  const habits = day?.habits ?? [];
-  const waterCount = day?.waterLogs.length ?? 0;
-  const mealLogs = day?.mealLogs ?? [];
+  const events = day.events;
+  const tasks = day.tasks.map((t) => ({ ...t, origin: t.origin as BadgeOrigin }));
+  const habits = day.habits.map((h) => ({ id: h.id, name: h.habit.name, done: h.done }));
+  const waterCount = day.waterLogs.length;
+  const mealLogs = day.mealLogs;
 
   const habitsDone = habits.filter((h) => h.done).length;
-  const tasksByOrigin = tasks.reduce<Record<string, typeof tasks>>((acc, task) => {
-    (acc[task.origin] ??= []).push(task);
-    return acc;
-  }, {});
+
+  const meals = (["CAFE_DA_MANHA", "ALMOCO", "JANTAR"] as const).map((type) => {
+    const log = mealLogs.find((m) => m.mealType === type);
+    const plan = mealPlans.find((p) => p.mealType === type);
+    return {
+      type,
+      title: log?.recipe?.title ?? plan?.recipe?.title ?? "—",
+    };
+  });
 
   const phrase =
     motivationalPhrases[dayOfYear(date) % motivationalPhrases.length];
@@ -118,8 +166,30 @@ export default async function HomePage() {
       <Topbar title="Home" />
 
       {/* Desktop */}
-      <main className="hidden flex-1 flex-col gap-4 p-6 md:flex">
-        <div className="grid grid-cols-4 gap-4">
+      <main className="mx-auto hidden w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-5 md:px-8 md:py-8 md:flex">
+        {/* A frase do dia existia só no mobile, e era o único lugar do desktop
+            com alguma voz — sem ela a home abria direto em quatro números. */}
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="font-serif text-xl italic text-text-secondary">
+            {phrase}
+          </p>
+          <span className="text-sm text-text-secondary">
+            {formatDateBR(date)}
+          </span>
+        </div>
+
+        {/* Ideia boa aparece a qualquer hora e some rápido: o campo fica no
+            topo da home para não depender de achar o menu antes. */}
+        <QuickCaptureForm businesses={businesses} standalone />
+
+        {/* Em Suspense para o radar (4 consultas) não segurar a Home inteira. */}
+        <Suspense fallback={null}>
+          <RadarHomeNote />
+        </Suspense>
+
+        {/* 4 colunas fixas espremiam "R$ 1.234,56" em ~115px entre 768 e
+            1280px. Duas até lá, quatro quando há espaço de verdade. */}
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           <StatCard
             label="Eventos hoje"
             value={events.length}
@@ -132,7 +202,7 @@ export default async function HomePage() {
           />
           <StatCard
             label="Água"
-            value={`${waterCount}/8`}
+            value={`${waterCount}/${settings.waterGoal}`}
             icon={<Droplets size={16} className="text-text-secondary" />}
           />
           <StatCard
@@ -143,12 +213,20 @@ export default async function HomePage() {
           />
         </div>
 
-        <div className="grid flex-1 grid-cols-2 gap-4">
-          <div className="flex flex-col gap-4">
+        {/* Agenda e Tarefas saem de uma coluna compartilhada para uma cada:
+            num container de 1600px, duas colunas davam cards de 780px com uma
+            lista de três linhas dentro.
+
+            O Cardápio desceu para a coluna da Agenda: num dia sem evento a
+            Agenda é um card de duas linhas, e sozinha na coluna ela deixava
+            meia tela em branco enquanto a terceira coluna tinha três cards
+            empilhados. Curto com curto de um lado, a lista longa no meio. */}
+        <div className="grid flex-1 grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-6 xl:grid-cols-3">
+          <div className="flex flex-col gap-4 lg:gap-6">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Agenda de hoje
-              </h2>
+              </CardTitle>
               {events.length === 0 ? (
                 <p className="text-sm text-text-secondary">
                   Nenhum evento para hoje.
@@ -172,100 +250,44 @@ export default async function HomePage() {
             </Card>
 
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
-                Tarefas de hoje
-              </h2>
-              {tasks.length === 0 ? (
-                <p className="text-sm text-text-secondary">
-                  Nenhuma tarefa para hoje.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {Object.entries(tasksByOrigin).map(([origin, items]) => (
-                    <div key={origin} className="flex flex-col gap-1.5">
-                      <Badge origin={origin as BadgeOrigin} />
-                      {items.map((task) => (
-                        <div
-                          key={task.id}
-                          className="flex items-center gap-2 pl-1 text-sm"
-                        >
-                          {task.done ? (
-                            <CheckCircle2 size={16} className="text-accent" />
-                          ) : (
-                            <Circle size={16} className="text-text-secondary" />
-                          )}
-                          <span
-                            className={cn(
-                              "text-text-primary",
-                              task.done && "text-text-secondary line-through",
-                            )}
-                          >
-                            {task.title}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <CardTitle className="mb-3">
+                Cardápio de hoje
+              </CardTitle>
+              <div className="grid grid-cols-3 gap-3">
+                {meals.map((meal) => (
+                  <div key={meal.type} className="flex flex-col gap-1">
+                    <span className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+                      {mealTypeLabels[meal.type]}
+                    </span>
+                    <span className="text-sm text-text-primary">{meal.title}</span>
+                  </div>
+                ))}
+              </div>
             </Card>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 lg:gap-6">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
-                Hábitos do dia
-              </h2>
-              <ul className="mb-4 flex flex-col gap-2">
-                {habits.map((h) => (
-                  <li key={h.id} className="flex items-center gap-2 text-sm">
-                    {h.done ? (
-                      <CheckCircle2 size={16} className="text-accent" />
-                    ) : (
-                      <Circle size={16} className="text-text-secondary" />
-                    )}
-                    <span
-                      className={cn(
-                        "text-text-primary",
-                        h.done && "text-text-secondary line-through",
-                      )}
-                    >
-                      {h.habit.name}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex items-center gap-1.5">
-                {Array.from({ length: 8 }, (_, i) => (
-                  <Droplets
-                    key={i}
-                    size={16}
-                    className={i < waterCount ? "text-accent" : "text-border"}
-                    fill={i < waterCount ? "currentColor" : "none"}
-                  />
-                ))}
-              </div>
+              <CardTitle className="mb-3">
+                Tarefas de hoje
+              </CardTitle>
+              <HomeTaskList items={tasks} />
             </Card>
+          </div>
 
+          <div className="flex flex-col gap-4 lg:col-span-2 lg:gap-6 xl:col-span-1">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
-                Cardápio de hoje
-              </h2>
-              <div className="grid grid-cols-3 gap-3">
-                {["CAFE_DA_MANHA", "ALMOCO", "JANTAR"].map((type) => {
-                  const log = mealLogs.find((m) => m.mealType === type);
-                  return (
-                    <div key={type} className="flex flex-col gap-1">
-                      <span className="text-xs font-medium uppercase tracking-wide text-text-secondary">
-                        {mealTypeLabels[type]}
-                      </span>
-                      <span className="text-sm text-text-primary">
-                        {log?.recipe?.title ?? "—"}
-                      </span>
-                    </div>
-                  );
-                })}
+              <CardTitle className="mb-3">
+                Hábitos do dia
+              </CardTitle>
+              <div className="mb-4">
+                <HomeHabitList items={habits} />
               </div>
+              <WaterTracker
+                dayId={day.id}
+                initialCount={waterCount}
+                settings={settings}
+              />
             </Card>
 
             <PillarHighlightCard pillar={pillarHighlight} />
@@ -279,10 +301,16 @@ export default async function HomePage() {
           {phrase}
         </p>
 
+        <QuickCaptureForm businesses={businesses} standalone />
+
+        <Suspense fallback={null}>
+          <RadarHomeNote />
+        </Suspense>
+
         <Card>
-          <h2 className="mb-1 text-sm font-semibold text-text-primary">
+          <CardTitle className="mb-1">
             Hoje, {formatDateBR(date)}
-          </h2>
+          </CardTitle>
           {events.length === 0 ? (
             <p className="text-sm text-text-secondary">
               Nenhum evento para hoje.
@@ -304,85 +332,48 @@ export default async function HomePage() {
 
         <Card>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Hábitos</h2>
+            <CardTitle>Hábitos</CardTitle>
             <span className="text-sm text-text-secondary">
               {habitsDone}/{habits.length}
             </span>
           </div>
-          {habits.length === 0 ? (
-            <p className="text-sm text-text-secondary">
-              Nenhum hábito cadastrado.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {habits.map((h) => (
-                <li key={h.id} className="flex items-center gap-2 text-sm">
-                  {h.done ? (
-                    <CheckCircle2 size={16} className="text-accent" />
-                  ) : (
-                    <Circle size={16} className="text-text-secondary" />
-                  )}
-                  <span
-                    className={cn(
-                      "text-text-primary",
-                      h.done && "text-text-secondary line-through",
-                    )}
-                  >
-                    {h.habit.name}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <HomeHabitList items={habits} />
         </Card>
 
         <Card>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Água</h2>
-            <span className="text-sm text-text-secondary">
-              {waterCount}/8
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: 8 }, (_, i) => (
-              <Droplets
-                key={i}
-                size={16}
-                className={i < waterCount ? "text-accent" : "text-border"}
-                fill={i < waterCount ? "currentColor" : "none"}
-              />
-            ))}
-          </div>
+          <CardTitle className="mb-3">
+            Tarefas de hoje
+          </CardTitle>
+          <HomeTaskList items={tasks} />
+        </Card>
+
+        <Card>
+          <CardTitle className="mb-3">Água</CardTitle>
+          <WaterTracker
+            dayId={day.id}
+            initialCount={waterCount}
+            settings={settings}
+          />
         </Card>
 
         <Link
           href="/dia"
-          className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-center text-sm font-medium text-white"
+          className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-center text-sm font-medium text-accent-contrast"
         >
           Ver dia completo
         </Link>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
+          <CardTitle className="mb-3">
             Cardápio de hoje
-          </h2>
+          </CardTitle>
           <div className="flex flex-col gap-2">
-            {["CAFE_DA_MANHA", "ALMOCO", "JANTAR"].map((type) => {
-              const log = mealLogs.find((m) => m.mealType === type);
-              return (
-                <div
-                  key={type}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="text-text-secondary">
-                    {mealTypeLabels[type]}
-                  </span>
-                  <span className="text-text-primary">
-                    {log?.recipe?.title ?? "—"}
-                  </span>
-                </div>
-              );
-            })}
+            {meals.map((meal) => (
+              <div key={meal.type} className="flex items-center justify-between text-sm">
+                <span className="text-text-secondary">{mealTypeLabels[meal.type]}</span>
+                <span className="text-text-primary">{meal.title}</span>
+              </div>
+            ))}
           </div>
         </Card>
 

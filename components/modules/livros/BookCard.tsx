@@ -144,7 +144,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
               <button
                 type="button"
                 onClick={submitTotal}
-                className="text-xs font-medium text-accent"
+                className="-my-2 py-2 text-xs font-medium text-accent"
               >
                 Salvar
               </button>
@@ -180,7 +180,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
               <button
                 type="button"
                 onClick={submitPage}
-                className="text-xs font-medium text-accent"
+                className="-my-2 py-2 text-xs font-medium text-accent"
               >
                 Salvar
               </button>

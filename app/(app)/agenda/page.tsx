@@ -11,12 +11,7 @@ export default async function AgendaPage() {
   return (
     <>
       <Topbar title="Agenda" action={<SyncNowButton variant="secondary" />} />
-      <main className="flex-1 space-y-4 p-4 md:p-6">
-        {/* No mobile não existe Topbar, então o botão aparece aqui. */}
-        <div className="md:hidden">
-          <SyncNowButton variant="secondary" />
-        </div>
-
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <AgendaBoard initialEvents={events} />
       </main>
     </>

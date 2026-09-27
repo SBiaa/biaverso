@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApiError, parseBody, route } from "@/lib/api";
 import { eventPatchSchema } from "@/lib/schemas";
-import { calendarClient, getAuthClient } from "@/lib/google-calendar";
+import { deleteEventEverywhere } from "@/lib/agenda";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 type Params = { params: Promise<{ id: string }> };
@@ -46,31 +46,14 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
   return NextResponse.json(await prisma.event.update({ where: { id }, data }));
 });
 
-// Apaga o evento no app e também no Google. Sem apagar lá, a próxima
-// sincronização traria o evento de volta.
+// Apaga o evento no app e também no Google (ver `deleteEventEverywhere`).
 export const DELETE = route(async (_request: Request, { params }: Params) => {
   const { id } = await params;
 
-  const event = await prisma.event.findUnique({ where: { id } });
+  const event = await prisma.event.findUnique({ where: { id }, select: { id: true } });
   if (!event) throw new ApiError(404, "Evento não encontrado.");
 
-  let googleDeleted = true;
-
-  if (event.googleEventId) {
-    try {
-      const calendar = calendarClient(await getAuthClient());
-      await calendar.events.delete({
-        calendarId: event.googleCalendarId ?? "primary",
-        eventId: event.googleEventId,
-      });
-    } catch {
-      // Desconectado, evento já removido lá ou calendário somente leitura:
-      // o evento sai do app do mesmo jeito.
-      googleDeleted = false;
-    }
-  }
-
-  await prisma.event.delete({ where: { id } });
+  const { googleDeleted } = await deleteEventEverywhere(id);
 
   return NextResponse.json({ ok: true, googleDeleted });
 });

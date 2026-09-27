@@ -35,7 +35,7 @@ export function MonthPicker({ month, year }: MonthPickerProps) {
       <button
         type="button"
         onClick={() => go(-1)}
-        className="rounded-md border border-border p-1.5 hover:bg-black/[0.03]"
+        className="rounded-md border border-border p-1.5 hover:bg-hover"
       >
         <ChevronLeft size={16} />
       </button>
@@ -45,7 +45,7 @@ export function MonthPicker({ month, year }: MonthPickerProps) {
       <button
         type="button"
         onClick={() => go(1)}
-        className="rounded-md border border-border p-1.5 hover:bg-black/[0.03]"
+        className="rounded-md border border-border p-1.5 hover:bg-hover"
       >
         <ChevronRight size={16} />
       </button>

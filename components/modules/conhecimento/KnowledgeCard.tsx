@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Card, ErrorNote } from "@/components/ui";
+import { Card, confirmAction, ErrorNote, IconButton, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { knowledgeAreaLabels, knowledgeTypeLabels, studyStatusLabels } from "@/lib/labels";
+import { knowledgeAreaLabels, knowledgeTypeLabels, knowledgeStatusLabels } from "@/lib/labels";
 import { formatDateBR } from "@/lib/utils";
 
-const statusOptions = Object.keys(studyStatusLabels);
+const statusOptions = Object.keys(knowledgeStatusLabels);
 
 type Knowledge = {
   id: string;
@@ -44,13 +44,18 @@ export function KnowledgeCard({ item: initialItem }: { item: Knowledge }) {
   }
 
   async function handleDelete() {
-    if (!confirm(`Excluir "${item.title}"?`)) return;
+    const confirmed = await confirmAction({
+      title: `Excluir "${item.title}"?`,
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     setDeleting(true);
     setError(null);
     try {
       await api.delete(`/api/knowledge/${item.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -65,15 +70,14 @@ export function KnowledgeCard({ item: initialItem }: { item: Knowledge }) {
         <p className="text-sm font-semibold text-text-primary">{item.title}</p>
         <div className="flex shrink-0 items-center gap-2">
           <span className="text-xs text-text-secondary">{knowledgeTypeLabels[item.type]}</span>
-          <button
-            type="button"
+          <IconButton
             onClick={handleDelete}
             disabled={deleting}
             aria-label={`Excluir ${item.title}`}
-            className="rounded p-1 text-text-secondary hover:bg-black/[0.03] disabled:opacity-50"
+            tone="danger"
           >
-            <Trash2 size={14} />
-          </button>
+            <Trash2 size={15} />
+          </IconButton>
         </div>
       </div>
 
@@ -88,7 +92,7 @@ export function KnowledgeCard({ item: initialItem }: { item: Knowledge }) {
         >
           {statusOptions.map((s) => (
             <option key={s} value={s}>
-              {studyStatusLabels[s]}
+              {knowledgeStatusLabels[s]}
             </option>
           ))}
         </select>
@@ -101,7 +105,7 @@ export function KnowledgeCard({ item: initialItem }: { item: Knowledge }) {
           href={item.link}
           target="_blank"
           rel="noreferrer"
-          className="text-xs font-medium text-accent"
+          className="-my-2 py-2 text-xs font-medium text-accent"
         >
           Abrir link
         </a>

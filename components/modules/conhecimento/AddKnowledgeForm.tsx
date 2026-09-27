@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import { Button, Card, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { knowledgeAreaLabels, knowledgeTypeLabels, studyStatusLabels } from "@/lib/labels";
+import { knowledgeAreaLabels, knowledgeTypeLabels, knowledgeStatusLabels } from "@/lib/labels";
 
 const typeOptions = Object.keys(knowledgeTypeLabels);
 const areaOptions = Object.keys(knowledgeAreaLabels);
-const statusOptions = Object.keys(studyStatusLabels);
+const statusOptions = Object.keys(knowledgeStatusLabels);
 
 export function AddKnowledgeForm() {
   const router = useRouter();
@@ -47,6 +47,7 @@ export function AddKnowledgeForm() {
         link: "",
       });
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -97,7 +98,7 @@ export function AddKnowledgeForm() {
         >
           {statusOptions.map((s) => (
             <option key={s} value={s}>
-              {studyStatusLabels[s]}
+              {knowledgeStatusLabels[s]}
             </option>
           ))}
         </select>

@@ -60,6 +60,17 @@ export function invoiceForPurchase(
   return addInvoiceMonths(month, year, 1);
 }
 
+/**
+ * Valor de uma conta fixa num mês: o ajuste daquele mês manda quando existe,
+ * senão vale o valor padrão da conta.
+ */
+export function billAmountForMonth(
+  amountOverride: number | null | undefined,
+  amount: number,
+) {
+  return amountOverride ?? amount;
+}
+
 /** Status de uma conta não paga, considerando a data de vencimento. */
 export function unpaidStatus(dueDate: Date) {
   return dueDate < todayUtc() ? "ATRASADO" : "PENDENTE";

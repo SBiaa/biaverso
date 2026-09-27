@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, confirmAction, ErrorNote, IconButton, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatDurationMinutes } from "@/lib/utils";
 import {
@@ -56,6 +56,7 @@ export function TimeEntryList({
       setEndTime("");
       setShowForm(false);
       router.refresh();
+      notify("Registrado.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -64,11 +65,19 @@ export function TimeEntryList({
   }
 
   async function handleDelete(entry: TimeEntryDTO) {
+    const category = categoryById.get(entry.categoryId);
+    const confirmed = await confirmAction({
+      title: `Excluir registro de ${category?.name ?? "categoria removida"}?`,
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     setDeletingId(entry.id);
     setError(null);
     try {
       await api.delete(`/api/time-entries/${entry.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -104,15 +113,14 @@ export function TimeEntryList({
                 <span className="shrink-0 text-xs font-medium text-text-secondary">
                   {formatDurationMinutes(minutesBetween(entry.startedAt, entry.endedAt))}
                 </span>
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => handleDelete(entry)}
                   disabled={deletingId === entry.id}
                   aria-label={`Excluir registro ${category?.name ?? ""}`}
-                  className="shrink-0 rounded p-1 text-text-secondary hover:bg-black/[0.03] disabled:opacity-50"
+                  tone="danger"
                 >
-                  <Trash2 size={14} />
-                </button>
+                  <Trash2 size={15} />
+                </IconButton>
               </li>
             );
           })}

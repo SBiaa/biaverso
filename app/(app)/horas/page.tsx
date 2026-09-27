@@ -3,7 +3,7 @@ import { getAllCategories, getDayTimeTracking, getRunningEntry } from "@/lib/tim
 import { instantToMinutes } from "@/lib/time-tracking-shared";
 import { parseDateOnly, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui";
+import { Card, CardTitle } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
 import { TimerWidget } from "@/components/modules/horas/TimerWidget";
 import { DayTimeline } from "@/components/modules/horas/DayTimeline";
@@ -39,7 +39,10 @@ export default async function HorasPage({
   return (
     <>
       <Topbar title="Controle de horas" />
-      <main key={day.id} className="flex-1 space-y-4 p-4 md:p-6 md:max-w-3xl">
+      <main
+        key={day.id}
+        className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:space-y-6 md:px-8 md:py-8"
+      >
         <div>
           <DayPicker date={day.date.toISOString()} />
           <p className="text-sm text-text-secondary">
@@ -48,12 +51,12 @@ export default async function HorasPage({
         </div>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Cronômetro</h2>
+          <CardTitle className="mb-3">Cronômetro</CardTitle>
           <TimerWidget categories={activeCategories} initialRunning={runningEntry} />
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Linha do tempo</h2>
+          <CardTitle className="mb-3">Linha do tempo</CardTitle>
           <DayTimeline
             categories={categories}
             blocks={blocks}
@@ -63,22 +66,22 @@ export default async function HorasPage({
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Resumo do dia</h2>
+          <CardTitle className="mb-3">Resumo do dia</CardTitle>
           <DailySummary categories={categories} entries={entries} />
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Blocos planejados</h2>
+          <CardTitle className="mb-3">Blocos planejados</CardTitle>
           <TimeBlockPlanner dayId={day.id} categories={activeCategories} blocks={blocks} />
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Registros do dia</h2>
+          <CardTitle className="mb-3">Registros do dia</CardTitle>
           <TimeEntryList dayId={day.id} categories={activeCategories} entries={entries} />
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Categorias</h2>
+          <CardTitle className="mb-3">Categorias</CardTitle>
           <CategoryManager initialItems={categories} />
         </Card>
       </main>

@@ -1,10 +1,22 @@
 import Link from "next/link";
-import { CreditCard, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import {
+  CreditCard,
+  Hourglass,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { ensureFixedBillLogsForMonth, getCreditCard } from "@/lib/finance";
+import { getCreditCard, getMonthPlan } from "@/lib/finance";
 import { invoiceDueDate } from "@/lib/finance-calc";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card, BusinessBadge, StatCard } from "@/components/ui";
+import {
+  Badge,
+  BusinessBadge,
+  Card,
+  CardTitle,
+  StatCard,
+} from "@/components/ui";
 import { FinanceSubNav } from "@/components/modules/financeiro/FinanceSubNav";
 import { TransactionsList } from "@/components/modules/financeiro/TransactionsList";
 import {
@@ -24,78 +36,68 @@ async function getFinanceData() {
   const month = date.getUTCMonth() + 1;
   const year = date.getUTCFullYear();
 
-  await ensureFixedBillLogsForMonth(month, year);
+  // Os totais saem do mesmo lugar que a tela de planejamento, para as duas não
+  // darem números diferentes para o mesmo mês. O plano também materializa os
+  // logs das contas fixas, então tem que vir antes das contas pendentes.
+  const plano = await getMonthPlan(month, year);
+  const fatura = plano.invoice;
 
-  const [
-    entradas,
-    saidas,
-    fatura,
-    receitaPorNegocioRaw,
-    ultimasTransacoes,
-    contasPendentes,
-    lancamentosCartao,
-    businesses,
-    card,
-  ] = await Promise.all([
-    prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: { type: "ENTRADA", date: { gte: start, lt: end } },
-    }),
-    prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: { type: "SAIDA", date: { gte: start, lt: end } },
-    }),
-    prisma.creditCardEntry.aggregate({
-      _sum: { amount: true },
-      where: { invoiceMonth: month, invoiceYear: year },
-    }),
-    prisma.transaction.groupBy({
-      by: ["businessId"],
-      _sum: { amount: true },
-      where: {
-        type: "ENTRADA",
-        date: { gte: start, lt: end },
-        businessId: { not: null },
-      },
-    }),
-    prisma.transaction.findMany({
-      orderBy: { date: "desc" },
-      take: 8,
-      include: { business: true },
-    }),
-    prisma.fixedBillLog.findMany({
-      where: { month, year, status: { in: ["PENDENTE", "ATRASADO"] } },
-      include: { fixedBill: true },
-      orderBy: { dueDate: "asc" },
-    }),
-    prisma.creditCardEntry.findMany({
-      where: { invoiceMonth: month, invoiceYear: year },
-      orderBy: { purchaseDate: "desc" },
-      include: { business: true },
-    }),
-    prisma.business.findMany({ where: { active: true } }),
-    getCreditCard(),
-  ]);
+  const [receitaPorNegocioRaw, ultimasTransacoes, businesses, card] =
+    await Promise.all([
+      // Separado por `received` para a linha do negócio mostrar o que caiu e o
+      // que ainda está previsto, sem misturar os dois num número só.
+      prisma.transaction.groupBy({
+        by: ["businessId", "received"],
+        _sum: { amount: true },
+        where: {
+          type: "ENTRADA",
+          date: { gte: start, lt: end },
+          businessId: { not: null },
+        },
+      }),
+      prisma.transaction.findMany({
+        orderBy: { date: "desc" },
+        take: 8,
+        include: { business: true },
+      }),
+      prisma.business.findMany({ where: { active: true } }),
+      getCreditCard(),
+    ]);
+
+  // Vem do plano, e não de uma busca própria, porque assinatura no cartão já
+  // conta como paga quando a fatura foi paga.
+  const contasPendentes = plano.fixedBills.filter((b) => b.status !== "PAGO");
 
   const businessMap = new Map(businesses.map((b) => [b.id, b]));
-  const receitaPorNegocio = receitaPorNegocioRaw
-    .filter((item) => item.businessId && businessMap.has(item.businessId))
-    .map((item) => ({
-      business: businessMap.get(item.businessId as string)!,
-      total: item._sum.amount ?? 0,
-    }));
-
-  const saldo = (entradas._sum.amount ?? 0) - (saidas._sum.amount ?? 0);
+  const receitaPorNegocio = [
+    ...receitaPorNegocioRaw
+      .filter((item) => item.businessId && businessMap.has(item.businessId))
+      .reduce((acc, item) => {
+        const id = item.businessId as string;
+        const linha = acc.get(id) ?? {
+          business: businessMap.get(id)!,
+          recebido: 0,
+          previsto: 0,
+        };
+        if (item.received) linha.recebido += item._sum.amount ?? 0;
+        else linha.previsto += item._sum.amount ?? 0;
+        acc.set(id, linha);
+        return acc;
+      }, new Map<string, { business: (typeof businesses)[number]; recebido: number; previsto: number }>())
+      .values(),
+  ].sort((a, b) => b.recebido + b.previsto - (a.recebido + a.previsto));
 
   return {
-    entradas: entradas._sum.amount ?? 0,
-    saidas: saidas._sum.amount ?? 0,
-    saldo,
-    fatura: fatura._sum.amount ?? 0,
+    entradas: plano.incomeReceivedTotal,
+    previstoParaCair: plano.incomePendingTotal,
+    saidas: plano.expenseTotal,
+    saldo: plano.balance,
+    fatura: fatura.total,
+    faturaPaga: fatura.status === "PAGA",
     receitaPorNegocio,
     ultimasTransacoes,
     contasPendentes,
-    lancamentosCartao,
+    lancamentosCartao: fatura.items,
     businesses,
     faturaVenceEm: card ? invoiceDueDate(month, year, card.dueDay) : null,
   };
@@ -107,15 +109,21 @@ export default async function FinanceiroPage() {
   return (
     <>
       <Topbar title="Financeiro" />
-      <main className="flex-1 space-y-4 p-4 md:p-6">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <FinanceSubNav />
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           <StatCard
-            label="Total entrou"
+            label="Já caiu na conta"
             value={formatCurrencyBRL(data.entradas)}
             icon={<TrendingUp size={16} className="text-emerald-600" />}
             valueClassName="text-emerald-600"
+          />
+          <StatCard
+            label="Previsto para cair"
+            value={formatCurrencyBRL(data.previstoParaCair)}
+            icon={<Hourglass size={16} className="text-text-secondary" />}
+            valueClassName="text-text-secondary"
           />
           <StatCard
             label="Total saiu"
@@ -130,18 +138,28 @@ export default async function FinanceiroPage() {
             valueClassName={data.saldo >= 0 ? "text-emerald-600" : "text-red-600"}
           />
           <StatCard
-            label="Fatura do cartão"
+            // Cinco cards em duas colunas deixam o último sozinho na linha,
+            // com meia tela vazia ao lado. Largura inteira só no celular.
+            className="col-span-2 md:col-span-1"
+            label={data.faturaPaga ? "Fatura do cartão (paga)" : "Fatura do cartão"}
             value={formatCurrencyBRL(data.fatura)}
-            icon={<CreditCard size={16} className="text-text-secondary" />}
+            icon={
+              <CreditCard
+                size={16}
+                className={
+                  data.faturaPaga ? "text-emerald-600" : "text-text-secondary"
+                }
+              />
+            }
           />
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
             <Card>
-              <h2 className="mb-3 text-sm font-semibold text-text-primary">
+              <CardTitle className="mb-3">
                 Receita por negócio
-              </h2>
+              </CardTitle>
               {data.receitaPorNegocio.length === 0 ? (
                 <p className="text-sm text-text-secondary">
                   Nenhuma receita este mês.
@@ -151,11 +169,18 @@ export default async function FinanceiroPage() {
                   {data.receitaPorNegocio.map((item) => (
                     <li
                       key={item.business.id}
-                      className="flex items-center justify-between text-sm"
+                      className="flex items-center justify-between gap-3 text-sm"
                     >
                       <BusinessBadge business={item.business} />
-                      <span className="font-medium text-text-primary">
-                        {formatCurrencyBRL(item.total)}
+                      <span className="text-right">
+                        <span className="font-medium text-emerald-600">
+                          {formatCurrencyBRL(item.recebido)}
+                        </span>
+                        {item.previsto > 0 && (
+                          <span className="block text-xs text-text-secondary">
+                            + {formatCurrencyBRL(item.previsto)} previsto
+                          </span>
+                        )}
                       </span>
                     </li>
                   ))}
@@ -165,12 +190,12 @@ export default async function FinanceiroPage() {
 
             <Card>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-text-primary">
+                <CardTitle>
                   Últimas transações
-                </h2>
+                </CardTitle>
                 <Link
                   href="/financeiro/transacoes"
-                  className="text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent"
                 >
                   Ver todas
                 </Link>
@@ -185,12 +210,12 @@ export default async function FinanceiroPage() {
           <div className="flex flex-col gap-4">
             <Card>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-text-primary">
+                <CardTitle>
                   Contas pendentes do mês
-                </h2>
+                </CardTitle>
                 <Link
                   href="/financeiro/contas-fixas"
-                  className="text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent"
                 >
                   Ver todas
                 </Link>
@@ -201,30 +226,32 @@ export default async function FinanceiroPage() {
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2">
-                  {data.contasPendentes.map((log) => (
+                  {data.contasPendentes.map((bill) => (
                     <li
-                      key={log.id}
+                      key={bill.logId}
                       className="flex items-center justify-between text-sm"
                     >
                       <div>
-                        <p className="text-text-primary">{log.fixedBill.name}</p>
+                        <p className="text-text-primary">{bill.name}</p>
                         <p className="text-xs text-text-secondary">
-                          vence em {formatDateBR(log.dueDate)}
+                          vence em {formatDateBR(new Date(bill.dueDate))}
+                          {bill.paymentMethod === "CARTAO_CREDITO" &&
+                            " · na fatura"}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
                             "rounded-full px-2 py-0.5 text-xs font-medium",
-                            log.status === "ATRASADO"
+                            bill.status === "ATRASADO"
                               ? "bg-badge-ace-bg text-badge-ace-text"
                               : "bg-badge-casa-bg text-badge-casa-text",
                           )}
                         >
-                          {billStatusLabels[log.status]}
+                          {billStatusLabels[bill.status]}
                         </span>
                         <span className="font-medium text-text-primary">
-                          {formatCurrencyBRL(log.fixedBill.amount)}
+                          {formatCurrencyBRL(bill.amount)}
                         </span>
                       </div>
                     </li>
@@ -235,7 +262,7 @@ export default async function FinanceiroPage() {
 
             <Card>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-text-primary">
+                <CardTitle>
                   Cartão de crédito do mês
                   {data.faturaVenceEm && (
                     <span className="font-normal text-text-secondary">
@@ -243,10 +270,10 @@ export default async function FinanceiroPage() {
                       · vence em {formatDateBR(data.faturaVenceEm)}
                     </span>
                   )}
-                </h2>
+                </CardTitle>
                 <Link
                   href="/financeiro/cartao"
-                  className="text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent"
                 >
                   Ver todos
                 </Link>
@@ -263,7 +290,13 @@ export default async function FinanceiroPage() {
                       className="flex items-center justify-between text-sm"
                     >
                       <div className="flex items-center gap-2">
-                        <BusinessBadge business={entry.business} />
+                        {entry.kind === "ASSINATURA" ? (
+                          <Badge className="bg-badge-tarot-bg text-badge-tarot-text">
+                            Assinatura
+                          </Badge>
+                        ) : (
+                          <BusinessBadge business={entry.business} />
+                        )}
                         <span className="text-text-primary">
                           {entry.description}
                         </span>

@@ -145,12 +145,16 @@ export function monthNameBR(month: number) {
   return MONTH_NAMES_BR[month - 1];
 }
 
-export function colorFromString(value: string) {
+export function hashString(value: string) {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
     hash = value.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const hue = Math.abs(hash) % 360;
+  return Math.abs(hash);
+}
+
+export function colorFromString(value: string) {
+  const hue = hashString(value) % 360;
   return `hsl(${hue}, 55%, 55%)`;
 }
 
