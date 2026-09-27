@@ -808,17 +808,20 @@ enum BookStatus {
   ABANDONADO
 }
 
-// BIBLIOTECA DE CONHECIMENTO
+// BIBLIOTECA DE CONHECIMENTO — também o controle do que falta/está sendo estudado.
 model Knowledge {
-  id        String        @id @default(cuid())
-  title     String
-  source    String?
-  type      KnowledgeType
-  area      KnowledgeArea
-  summary   String?
-  link      String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id         String        @id @default(cuid())
+  title      String
+  source     String?
+  type       KnowledgeType
+  area       KnowledgeArea
+  status     StudyStatus   @default(QUERO_ESTUDAR)
+  summary    String?
+  link       String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 }
 
 enum KnowledgeType {
@@ -828,6 +831,14 @@ enum KnowledgeType {
   PODCAST
   POST
   OUTRO
+}
+
+enum StudyStatus {
+  QUERO_ESTUDAR
+  ESTUDANDO
+  ESTUDADO
+  PAUSADO
+  ABANDONADO
 }
 
 enum KnowledgeArea {

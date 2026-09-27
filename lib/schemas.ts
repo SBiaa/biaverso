@@ -300,11 +300,22 @@ export const bookPatchSchema = z.object({
   currentPage: z.coerce.number().int().min(0).nullish(),
 });
 
-export const knowledgeSchema = z.object({
+export const knowledgeCreateSchema = z.object({
   title: text,
   source: optionalText,
   type: z.enum(E.KnowledgeType),
   area: z.enum(E.KnowledgeArea),
+  status: z.enum(E.StudyStatus).default("QUERO_ESTUDAR"),
+  summary: optionalText,
+  link: optionalText,
+});
+
+export const knowledgePatchSchema = z.object({
+  title: text.optional(),
+  source: optionalText,
+  type: z.enum(E.KnowledgeType).optional(),
+  area: z.enum(E.KnowledgeArea).optional(),
+  status: z.enum(E.StudyStatus).optional(),
   summary: optionalText,
   link: optionalText,
 });

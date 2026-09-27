@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { knowledgeAreaLabels, knowledgeTypeLabels } from "@/lib/labels";
+import { knowledgeAreaLabels, knowledgeTypeLabels, studyStatusLabels } from "@/lib/labels";
 
 const typeOptions = Object.keys(knowledgeTypeLabels);
 const areaOptions = Object.keys(knowledgeAreaLabels);
+const statusOptions = Object.keys(studyStatusLabels);
 
 export function AddKnowledgeForm() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export function AddKnowledgeForm() {
     source: "",
     type: typeOptions[0],
     area: areaOptions[0],
+    status: "QUERO_ESTUDAR",
     summary: "",
     link: "",
   });
@@ -40,6 +42,7 @@ export function AddKnowledgeForm() {
         source: "",
         type: typeOptions[0],
         area: areaOptions[0],
+        status: "QUERO_ESTUDAR",
         summary: "",
         link: "",
       });
@@ -84,6 +87,17 @@ export function AddKnowledgeForm() {
           {areaOptions.map((a) => (
             <option key={a} value={a}>
               {knowledgeAreaLabels[a]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.status}
+          onChange={(e) => update("status", e.target.value)}
+          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          {statusOptions.map((s) => (
+            <option key={s} value={s}>
+              {studyStatusLabels[s]}
             </option>
           ))}
         </select>
