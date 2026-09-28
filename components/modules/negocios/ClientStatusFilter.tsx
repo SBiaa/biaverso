@@ -3,7 +3,8 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { clientStatusLabels } from "@/lib/labels";
 
-const statusOptions = Object.keys(clientStatusLabels);
+// Prospect tem quadro próprio acima desta lista — não entra neste filtro.
+const statusOptions = Object.keys(clientStatusLabels).filter((s) => s !== "PROSPECT");
 
 export function ClientStatusFilter() {
   const router = useRouter();

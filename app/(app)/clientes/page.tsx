@@ -6,11 +6,13 @@ import { Card, BusinessBadge, StatCard } from "@/components/ui";
 import { NewClientForm } from "@/components/modules/clientes/NewClientForm";
 import { ClientFilterBar } from "@/components/modules/clientes/ClientFilterBar";
 import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
+import { prospectStageLabels } from "@/lib/labels";
+import { todayUtc } from "@/lib/utils";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ q?: string; businessId?: string }>;
+type SearchParams = Promise<{ q?: string; businessId?: string; kind?: string }>;
 
 /** Valor do select para "clientes que ainda não estão em negócio nenhum". */
 const NO_BUSINESS = "__none__";
@@ -31,11 +33,14 @@ export default async function ClientesPage({
 
   if (sp.businessId === NO_BUSINESS) {
     where.businessLinks = { none: {} };
-  } else if (sp.businessId) {
-    where.businessLinks = { some: { businessId: sp.businessId } };
+  } else {
+    const linkWhere: Prisma.ClientBusinessWhereInput = {};
+    if (sp.businessId) linkWhere.businessId = sp.businessId;
+    if (sp.kind === "prospect") linkWhere.status = "PROSPECT";
+    if (Object.keys(linkWhere).length > 0) where.businessLinks = { some: linkWhere };
   }
 
-  const [clients, businesses, totalClients] = await Promise.all([
+  const [clients, businesses, totalClients, openProspects, overdueFollowUps] = await Promise.all([
     prisma.client.findMany({
       where,
       orderBy: { name: "asc" },
@@ -51,6 +56,7 @@ export default async function ClientesPage({
           select: {
             id: true,
             status: true,
+            prospectStage: true,
             business: { select: { name: true, color: true } },
           },
         },
@@ -62,6 +68,10 @@ export default async function ClientesPage({
       select: { id: true, name: true, color: true },
     }),
     prisma.client.count(),
+    prisma.clientBusiness.count({ where: { status: "PROSPECT" } }),
+    prisma.clientBusiness.count({
+      where: { status: "PROSPECT", nextFollowUpAt: { lt: todayUtc() } },
+    }),
   ]);
 
   // Quem atende mais de um negócio é o caso que motivou esta tela.
@@ -71,7 +81,7 @@ export default async function ClientesPage({
     <>
       <Topbar title="Clientes" />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard
             label="Clientes cadastrados"
             value={totalClients}
@@ -79,6 +89,12 @@ export default async function ClientesPage({
           />
           <StatCard label="Em mais de um negócio" value={sharedCount} />
           <StatCard label="Mostrando" value={clients.length} />
+          <StatCard label="Prospects em aberto" value={openProspects} />
+          <StatCard
+            label="Follow-up atrasado"
+            value={overdueFollowUps}
+            valueClassName={overdueFollowUps > 0 ? "text-danger" : undefined}
+          />
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -121,11 +137,21 @@ export default async function ClientesPage({
                         </span>
                       ) : (
                         client.businessLinks.map((link) => (
-                          <BusinessBadge
-                            key={link.id}
-                            business={link.business}
-                            className={link.status === "ATIVO" ? undefined : "opacity-50"}
-                          />
+                          <span key={link.id} className="inline-flex items-center gap-1">
+                            <BusinessBadge
+                              business={link.business}
+                              className={
+                                link.status === "ATIVO" || link.status === "PROSPECT"
+                                  ? undefined
+                                  : "opacity-50"
+                              }
+                            />
+                            {link.status === "PROSPECT" && (
+                              <span className="rounded-full bg-warning-soft-bg px-2 py-0.5 text-[10px] font-medium text-warning-soft-text">
+                                {prospectStageLabels[link.prospectStage ?? "NOVO_CONTATO"]}
+                              </span>
+                            )}
+                          </span>
                         ))
                       )}
                     </div>

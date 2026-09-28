@@ -63,9 +63,36 @@ export const projectStatusLabels: Record<string, string> = {
 };
 
 export const clientStatusLabels: Record<string, string> = {
+  PROSPECT: "Prospect",
   ATIVO: "Ativo",
   PAUSADO: "Pausado",
   INATIVO: "Inativo",
+};
+
+export const prospectStageLabels: Record<string, string> = {
+  NOVO_CONTATO: "Novo contato",
+  CONTATO_FEITO: "Contato feito",
+  PROPOSTA_ENVIADA: "Proposta enviada",
+  NEGOCIACAO: "Negociação",
+  GANHO: "Ganho",
+  PERDIDO: "Perdido",
+};
+
+/** As quatro colunas do quadro — GANHO/PERDIDO tiram o cartão do quadro. */
+export const prospectOpenStages = [
+  "NOVO_CONTATO",
+  "CONTATO_FEITO",
+  "PROPOSTA_ENVIADA",
+  "NEGOCIACAO",
+] as const;
+
+export const leadSourceLabels: Record<string, string> = {
+  INDICACAO: "Indicação",
+  PROSPECCAO_ATIVA: "Prospecção ativa",
+  INSTAGRAM: "Instagram",
+  SITE: "Site",
+  EVENTO: "Evento",
+  OUTRO: "Outro",
 };
 
 export const starsValues = ["UM", "DOIS", "TRES", "QUATRO", "CINCO"];

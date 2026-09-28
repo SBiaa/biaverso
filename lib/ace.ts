@@ -7,6 +7,7 @@ import {
   isPostOverdue,
   isTaskOverdue,
   type ClientOverview,
+  type ProspectOverview,
   type PendingItem,
   type MonthlyHistoryEntry,
 } from "@/lib/ace-shared";
@@ -25,9 +26,11 @@ export async function getClientsOverview(
       businessLinks: {
         some: {
           businessId,
-          ...(statusFilter
-            ? { status: statusFilter as Prisma.ClientBusinessWhereInput["status"] }
-            : {}),
+          // Prospect tem quadro próprio (getProspectsOverview); sem filtro
+          // explícito, a lista de clientes não mistura os dois.
+          status: statusFilter
+            ? (statusFilter as Prisma.ClientBusinessWhereInput["status"])
+            : { not: "PROSPECT" },
         },
       },
     },
@@ -76,6 +79,36 @@ export async function getClientsOverview(
         : null,
     };
   });
+}
+
+/** Os cartões do quadro de prospecção deste negócio, mais recentes primeiro. */
+export async function getProspectsOverview(businessId: string): Promise<ProspectOverview[]> {
+  const links = await prisma.clientBusiness.findMany({
+    where: { businessId, status: "PROSPECT" },
+    orderBy: { joinedAt: "desc" },
+    include: {
+      client: {
+        select: { id: true, name: true, color: true, email: true, phone: true, instagram: true },
+      },
+    },
+  });
+
+  return links.map((link) => ({
+    linkId: link.id,
+    clientId: link.clientId,
+    name: link.client.name,
+    color: link.client.color,
+    email: link.client.email,
+    phone: link.client.phone,
+    instagram: link.client.instagram,
+    stage: link.prospectStage ?? "NOVO_CONTATO",
+    source: link.source,
+    nextFollowUpAt: link.nextFollowUpAt ? link.nextFollowUpAt.toISOString() : null,
+    lastContactAt: link.lastContactAt ? link.lastContactAt.toISOString() : null,
+    proposalValue: link.proposalValue,
+    notes: link.notes,
+    joinedAt: link.joinedAt.toISOString(),
+  }));
 }
 
 export async function getPendingItems(

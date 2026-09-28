@@ -35,6 +35,9 @@ export default async function ClientDetailPage({
             businessId: true,
             status: true,
             joinedAt: true,
+            prospectStage: true,
+            nextFollowUpAt: true,
+            source: true,
             business: { select: { id: true, name: true, color: true } },
           },
         },
@@ -100,6 +103,9 @@ export default async function ClientDetailPage({
               businessId: link.businessId,
               status: link.status,
               joinedAt: link.joinedAt.toISOString(),
+              prospectStage: link.prospectStage,
+              nextFollowUpAt: link.nextFollowUpAt ? link.nextFollowUpAt.toISOString() : null,
+              source: link.source,
               business: link.business,
             }))}
             allBusinesses={allBusinesses}
