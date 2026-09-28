@@ -196,6 +196,9 @@ export function TimeGridCalendar({
           dayId={modal.dayId}
           initial={modal.initial}
           categories={categories}
+          otherDays={days
+            .filter((d) => d.dayId !== modal.dayId)
+            .map((d) => ({ dayId: d.dayId, date: d.date }))}
           onClose={() => setModal(null)}
         />
       )}
