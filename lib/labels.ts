@@ -160,6 +160,14 @@ export const knowledgeTypeLabels: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+export const knowledgeStatusLabels: Record<string, string> = {
+  QUERO_ESTUDAR: "Quero estudar",
+  ESTUDANDO: "Estudando",
+  ESTUDADO: "Estudado",
+  PAUSADO: "Pausado",
+  ABANDONADO: "Abandonado",
+};
+
 export const knowledgeAreaLabels: Record<string, string> = {
   MARKETING: "Marketing",
   PROGRAMACAO: "Programação",

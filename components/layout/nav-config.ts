@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
+  Clock,
   Compass,
   Droplet,
   FolderKanban,
@@ -45,6 +46,7 @@ export const navGroups: NavGroup[] = [
       { href: "/", label: "Home", icon: Home },
       { href: "/dia", label: "Dia a dia", icon: CalendarCheck },
       { href: "/agenda", label: "Agenda", icon: CalendarDays },
+      { href: "/horas", label: "Controle de horas", icon: Clock },
       // O que foi começado e parou — a única tela do app que olha ausência.
       { href: "/radar", label: "Radar", icon: Radar },
     ],

@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { knowledgeAreaLabels, knowledgeTypeLabels } from "@/lib/labels";
+import { knowledgeAreaLabels, knowledgeTypeLabels, knowledgeStatusLabels } from "@/lib/labels";
 
 const typeOptions = Object.keys(knowledgeTypeLabels);
 const areaOptions = Object.keys(knowledgeAreaLabels);
+const statusOptions = Object.keys(knowledgeStatusLabels);
 
 export function KnowledgeFilters() {
   const router = useRouter();
@@ -45,6 +46,19 @@ export function KnowledgeFilters() {
         {areaOptions.map((a) => (
           <option key={a} value={a}>
             {knowledgeAreaLabels[a]}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={searchParams.get("status") ?? ""}
+        onChange={(e) => setParam("status", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      >
+        <option value="">Todos os status</option>
+        {statusOptions.map((s) => (
+          <option key={s} value={s}>
+            {knowledgeStatusLabels[s]}
           </option>
         ))}
       </select>

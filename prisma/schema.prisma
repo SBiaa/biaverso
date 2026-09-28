@@ -33,11 +33,13 @@ model Day {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  habits    HabitLog[]
-  waterLogs WaterLog[]
-  mealLogs  MealLog[]
-  tasks     Task[]
-  events    Event[]
+  habits      HabitLog[]
+  waterLogs   WaterLog[]
+  mealLogs    MealLog[]
+  tasks       Task[]
+  events      Event[]
+  timeBlocks  TimeBlock[]
+  timeEntries TimeEntry[]
 }
 
 enum DayType {
@@ -235,6 +237,61 @@ enum EventCategory {
   SAUDE
   ESPIRITUAL
   OUTRO
+}
+
+// CONTROLE DE HORAS — categorias de atividade e blocos de tempo do dia.
+// Categoria é tabela (não enum) porque a usuária cria as suas: começa com um
+// conjunto padrão (ver lib/time-tracking.ts) e pode adicionar mais depois.
+model ActivityCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6366F1")
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  timeBlocks  TimeBlock[]
+  timeEntries TimeEntry[]
+}
+
+// Bloco planejado: "das 9h às 11h vou trabalhar". Horário como "HH:mm", igual
+// ao Event — é só exibido, não precisa virar instante real.
+model TimeBlock {
+  id        String   @id @default(cuid())
+  title     String?
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+
+  dayId String
+  day   Day    @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   ActivityCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([dayId])
+  @@index([categoryId])
+}
+
+// Tempo realmente gasto. `startedAt`/`endedAt` são instantes reais (não só
+// "HH:mm") para o cronômetro medir duração de verdade; `endedAt` nulo é o
+// registro em andamento — só um por vez (garantido pela rota de start).
+model TimeEntry {
+  id        String    @id @default(cuid())
+  title     String?
+  startedAt DateTime
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  dayId String
+  day   Day    @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   ActivityCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([dayId])
+  @@index([categoryId])
+  @@index([endedAt])
 }
 
 // CARDÁPIO E RECEITAS
@@ -1337,17 +1394,20 @@ enum BookStatus {
   ABANDONADO
 }
 
-// BIBLIOTECA DE CONHECIMENTO
+// BIBLIOTECA DE CONHECIMENTO — também o controle do que falta/está sendo estudado.
 model Knowledge {
-  id        String        @id @default(cuid())
-  title     String
-  source    String?
-  type      KnowledgeType
-  area      KnowledgeArea
-  summary   String?
-  link      String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id         String               @id @default(cuid())
+  title      String
+  source     String?
+  type       KnowledgeType
+  area       KnowledgeArea
+  status     KnowledgeStudyStatus @default(QUERO_ESTUDAR)
+  summary    String?
+  link       String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
 }
 
 enum KnowledgeType {
@@ -1357,6 +1417,14 @@ enum KnowledgeType {
   PODCAST
   POST
   OUTRO
+}
+
+enum KnowledgeStudyStatus {
+  QUERO_ESTUDAR
+  ESTUDANDO
+  ESTUDADO
+  PAUSADO
+  ABANDONADO
 }
 
 enum KnowledgeArea {

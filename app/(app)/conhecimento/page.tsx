@@ -1,14 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui";
 import { KnowledgeFilters } from "@/components/modules/conhecimento/KnowledgeFilters";
 import { AddKnowledgeForm } from "@/components/modules/conhecimento/AddKnowledgeForm";
-import { knowledgeAreaLabels, knowledgeTypeLabels } from "@/lib/labels";
+import { KnowledgeCard } from "@/components/modules/conhecimento/KnowledgeCard";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ type?: string; area?: string }>;
+type SearchParams = Promise<{ type?: string; area?: string; status?: string }>;
 
 export default async function ConhecimentoPage({
   searchParams,
@@ -20,6 +19,7 @@ export default async function ConhecimentoPage({
   const where: Prisma.KnowledgeWhereInput = {};
   if (params.type) where.type = params.type as Prisma.KnowledgeWhereInput["type"];
   if (params.area) where.area = params.area as Prisma.KnowledgeWhereInput["area"];
+  if (params.status) where.status = params.status as Prisma.KnowledgeWhereInput["status"];
 
   const items = await prisma.knowledge.findMany({
     where,
@@ -43,35 +43,14 @@ export default async function ConhecimentoPage({
         ) : (
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
             {items.map((item) => (
-              <Card key={item.id} className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-text-primary">
-                    {item.title}
-                  </p>
-                  <span className="shrink-0 text-xs text-text-secondary">
-                    {knowledgeTypeLabels[item.type]}
-                  </span>
-                </div>
-                <span className="w-fit rounded-full bg-badge-pessoal-bg px-2 py-0.5 text-xs font-medium text-badge-pessoal-text">
-                  {knowledgeAreaLabels[item.area]}
-                </span>
-                {item.source && (
-                  <p className="text-xs text-text-secondary">{item.source}</p>
-                )}
-                {item.summary && (
-                  <p className="text-xs text-text-secondary">{item.summary}</p>
-                )}
-                {item.link && (
-                  <a
-                    href={item.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="-my-2 py-2 text-xs font-medium text-accent"
-                  >
-                    Abrir link
-                  </a>
-                )}
-              </Card>
+              <KnowledgeCard
+                key={item.id}
+                item={{
+                  ...item,
+                  startedAt: item.startedAt ? item.startedAt.toISOString() : null,
+                  finishedAt: item.finishedAt ? item.finishedAt.toISOString() : null,
+                }}
+              />
             ))}
           </div>
         )}
