@@ -145,6 +145,18 @@ export function monthNameBR(month: number) {
   return MONTH_NAMES_BR[month - 1];
 }
 
+/** "22 a 28 de setembro" — cabeçalho de navegação de um período de N dias a partir de `start`. */
+export function formatDateRangeBR(start: Date, numDays: number) {
+  if (numDays <= 1) return formatDateLongBR(start);
+
+  const end = addUtcDays(start, numDays - 1);
+  const sameMonth = start.getUTCMonth() === end.getUTCMonth();
+
+  return sameMonth
+    ? `${start.getUTCDate()} a ${end.getUTCDate()} de ${monthNameBR(end.getUTCMonth() + 1)}`
+    : `${start.getUTCDate()} de ${monthNameBR(start.getUTCMonth() + 1)} a ${end.getUTCDate()} de ${monthNameBR(end.getUTCMonth() + 1)}`;
+}
+
 export function hashString(value: string) {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {

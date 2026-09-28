@@ -74,8 +74,8 @@ export default async function HorasPage({
         <Card>
           <div className="mb-3 flex items-center justify-between gap-2">
             <CardTitle>Blocos planejados</CardTitle>
-            <Link href="/horas/semana" className="text-xs font-medium text-accent hover:underline">
-              Ver semana
+            <Link href="/horas/calendario" className="text-xs font-medium text-accent hover:underline">
+              Ver calendário
             </Link>
           </div>
           <TimeBlockPlanner dayId={day.id} categories={activeCategories} blocks={blocks} />

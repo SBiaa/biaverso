@@ -86,16 +86,19 @@ export async function getRunningEntry(): Promise<TimeEntryDTO | null> {
   return entry ? serializeTimeEntry(entry) : null;
 }
 
-export type WeekDayBlocks = {
+export type RangeDayBlocks = {
   dayId: string;
   date: string;
   blocks: TimeBlockDTO[];
 };
 
-/** Os blocos planejados dos 7 dias a partir de `weekStart` — para a grade da semana. */
-export async function getWeekPlannedBlocks(weekStart: Date): Promise<WeekDayBlocks[]> {
+/** Os blocos planejados de `numDays` dias a partir de `start` — para o calendário. */
+export async function getPlannedBlocksForRange(
+  start: Date,
+  numDays: number,
+): Promise<RangeDayBlocks[]> {
   const days = await Promise.all(
-    Array.from({ length: 7 }, (_, i) => getOrCreateDay(addUtcDays(weekStart, i))),
+    Array.from({ length: numDays }, (_, i) => getOrCreateDay(addUtcDays(start, i))),
   );
 
   const blocks = await prisma.timeBlock.findMany({

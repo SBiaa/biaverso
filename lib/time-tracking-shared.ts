@@ -64,3 +64,19 @@ export function totalMinutesByCategory(entries: TimeEntryDTO[]): Map<string, num
   }
   return totals;
 }
+
+// Zoom do calendário de blocos planejados. Fica aqui (e não no componente
+// "use client" que o usa) porque a página de servidor também precisa de
+// `daysForView` — um export de um módulo "use client" não pode ser chamado
+// do servidor, só passado como prop.
+export const CALENDAR_VIEWS = [
+  { value: "dia", label: "Dia", days: 1 },
+  { value: "3dias", label: "3 dias", days: 3 },
+  { value: "semana", label: "Semana", days: 7 },
+] as const;
+
+export type CalendarViewMode = (typeof CALENDAR_VIEWS)[number]["value"];
+
+export function daysForView(view: CalendarViewMode) {
+  return CALENDAR_VIEWS.find((v) => v.value === view)?.days ?? 7;
+}
