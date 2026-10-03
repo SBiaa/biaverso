@@ -16,15 +16,10 @@ import { WaterTracker } from "@/components/modules/dia/WaterTracker";
 import { TaskListByOrigin } from "@/components/modules/dia/TaskListByOrigin";
 import { MealChecklist } from "@/components/modules/dia/MealChecklist";
 import { NotesField } from "@/components/modules/dia/NotesField";
-import {
-  ProductionTasksToday,
-  type ProductionGroup,
-} from "@/components/modules/dia/ProductionTasksToday";
-import { CollectionTasksToday } from "@/components/modules/dia/CollectionTasksToday";
+import { WorkTasksToday, type WorkTask } from "@/components/modules/dia/WorkTasksToday";
 import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
 import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
-import { getUtcDayRange, isTaskOverdue } from "@/lib/ace";
 import { productionTypeLabels } from "@/lib/labels";
 import { getUserSettings } from "@/lib/settings";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
@@ -89,122 +84,100 @@ async function getDay(date: Date) {
 }
 
 /**
- * Seção pesada e independente do resto da tela: a consulta varre as tarefas de
- * produção em aberto de todos os negócios, sem corte inferior de data. Isolada
- * atrás de um Suspense, ela não segura mais a pintura do dia inteiro.
+ * Tudo o que está em andamento nos negócios e nas coleções, numa lista só. A
+ * consulta varre as tarefas em aberto sem corte de data e por isso fica atrás de
+ * um Suspense: não segura a pintura do dia inteiro.
+ *
+ * Sem filtro de prazo, de propósito: antes só entrava tarefa com data até hoje,
+ * então uma coleção em andamento cujas tarefas não tinham prazo não aparecia —
+ * e o dia mostrava só a que já estava atrasada.
  */
-async function ProductionSection({ date }: { date: Date }) {
-  const { end: dueEnd } = getUtcDayRange(date);
+async function WorkSection() {
+  const today = todayUtc();
 
-  // Vencidas em dias anteriores continuam aparecendo enquanto estiverem
-  // abertas — é o que faz o selo "Atrasado" ter para quem aparecer.
-  const tasks = await prisma.productionTask.findMany({
-    where: {
-      dueDate: { lt: dueEnd },
-      status: { notIn: ["CONCLUIDO", "CANCELADO"] },
-    },
-    select: {
-      id: true,
-      title: true,
-      status: true,
-      type: true,
-      priority: true,
-      dueDate: true,
-      businessId: true,
-      business: { select: { name: true, color: true } },
-      client: { select: { name: true } },
-      subtasks: {
-        orderBy: { order: "asc" },
-        select: { id: true, title: true, done: true },
+  const [levels, production, collection] = await Promise.all([
+    prisma.priorityLevel.findMany({
+      orderBy: { order: "asc" },
+      select: { id: true, name: true, color: true, order: true },
+    }),
+    prisma.productionTask.findMany({
+      where: { status: { notIn: ["CONCLUIDO", "CANCELADO"] } },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        priority: true,
+        dueDate: true,
+        priorityLevelId: true,
+        estimateMinutes: true,
+        business: { select: { name: true, color: true } },
+        client: { select: { name: true } },
+        subtasks: {
+          orderBy: { order: "asc" },
+          select: { id: true, title: true, done: true },
+        },
       },
-    },
-    orderBy: [{ dueDate: "asc" }, { priority: "desc" }, { createdAt: "asc" }],
-  });
-
-  // Um grupo por negócio, montado a partir do `businessId` de cada tarefa. O
-  // nome e a cor saem do próprio registro do negócio — nada de rótulo fixo.
-  const groups: ProductionGroup[] = [];
-  const byBusiness = new Map<string, ProductionGroup>();
-
-  for (const task of tasks) {
-    let group = byBusiness.get(task.businessId);
-    if (!group) {
-      group = {
-        businessId: task.businessId,
-        businessName: task.business.name,
-        businessColor: task.business.color,
-        tasks: [],
-      };
-      byBusiness.set(task.businessId, group);
-      groups.push(group);
-    }
-    group.tasks.push({
-      id: task.id,
-      title: task.title,
-      status: task.status,
-      typeLabel: productionTypeLabels[task.type],
-      clientName: task.client?.name ?? null,
-      urgent: task.priority === "URGENTE",
-      dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-      overdue: isTaskOverdue(task),
-      subtasks: task.subtasks,
-    });
-  }
-
-  groups.sort((a, b) => a.businessName.localeCompare(b.businessName, "pt-BR"));
-
-  return <ProductionTasksToday groups={groups} />;
-}
-
-/**
- * Tarefas de coleção com prazo até hoje. Mesma regra das tarefas de produção:
- * o que venceu antes e continua aberto segue aparecendo.
- */
-async function CollectionTasksSection({ date }: { date: Date }) {
-  const { start: dayStart, end: dayEnd } = getUtcDayRange(date);
-
-  const tasks = await prisma.collectionTask.findMany({
-    where: {
-      OR: [
-        // Abertas com prazo até hoje — as atrasadas continuam à vista.
-        { done: false, dueDate: { lt: dayEnd } },
-        // Concluídas hoje ficam na lista para dar o senso de progresso do dia.
-        { done: true, dueDate: { gte: dayStart, lt: dayEnd } },
-      ],
-    },
-    select: {
-      id: true,
-      title: true,
-      done: true,
-      dueDate: true,
-      collectionId: true,
-      collection: {
-        select: { name: true, businessId: true, business: { select: { color: true } } },
+    }),
+    prisma.collectionTask.findMany({
+      where: { done: false, collection: { status: { not: "ENCERRADA" } } },
+      select: {
+        id: true,
+        title: true,
+        dueDate: true,
+        priorityLevelId: true,
+        estimateMinutes: true,
+        collectionId: true,
+        collection: {
+          select: { name: true, businessId: true, business: { select: { color: true } } },
+        },
+        subtasks: {
+          orderBy: { order: "asc" },
+          select: { id: true, title: true, done: true },
+        },
       },
-      subtasks: {
-        orderBy: { order: "asc" },
-        select: { id: true, title: true, done: true },
-      },
-    },
-    orderBy: [{ dueDate: "asc" }, { order: "asc" }],
-  });
+    }),
+  ]);
 
-  return (
-    <CollectionTasksToday
-      tasks={tasks.map((t) => ({
-        id: t.id,
-        title: t.title,
-        done: t.done,
-        dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-        overdue: !t.done && t.dueDate !== null && t.dueDate.getTime() < todayUtc().getTime(),
-        collectionId: t.collectionId,
-        collectionName: t.collection.name,
-        businessId: t.collection.businessId,
-        businessColor: t.collection.business.color,
-        subtasks: t.subtasks,
-      }))}
-    />
-  );
+  const isLate = (due: Date | null) => due !== null && due.getTime() < today.getTime();
+
+  const tasks: WorkTask[] = [
+    ...production.map((t) => ({
+      kind: "production" as const,
+      id: t.id,
+      title: t.title,
+      done: false,
+      originLabel: t.business.name,
+      originColor: t.business.color,
+      originHref: null,
+      detail: [productionTypeLabels[t.type], t.client?.name ?? "Interno"].join(" · "),
+      urgent: t.priority === "URGENTE",
+      priorityLevelId: t.priorityLevelId,
+      estimateMinutes: t.estimateMinutes,
+      dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+      overdue: isLate(t.dueDate),
+      collectionId: null,
+      subtasks: t.subtasks,
+    })),
+    ...collection.map((t) => ({
+      kind: "collection" as const,
+      id: t.id,
+      title: t.title,
+      done: false,
+      originLabel: t.collection.name,
+      originColor: t.collection.business.color,
+      originHref: `/negocios/${t.collection.businessId}/colecoes/${t.collectionId}`,
+      detail: "Coleção",
+      urgent: false,
+      priorityLevelId: t.priorityLevelId,
+      estimateMinutes: t.estimateMinutes,
+      dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+      overdue: isLate(t.dueDate),
+      collectionId: t.collectionId,
+      subtasks: t.subtasks,
+    })),
+  ];
+
+  return <WorkTasksToday tasks={tasks} levels={levels} />;
 }
 
 /** Rotinas e agendamentos de beleza: duas consultas próprias, também isoladas. */
@@ -281,7 +254,7 @@ export default async function DiaPage({
         </div>
 
         {/* Duas colunas de peso diferente, e não uma pilha: à esquerda o que é
-            longo e muda o dia todo (tarefas, produção, coleções); à direita os
+            longo e muda o dia todo (tarefas e andamento dos negócios); à direita os
             registros curtos que você marca de passagem. Empilhados, os curtos
             jogavam as tarefas para 2000px abaixo da dobra. */}
         <div className="grid items-start gap-4 xl:grid-cols-3 xl:gap-6">
@@ -315,11 +288,7 @@ export default async function DiaPage({
             </Card>
 
             <Suspense fallback={<SectionFallback />}>
-              <ProductionSection date={date} />
-            </Suspense>
-
-            <Suspense fallback={<SectionFallback />}>
-              <CollectionTasksSection date={date} />
+              <WorkSection />
             </Suspense>
           </div>
 

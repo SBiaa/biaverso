@@ -1075,10 +1075,17 @@ model ProductionTask {
   projectId  String?
   project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
+  // Prioridade (lista editável em Configurações) e quanto tempo a tarefa deve
+  // levar — é o que permite ordenar o dia por "o que faço primeiro".
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  estimateMinutes Int?
+
   subtasks Subtask[]
 
   @@index([businessId, status])
   @@index([businessId, dueDate])
+  @@index([priorityLevelId])
   @@index([dueDate, status])
   @@index([clientId])
   @@index([projectId])
@@ -1211,11 +1218,31 @@ model CollectionTask {
   collectionId String
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  estimateMinutes Int?
+
   subtasks Subtask[]
 
   @@index([collectionId, order])
+  @@index([priorityLevelId])
   // As tarefas do dia varrem por prazo em aberto.
   @@index([dueDate, done])
+}
+
+// Níveis de prioridade das tarefas (Alta, Média, Baixa...). Lista da própria
+// usuária, editável em Configurações — nada de enum fixo. Apagar um nível não
+// apaga tarefa: ela só volta a ficar sem prioridade (SetNull).
+model PriorityLevel {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#6366F1")
+  // Menor = mais urgente: é a chave de ordenação da tabela do dia.
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  productionTasks ProductionTask[]
+  collectionTasks CollectionTask[]
 }
 
 enum CollectionStatus {

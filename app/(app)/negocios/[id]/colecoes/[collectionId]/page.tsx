@@ -28,7 +28,7 @@ export default async function CollectionDetailPage({
 }) {
   const { id: businessId, collectionId } = await params;
 
-  const [collection, settings] = await Promise.all([
+  const [collection, settings, levels] = await Promise.all([
     prisma.collection.findUnique({
       where: { id: collectionId },
       include: {
@@ -42,6 +42,10 @@ export default async function CollectionDetailPage({
       },
     }),
     getUserSettings(),
+    prisma.priorityLevel.findMany({
+      orderBy: { order: "asc" },
+      select: { id: true, name: true, color: true, order: true },
+    }),
   ]);
   if (!collection || collection.businessId !== businessId) notFound();
 
@@ -182,12 +186,15 @@ export default async function CollectionDetailPage({
 
         <CollectionTasksSection
           collectionId={collection.id}
+          levels={levels}
           initialTasks={collection.tasks.map((t) => ({
             id: t.id,
             title: t.title,
             description: t.description,
             done: t.done,
             dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+            priorityLevelId: t.priorityLevelId,
+            estimateMinutes: t.estimateMinutes,
           }))}
         />
 

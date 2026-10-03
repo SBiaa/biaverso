@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { AccentColorPicker } from "@/components/modules/configuracoes/AccentColorPicker";
 import { RoutineTemplateList } from "@/components/modules/configuracoes/RoutineTemplateList";
 import { HabitList } from "@/components/modules/configuracoes/HabitList";
+import { PriorityLevelList } from "@/components/modules/configuracoes/PriorityLevelList";
 import { GoogleCalendarCard } from "@/components/modules/agenda/GoogleCalendarCard";
 import { WaterSettingsForm } from "@/components/modules/configuracoes/WaterSettingsForm";
 import { PricingSettingsForm } from "@/components/modules/configuracoes/PricingSettingsForm";
@@ -20,7 +21,7 @@ export default async function ConfiguracoesPage({
 }) {
   const { google } = await searchParams;
 
-  const [googleStatus, settings, templates, habits] = await Promise.all([
+  const [googleStatus, settings, templates, habits, priorityLevels] = await Promise.all([
     getGoogleSyncStatus(),
     getUserSettings(),
     prisma.task.findMany({
@@ -39,6 +40,10 @@ export default async function ConfiguracoesPage({
     prisma.habit.findMany({
       orderBy: { createdAt: "asc" },
       select: { id: true, name: true, active: true },
+    }),
+    prisma.priorityLevel.findMany({
+      orderBy: { order: "asc" },
+      select: { id: true, name: true, color: true, order: true },
     }),
   ]);
 
@@ -83,6 +88,7 @@ export default async function ConfiguracoesPage({
             title="Dia de Faxina — tarefas padrão"
             initialItems={faxina}
           />
+          <PriorityLevelList initialItems={priorityLevels} />
           <HabitList initialItems={habits} />
           <WaterSettingsForm initial={settings} />
           <PricingSettingsForm initial={settings} />

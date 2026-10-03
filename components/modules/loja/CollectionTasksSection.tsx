@@ -31,7 +31,8 @@ import {
   IconButton,
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { cn, formatDateBR, todayUtc } from "@/lib/utils";
+import { cn, formatDateBR, hexToRgba, todayUtc } from "@/lib/utils";
+import { formatMinutes, parseMinutes, type PriorityLevelDTO } from "@/lib/task-plan";
 
 export type CollectionTask = {
   id: string;
@@ -39,16 +40,20 @@ export type CollectionTask = {
   description: string | null;
   done: boolean;
   dueDate: string | null;
+  priorityLevelId: string | null;
+  estimateMinutes: number | null;
 };
 
-const emptyForm = { title: "", description: "", dueDate: "" };
+const emptyForm = { title: "", description: "", dueDate: "", priorityLevelId: "", estimate: "" };
 
 function SortableTask({
   task,
+  levels,
   onToggle,
   onDelete,
 }: {
   task: CollectionTask;
+  levels: PriorityLevelDTO[];
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -60,6 +65,8 @@ function SortableTask({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const level = levels.find((l) => l.id === task.priorityLevelId);
 
   const overdue =
     !task.done &&
@@ -104,6 +111,23 @@ function SortableTask({
         >
           {task.title}
         </p>
+        {(level || task.estimateMinutes) && (
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            {level && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                style={{ backgroundColor: hexToRgba(level.color, 0.14), color: level.color }}
+              >
+                {level.name}
+              </span>
+            )}
+            {task.estimateMinutes && (
+              <span className="text-xs text-text-secondary">
+                {formatMinutes(task.estimateMinutes)}
+              </span>
+            )}
+          </div>
+        )}
         {task.description && (
           <p className="text-xs text-text-secondary">{task.description}</p>
         )}
@@ -135,9 +159,11 @@ function SortableTask({
 export function CollectionTasksSection({
   collectionId,
   initialTasks,
+  levels,
 }: {
   collectionId: string;
   initialTasks: CollectionTask[];
+  levels: PriorityLevelDTO[];
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [adding, setAdding] = useState(false);
@@ -155,6 +181,12 @@ export function CollectionTasksSection({
   const progress = tasks.length === 0 ? 0 : Math.round((doneCount / tasks.length) * 100);
 
   async function add() {
+    const estimateMinutes = parseMinutes(form.estimate);
+    if (estimateMinutes === undefined) {
+      setError("Tempo inválido. Use algo como 45, 1h30 ou 2h.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -164,6 +196,8 @@ export function CollectionTasksSection({
           title: form.title,
           description: form.description || null,
           dueDate: form.dueDate || null,
+          priorityLevelId: form.priorityLevelId || null,
+          estimateMinutes,
         },
       );
       setTasks((prev) => [...prev, created]);
@@ -265,6 +299,7 @@ export function CollectionTasksSection({
                 <SortableTask
                   key={task.id}
                   task={task}
+                  levels={levels}
                   onToggle={toggle}
                   onDelete={remove}
                 />
@@ -294,6 +329,28 @@ export function CollectionTasksSection({
             onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
             className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
           />
+          <div className="flex gap-2">
+            <select
+              value={form.priorityLevelId}
+              onChange={(e) => setForm({ ...form, priorityLevelId: e.target.value })}
+              aria-label="Prioridade"
+              className="min-w-0 flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+            >
+              <option value="">Sem prioridade</option>
+              {levels.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+            <input
+              value={form.estimate}
+              onChange={(e) => setForm({ ...form, estimate: e.target.value })}
+              placeholder="Tempo (ex.: 1h30)"
+              aria-label="Tempo estimado"
+              className="min-w-0 flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+            />
+          </div>
           <div className="flex gap-2">
             <Button type="button" onClick={add} disabled={saving || !form.title.trim()}>
               Adicionar

@@ -17,6 +17,8 @@ const optionalId = z.string().min(1).nullish();
 const dateOnly = z.coerce.date();
 const text = z.string().trim().min(1, "não pode ficar vazio");
 const optionalText = z.string().trim().nullish().transform((v) => v || null);
+/** Tempo estimado de uma tarefa, em minutos inteiros (até uma semana). */
+const estimateMinutes = z.number().int().min(1).max(10080).nullish();
 const money = z.coerce.number().finite().nonnegative();
 const dayOfMonth = z.coerce.number().int().min(1).max(31);
 const monthNumber = z.coerce.number().int().min(1).max(12);
@@ -421,6 +423,8 @@ export const collectionTaskCreateSchema = z.object({
   title: text,
   description: optionalText,
   dueDate: dateOnly.nullish(),
+  priorityLevelId: optionalId,
+  estimateMinutes,
 });
 export const collectionTaskPatchSchema = collectionTaskCreateSchema
   .partial()
@@ -483,11 +487,18 @@ export const productionTaskCreateSchema = z.object({
   clientId: optionalId,
   projectId: optionalId,
   notes: optionalText,
+  priorityLevelId: optionalId,
+  estimateMinutes,
 });
 export const productionTaskPatchSchema = productionTaskCreateSchema
   .omit({ businessId: true, status: true })
   .partial()
-  .extend({ status: z.enum(E.ProductionStatus).optional() });
+  // `priority` é refeito sem o `default` do create: com ele, qualquer PATCH
+  // (até um que só muda o tempo estimado) devolvia a tarefa urgente para NORMAL.
+  .extend({
+    status: z.enum(E.ProductionStatus).optional(),
+    priority: z.enum(E.Priority).optional(),
+  });
 
 export const aceListQuerySchema = z.object({
   businessId: filter(id),
@@ -891,6 +902,17 @@ const requiredTimeOfDay = z
   .string()
   .trim()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "hora inválida (HH:mm)");
+
+export const priorityLevelCreateSchema = z.object({
+  name: text,
+  color: hexColor.optional(),
+});
+
+export const priorityLevelPatchSchema = z.object({
+  name: text.optional(),
+  color: hexColor.optional(),
+  order: z.coerce.number().int().min(0).optional(),
+});
 
 export const activityCategoryCreateSchema = z.object({
   name: text,
