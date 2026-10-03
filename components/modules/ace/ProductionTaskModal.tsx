@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -20,6 +20,7 @@ import {
   type ProjectOption,
 } from "./ContentPostModal";
 import { ClientOptions } from "./ClientOptions";
+import { formatMinutes, parseMinutes, type PriorityLevelDTO } from "@/lib/task-plan";
 
 const typeOptions = Object.keys(productionTypeLabels);
 const priorityOptions = Object.keys(priorityLabels);
@@ -38,6 +39,8 @@ export type TaskRecord = {
   /** Null = tarefa interna do próprio negócio. */
   clientId: string | null;
   projectId: string | null;
+  priorityLevelId: string | null;
+  estimateMinutes: number | null;
 };
 type TaskInitial = TaskRecord;
 
@@ -80,6 +83,8 @@ function emptyForm(
     notes: "",
     clientId,
     projectId: defaultProjectId ?? mostRecentProjectId(projects, clientId),
+    priorityLevelId: "",
+    estimate: "",
   };
 }
 
@@ -95,6 +100,8 @@ function formFromTask(task: TaskInitial) {
     notes: task.notes ?? "",
     clientId: task.clientId ?? INTERNAL_CLIENT,
     projectId: task.projectId ?? "",
+    priorityLevelId: task.priorityLevelId ?? "",
+    estimate: task.estimateMinutes === null ? "" : formatMinutes(task.estimateMinutes),
   };
 }
 
@@ -123,11 +130,26 @@ export function ProductionTaskModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [levels, setLevels] = useState<PriorityLevelDTO[]>([]);
   const [form, setForm] = useState(
     task
       ? formFromTask(task)
       : emptyForm(clients, projects, defaultClientId, defaultProjectId, defaultDate),
   );
+
+  // A lista de prioridades é da usuária (Configurações), então vem do servidor
+  // em vez de ser repassada por cada uma das telas que abrem este modal. Se a
+  // busca falhar, o select fica só com "Sem prioridade" e o resto segue salvando.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<PriorityLevelDTO[]>("/api/priority-levels")
+      .then((list) => !cancelled && setLevels(list))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => {
@@ -146,11 +168,20 @@ export function ProductionTaskModal({
 
   async function handleSubmit() {
     if (!form.title.trim()) return;
+
+    const estimateMinutes = parseMinutes(form.estimate);
+    if (estimateMinutes === undefined) {
+      setError("Tempo inválido. Use algo como 45, 1h30 ou 2h.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     const payload = {
       ...form,
+      priorityLevelId: form.priorityLevelId || null,
+      estimateMinutes,
       businessId,
       clientId: form.clientId || null,
       projectId: form.projectId || null,
@@ -187,6 +218,8 @@ export function ProductionTaskModal({
       type: form.type,
       description: form.description,
       priority: form.priority,
+      priorityLevelId: form.priorityLevelId || null,
+      estimateMinutes: parseMinutes(form.estimate) ?? null,
       status: "A_FAZER",
       dueDate: nextDate || null,
       completedAt: null,
@@ -270,9 +303,37 @@ export function ProductionTaskModal({
       />
 
       <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Prioridade</p>
+          <select
+            value={form.priorityLevelId}
+            onChange={(e) => update("priorityLevelId", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          >
+            <option value="">Sem prioridade</option>
+            {levels.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Tempo estimado</p>
+          <input
+            value={form.estimate}
+            onChange={(e) => update("estimate", e.target.value)}
+            placeholder="Ex.: 45, 1h30, 2h"
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
         <select
           value={form.priority}
           onChange={(e) => update("priority", e.target.value)}
+          aria-label="Urgência"
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         >
           {priorityOptions.map((p) => (

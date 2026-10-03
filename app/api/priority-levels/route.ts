@@ -3,6 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { parseBody, route } from "@/lib/api";
 import { priorityLevelCreateSchema } from "@/lib/schemas";
 
+export const GET = route(async () => {
+  return NextResponse.json(
+    await prisma.priorityLevel.findMany({
+      orderBy: { order: "asc" },
+      select: { id: true, name: true, color: true, order: true },
+    }),
+  );
+});
+
 export const POST = route(async (request: Request) => {
   const data = await parseBody(request, priorityLevelCreateSchema);
 

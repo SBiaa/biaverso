@@ -278,6 +278,8 @@ export const taskRecordSelect = {
   notes: true,
   clientId: true,
   projectId: true,
+  priorityLevelId: true,
+  estimateMinutes: true,
 } satisfies Prisma.ProductionTaskSelect;
 
 // Das telas que mostram o cliente ao lado do item, só nome e cor são lidos.

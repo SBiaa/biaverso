@@ -177,6 +177,8 @@ export function toTaskRecord(task: {
   notes: string | null;
   clientId: string | null;
   projectId: string | null;
+  priorityLevelId: string | null;
+  estimateMinutes: number | null;
 }) {
   return {
     id: task.id,
@@ -190,6 +192,8 @@ export function toTaskRecord(task: {
     notes: task.notes,
     clientId: task.clientId,
     projectId: task.projectId,
+    priorityLevelId: task.priorityLevelId,
+    estimateMinutes: task.estimateMinutes,
   };
 }
 
