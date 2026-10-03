@@ -40,6 +40,14 @@ export type WorkTask = {
   subtasks: SubtaskItem[];
 };
 
+type Range = "today" | "week" | "all";
+
+const RANGES: { id: Range; label: string }[] = [
+  { id: "today", label: "Hoje" },
+  { id: "week", label: "Semana" },
+  { id: "all", label: "Tudo" },
+];
+
 type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null };
 
 function patchUrl(task: WorkTask) {
@@ -282,18 +290,36 @@ function sortTasks(tasks: WorkTask[], levels: PriorityLevelDTO[]) {
 export function WorkTasksToday({
   tasks,
   levels,
+  dayEnd,
+  weekEnd,
 }: {
   tasks: WorkTask[];
   levels: PriorityLevelDTO[];
+  /** Fim (exclusivo) do dia em foco e da semana dele, em ISO. */
+  dayEnd: string;
+  weekEnd: string;
 }) {
   const [items, setItems] = useState(tasks);
+  const [range, setRange] = useState<Range>("all");
   const [error, setError] = useState<string | null>(null);
 
-  const sorted = useMemo(() => sortTasks(items, levels), [items, levels]);
-  const open = items.filter((t) => !t.done);
+  // Atrasada entra em Hoje e em Semana: o que venceu antes continua à vista.
+  // Sem prazo só aparece em "Tudo" — não dá para dizer que é da semana.
+  const limits = { day: new Date(dayEnd).getTime(), week: new Date(weekEnd).getTime() };
+  const inRange = (t: WorkTask, r: Range) =>
+    r === "all" ||
+    (t.dueDate !== null && new Date(t.dueDate).getTime() < limits[r === "today" ? "day" : "week"]);
+
+  const visible = useMemo(
+    () => sortTasks(items.filter((t) => inRange(t, range)), levels),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, levels, range, dayEnd, weekEnd],
+  );
+  const open = visible.filter((t) => !t.done);
   const lateCount = open.filter((t) => t.overdue).length;
   const estimated = open.reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0);
   const withoutEstimate = open.filter((t) => t.estimateMinutes === null).length;
+  const countOpen = (r: Range) => items.filter((t) => !t.done && inRange(t, r)).length;
 
   function update(key: string, change: Partial<WorkTask>) {
     setItems((prev) =>
@@ -364,6 +390,31 @@ export function WorkTasksToday({
         </p>
       </div>
 
+      <div className="mb-3 flex gap-1.5" role="group" aria-label="Período">
+        {RANGES.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            onClick={() => setRange(r.id)}
+            aria-pressed={range === r.id}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              range === r.id
+                ? "border-accent bg-accent text-accent-contrast"
+                : "border-border text-text-secondary hover:text-text-primary",
+            )}
+          >
+            {r.label} · {countOpen(r.id)}
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 && (
+        <p className="py-2 text-sm text-text-secondary">
+          Nada com prazo {range === "today" ? "até hoje" : "até o fim da semana"}.
+        </p>
+      )}
+
       {/* Colunas não cabem numa tela de celular: a tabela rola na horizontal
           em vez de espremer o título até virar duas letras por linha. */}
       <div className="-mx-1 overflow-x-auto px-1">
@@ -388,7 +439,7 @@ export function WorkTasksToday({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {sorted.map((task) => (
+            {visible.map((task) => (
               <TaskRow
                 key={task.kind + task.id}
                 task={task}

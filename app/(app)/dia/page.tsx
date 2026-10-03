@@ -92,8 +92,11 @@ async function getDay(date: Date) {
  * então uma coleção em andamento cujas tarefas não tinham prazo não aparecia —
  * e o dia mostrava só a que já estava atrasada.
  */
-async function WorkSection() {
+async function WorkSection({ date }: { date: Date }) {
   const today = todayUtc();
+  // Semana de segunda a domingo, como o cardápio. O corte é exclusivo.
+  const dayEnd = new Date(date.getTime() + 86_400_000);
+  const weekEnd = new Date(date.getTime() + (8 - (date.getUTCDay() || 7)) * 86_400_000);
 
   const [levels, production, collection] = await Promise.all([
     prisma.priorityLevel.findMany({
@@ -177,7 +180,12 @@ async function WorkSection() {
     })),
   ];
 
-  return <WorkTasksToday tasks={tasks} levels={levels} />;
+  return <WorkTasksToday
+      tasks={tasks}
+      levels={levels}
+      dayEnd={dayEnd.toISOString()}
+      weekEnd={weekEnd.toISOString()}
+    />;
 }
 
 /** Rotinas e agendamentos de beleza: duas consultas próprias, também isoladas. */
@@ -288,7 +296,7 @@ export default async function DiaPage({
             </Card>
 
             <Suspense fallback={<SectionFallback />}>
-              <WorkSection />
+              <WorkSection date={date} />
             </Suspense>
           </div>
 
