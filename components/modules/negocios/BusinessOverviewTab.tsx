@@ -38,8 +38,11 @@ export function BusinessOverviewTab({
   overview,
   projects,
   tabs,
+  schedule,
 }: {
   businessId: string;
+  /** Card de tarefas e posts (tabela/calendário), já montado pela página. */
+  schedule?: React.ReactNode;
   overview: BusinessOverview;
   projects: ProjectCard[];
   /** Abas ligadas, para os atalhos do rodapé. */
@@ -98,6 +101,8 @@ export function BusinessOverviewTab({
           </span>
         </div>
       )}
+
+      {schedule}
 
       {cards.length > 0 && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">

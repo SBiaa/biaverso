@@ -41,6 +41,7 @@ import { buildBusinessTabs, resolveTab, OVERVIEW_TAB } from "@/lib/business-modu
 import { BusinessOverviewTab } from "@/components/modules/negocios/BusinessOverviewTab";
 import { getBusinessOverview } from "@/lib/business-overview";
 import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
+import { ProjectItems } from "@/components/modules/projetos/ProjectItems";
 import { ProjectGrid } from "@/components/modules/projetos/ProjectGrid";
 import { ProjectFilterBar } from "@/components/modules/projetos/ProjectFilterBar";
 import { getProjectsOverview } from "@/lib/projects";
@@ -138,9 +139,40 @@ export default async function BusinessDetailPage({
       getProjectsOverview(id),
     ]);
 
+    // Só negócios com posts ou tarefas ligados ganham o card de cronograma.
+    const showItems = overview.stats.openTasks !== null || overview.stats.plannedPosts !== null;
+    const [allPosts, allTasks] = showItems
+      ? await Promise.all([
+          prisma.contentPost.findMany({
+            where: { businessId: id },
+            orderBy: { publishDate: "asc" },
+            select: postRecordSelect,
+          }),
+          prisma.productionTask.findMany({
+            where: { businessId: id },
+            orderBy: { dueDate: "asc" },
+            select: taskRecordSelect,
+          }),
+        ])
+      : [[], []];
+
     content = (
       <BusinessOverviewTab
         businessId={id}
+        schedule={
+          showItems ? (
+            <Card>
+              <CardTitle className="mb-3">Tarefas e posts</CardTitle>
+              <ProjectItems
+                businessId={id}
+                posts={allPosts.map(toPostRecord)}
+                tasks={allTasks.map(toTaskRecord)}
+                clients={clients}
+                projectOptions={projectOptions}
+              />
+            </Card>
+          ) : null
+        }
         overview={overview}
         // Só os que estão rolando — concluído e cancelado enchem a home.
         projects={projectCards.filter((p) => p.status === "EM_ANDAMENTO")}

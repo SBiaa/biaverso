@@ -59,20 +59,21 @@ export function ProjectItems({
   businessId,
   projectId,
   clientId,
-  startDate,
-  endDate,
+  startDate = null,
+  endDate = null,
   posts,
   tasks,
   clients,
   projectOptions,
 }: {
   businessId: string;
-  projectId: string;
-  /** Null = projeto interno do negócio. */
-  clientId: string | null;
+  /** Ausente na visão do negócio inteiro: o modal escolhe o projeto. */
+  projectId?: string;
+  /** Null = projeto interno do negócio; ausente = visão do negócio inteiro. */
+  clientId?: string | null;
   /** "YYYY-MM-DD" ou null. */
-  startDate: string | null;
-  endDate: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   posts: PostRecord[];
   tasks: TaskRecord[];
   clients: ClientOption[];
@@ -88,7 +89,8 @@ export function ProjectItems({
   const [editingPost, setEditingPost] = useState<PostRecord | null>(null);
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
 
-  const defaultClientId = clientId ?? INTERNAL_CLIENT;
+  const defaultClientId =
+    clientId === undefined ? undefined : (clientId ?? INTERNAL_CLIENT);
   const today = todayInputValue();
 
   // Mesma referência enquanto o servidor não manda dados novos: o calendário
@@ -235,7 +237,9 @@ export function ProjectItems({
         rows.length === 0 ? (
           <p className="py-2 text-sm text-text-secondary">
             {items.length === 0
+              ? projectId
               ? "Nenhuma tarefa ou post neste projeto ainda."
+              : "Nenhuma tarefa ou post neste negócio ainda."
               : "Nada nesse filtro."}
           </p>
         ) : (
