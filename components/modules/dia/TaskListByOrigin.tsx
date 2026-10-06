@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, Plus } from "lucide-react";
 import {
   AttentionBadge,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
+import { FocusStar } from "@/components/modules/dia/FocusStar";
 import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
 
 type TaskItem = {
@@ -33,16 +35,22 @@ type TaskListByOriginProps = {
   /** Dia aberto já passou: o que for criado aqui já nasce atrasado. */
   dayInPast: boolean;
   initialTasks: TaskItem[];
+  /** Ids das tarefas avulsas que estão no foco do dia. */
+  focusIds: string[];
 };
 
 const originOptions = Object.keys(originLabels) as BadgeOrigin[];
 
 function TaskRow({
   task,
+  dayId,
+  focused,
   onToggle,
   onRename,
 }: {
   task: TaskItem;
+  dayId: string;
+  focused: boolean;
   onToggle: (id: string) => void;
   onRename: (id: string, title: string) => Promise<unknown>;
 }) {
@@ -96,6 +104,13 @@ function TaskRow({
             doneCount={subtasks.doneCount}
             total={subtasks.subtasks.length}
           />
+          <FocusStar
+            dayId={dayId}
+            kind="task"
+            taskId={task.id}
+            focused={focused}
+            title={task.title}
+          />
         </span>
       </div>
 
@@ -113,7 +128,9 @@ export function TaskListByOrigin({
   dayDate,
   dayInPast,
   initialTasks,
+  focusIds,
 }: TaskListByOriginProps) {
+  const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -135,6 +152,8 @@ export function TaskListByOrigin({
 
     try {
       await api.patch(`/api/tasks/${id}`, { done: nextDone });
+      // O resumo do dia, no topo, vem do servidor.
+      router.refresh();
     } catch (e) {
       setTasks(previous);
       setError(errorMessage(e));
@@ -177,6 +196,7 @@ export function TaskListByOrigin({
       ]);
       setTitle("");
       setShowForm(false);
+      router.refresh();
     } catch (e) {
       // A tarefa não entra na lista se não foi gravada.
       setError(errorMessage(e));
@@ -199,6 +219,8 @@ export function TaskListByOrigin({
               <TaskRow
                 key={task.id}
                 task={task}
+                dayId={dayId}
+                focused={focusIds.includes(task.id)}
                 onToggle={toggle}
                 onRename={rename}
               />

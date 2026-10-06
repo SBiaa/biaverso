@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Circle, Clock } from "lucide-react";
 import { AttentionBadge, Card, CardTitle, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR, hexToRgba } from "@/lib/utils";
+import { focusKey } from "@/lib/day-focus";
+import { FocusStar } from "@/components/modules/dia/FocusStar";
 import {
   formatMinutes,
   parseMinutes,
@@ -24,6 +27,8 @@ export type WorkTask = {
   id: string;
   title: string;
   done: boolean;
+  /** Já veio concluída do servidor (aba "Feitas"), e não marcada agora na tela. */
+  doneOnLoad: boolean;
   /** Chip de origem: o negócio (produção) ou a coleção. */
   originLabel: string;
   originColor: string;
@@ -40,12 +45,13 @@ export type WorkTask = {
   subtasks: SubtaskItem[];
 };
 
-type Range = "today" | "week" | "all";
+type Range = "today" | "week" | "all" | "done";
 
 const RANGES: { id: Range; label: string }[] = [
   { id: "today", label: "Hoje" },
   { id: "week", label: "Semana" },
   { id: "all", label: "Tudo" },
+  { id: "done", label: "Feitas" },
 ];
 
 type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null };
@@ -137,11 +143,15 @@ function PrioritySelect({
 
 function TaskRow({
   task,
+  dayId,
+  focused,
   levels,
   onToggle,
   onPatch,
 }: {
   task: WorkTask;
+  dayId: string;
+  focused: boolean;
   levels: PriorityLevelDTO[];
   onToggle: (task: WorkTask) => void;
   onPatch: (task: WorkTask, patch: Patch) => void;
@@ -182,6 +192,13 @@ function TaskRow({
                   {task.title}
                   {task.urgent && <span className="sr-only"> (urgente)</span>}
                 </span>
+                <FocusStar
+                  dayId={dayId}
+                  kind={task.kind}
+                  taskId={task.id}
+                  focused={focused}
+                  title={task.title}
+                />
                 <SubtaskToggle
                   open={open}
                   onClick={() => setOpen((v) => !v)}
@@ -288,17 +305,23 @@ function sortTasks(tasks: WorkTask[], levels: PriorityLevelDTO[]) {
  * dá para olhar e decidir o que fazer primeiro, e quanto tempo o dia pede.
  */
 export function WorkTasksToday({
+  dayId,
+  focusKeys,
   tasks,
   levels,
   dayEnd,
   weekEnd,
 }: {
+  dayId: string;
+  /** `kind:id` das tarefas que estão no foco do dia. */
+  focusKeys: string[];
   tasks: WorkTask[];
   levels: PriorityLevelDTO[];
   /** Fim (exclusivo) do dia em foco e da semana dele, em ISO. */
   dayEnd: string;
   weekEnd: string;
 }) {
+  const router = useRouter();
   const [items, setItems] = useState(tasks);
   const [range, setRange] = useState<Range>("all");
   const [error, setError] = useState<string | null>(null);
@@ -307,8 +330,13 @@ export function WorkTasksToday({
   // Sem prazo só aparece em "Tudo" — não dá para dizer que é da semana.
   const limits = { day: new Date(dayEnd).getTime(), week: new Date(weekEnd).getTime() };
   const inRange = (t: WorkTask, r: Range) =>
-    r === "all" ||
-    (t.dueDate !== null && new Date(t.dueDate).getTime() < limits[r === "today" ? "day" : "week"]);
+    // "Feitas" é tudo que está concluído; as outras abas escondem o que já
+    // chegou concluído, mas mantêm o que ela acabou de marcar (riscado, no fim).
+    r === "done"
+      ? t.done
+      : !(t.done && t.doneOnLoad) &&
+        (r === "all" ||
+    (t.dueDate !== null && new Date(t.dueDate).getTime() < limits[r === "today" ? "day" : "week"]));
 
   const visible = useMemo(
     () => sortTasks(items.filter((t) => inRange(t, range)), levels),
@@ -319,7 +347,14 @@ export function WorkTasksToday({
   const lateCount = open.filter((t) => t.overdue).length;
   const estimated = open.reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0);
   const withoutEstimate = open.filter((t) => t.estimateMinutes === null).length;
-  const countOpen = (r: Range) => items.filter((t) => !t.done && inRange(t, r)).length;
+  // Em "Feitas" o que conta é o concluído; nas outras, o que ainda está aberto.
+  const openIn = (r: Range) =>
+    items.filter((t) => (r === "done" ? t.done : !t.done) && inRange(t, r));
+  const countOpen = (r: Range) => openIn(r).length;
+  const doneCount = items.filter((t) => t.done).length;
+  // Quanto cada recorte pede de tempo: mostra se o dia cabe antes de abrir a lista.
+  const minutesIn = (r: Range) =>
+    openIn(r).reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0);
 
   function update(key: string, change: Partial<WorkTask>) {
     setItems((prev) =>
@@ -336,6 +371,8 @@ export function WorkTasksToday({
 
     try {
       await api.patch(patchUrl(task), body);
+      // O foco do dia, no topo, vem do servidor.
+      router.refresh();
     } catch (e) {
       setItems(previous);
       setError(errorMessage(e));
@@ -372,21 +409,31 @@ export function WorkTasksToday({
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <CardTitle>Tarefas em andamento</CardTitle>
         <p className="flex flex-wrap items-center gap-x-3 text-xs text-text-secondary">
-          <span>
-            {open.length} {open.length === 1 ? "aberta" : "abertas"}
-          </span>
-          {lateCount > 0 && (
-            <span className="font-medium text-red-600">
-              {lateCount} {lateCount === 1 ? "atrasada" : "atrasadas"}
+          {range === "done" ? (
+            <span>
+              {doneCount} {doneCount === 1 ? "feita" : "feitas"} na semana
+            </span>
+          ) : (
+            <span>
+              {open.length} {open.length === 1 ? "aberta" : "abertas"}
             </span>
           )}
-          <span className="inline-flex items-center gap-1">
-            <Clock size={12} />
-            {estimated > 0 ? `~${formatMinutes(estimated)}` : "sem estimativa"}
-            {estimated > 0 && withoutEstimate > 0 && (
-              <span> · {withoutEstimate} sem tempo</span>
-            )}
-          </span>
+          {range !== "done" && (
+            <>
+              {lateCount > 0 && (
+                <span className="font-medium text-red-600">
+                  {lateCount} {lateCount === 1 ? "atrasada" : "atrasadas"}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1">
+                <Clock size={12} />
+                {estimated > 0 ? `~${formatMinutes(estimated)}` : "sem estimativa"}
+                {estimated > 0 && withoutEstimate > 0 && (
+                  <span> · {withoutEstimate} sem tempo</span>
+                )}
+              </span>
+            </>
+          )}
         </p>
       </div>
 
@@ -405,13 +452,16 @@ export function WorkTasksToday({
             )}
           >
             {r.label} · {countOpen(r.id)}
+            {minutesIn(r.id) > 0 && ` · ${formatMinutes(minutesIn(r.id))}`}
           </button>
         ))}
       </div>
 
       {visible.length === 0 && (
         <p className="py-2 text-sm text-text-secondary">
-          Nada com prazo {range === "today" ? "até hoje" : "até o fim da semana"}.
+          {range === "done"
+            ? "Nada concluído nesta semana."
+            : `Nada com prazo ${range === "today" ? "até hoje" : "até o fim da semana"}.`}
         </p>
       )}
 
@@ -443,6 +493,8 @@ export function WorkTasksToday({
               <TaskRow
                 key={task.kind + task.id}
                 task={task}
+                dayId={dayId}
+                focused={focusKeys.includes(focusKey(task.kind, task.id))}
                 levels={levels}
                 onToggle={toggle}
                 onPatch={patch}

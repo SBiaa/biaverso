@@ -40,6 +40,23 @@ model Day {
   events      Event[]
   timeBlocks  TimeBlock[]
   timeEntries TimeEntry[]
+  focus       DayFocus[]
+}
+
+/// As até 3 tarefas que ela escolheu como foco de um dia. A tarefa pode ser
+/// avulsa (`task`), de produção (`production`) ou de coleção (`collection`):
+/// três tabelas diferentes, então o vínculo é por `kind` + `taskId`, sem chave
+/// estrangeira. Tarefa apagada simplesmente deixa de aparecer no foco.
+model DayFocus {
+  id        String   @id @default(cuid())
+  dayId     String
+  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  kind      String
+  taskId    String
+  createdAt DateTime @default(now())
+
+  @@unique([dayId, kind, taskId])
+  @@index([dayId])
 }
 
 enum DayType {

@@ -57,6 +57,13 @@ export const waterLogSchema = z.object({
   count: z.coerce.number().int().min(0).max(30),
 });
 
+export const dayFocusSchema = z.object({
+  dayId: id,
+  kind: z.enum(["task", "production", "collection"]),
+  taskId: id,
+  focused: z.boolean(),
+});
+
 export const taskCreateSchema = z.object({
   title: text,
   origin: z.enum(E.Origin).default("PESSOAL"),

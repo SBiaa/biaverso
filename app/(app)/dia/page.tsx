@@ -10,6 +10,8 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card, CardTitle, Skeleton } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
 import { MoodEnergySelector } from "@/components/modules/dia/MoodEnergySelector";
+import { DaySummary } from "@/components/modules/dia/DaySummary";
+import { FocusToday, type FocusItem } from "@/components/modules/dia/FocusToday";
 import { DayTypeToggle } from "@/components/modules/dia/DayTypeToggle";
 import { HabitChecklist } from "@/components/modules/dia/HabitChecklist";
 import { WaterTracker } from "@/components/modules/dia/WaterTracker";
@@ -23,6 +25,7 @@ import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
 import { productionTypeLabels } from "@/lib/labels";
 import { getUserSettings } from "@/lib/settings";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
+import { focusKey, type FocusKind } from "@/lib/day-focus";
 import type { BadgeOrigin } from "@/components/ui";
 import type { MealType } from "@/app/generated/prisma/client";
 
@@ -92,100 +95,134 @@ async function getDay(date: Date) {
  * então uma coleção em andamento cujas tarefas não tinham prazo não aparecia —
  * e o dia mostrava só a que já estava atrasada.
  */
-async function WorkSection({ date }: { date: Date }) {
+async function WorkSection({
+  date,
+  dayId,
+  focusKeys,
+}: {
+  date: Date;
+  dayId: string;
+  focusKeys: string[];
+}) {
   const today = todayUtc();
   // Semana de segunda a domingo, como o cardápio. O corte é exclusivo.
   const dayEnd = new Date(date.getTime() + 86_400_000);
   const weekEnd = new Date(date.getTime() + (8 - (date.getUTCDay() || 7)) * 86_400_000);
+  // Concluídas da semana do dia aberto: é o que a aba "Feitas" mostra.
+  const weekStart = new Date(weekEnd.getTime() - 7 * 86_400_000);
+  const doneThisWeek = { gte: weekStart, lt: weekEnd };
 
-  const [levels, production, collection] = await Promise.all([
+  const productionSelect = {
+    id: true,
+    title: true,
+    type: true,
+    priority: true,
+    dueDate: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    business: { select: { name: true, color: true } },
+    client: { select: { name: true } },
+    subtasks: {
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, done: true },
+    },
+  } as const;
+  const collectionSelect = {
+    id: true,
+    title: true,
+    dueDate: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    collectionId: true,
+    collection: {
+      select: { name: true, businessId: true, business: { select: { color: true } } },
+    },
+    subtasks: {
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, done: true },
+    },
+  } as const;
+
+  const [levels, production, collection, doneProduction, doneCollection] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
     }),
     prisma.productionTask.findMany({
       where: { status: { notIn: ["CONCLUIDO", "CANCELADO"] } },
-      select: {
-        id: true,
-        title: true,
-        type: true,
-        priority: true,
-        dueDate: true,
-        priorityLevelId: true,
-        estimateMinutes: true,
-        business: { select: { name: true, color: true } },
-        client: { select: { name: true } },
-        subtasks: {
-          orderBy: { order: "asc" },
-          select: { id: true, title: true, done: true },
-        },
-      },
+      select: productionSelect,
     }),
     prisma.collectionTask.findMany({
       where: { done: false, collection: { status: { not: "ENCERRADA" } } },
-      select: {
-        id: true,
-        title: true,
-        dueDate: true,
-        priorityLevelId: true,
-        estimateMinutes: true,
-        collectionId: true,
-        collection: {
-          select: { name: true, businessId: true, business: { select: { color: true } } },
-        },
-        subtasks: {
-          orderBy: { order: "asc" },
-          select: { id: true, title: true, done: true },
-        },
-      },
+      select: collectionSelect,
+    }),
+    prisma.productionTask.findMany({
+      where: { status: "CONCLUIDO", completedAt: doneThisWeek },
+      select: productionSelect,
+    }),
+    prisma.collectionTask.findMany({
+      where: { done: true, completedAt: doneThisWeek, collection: { status: { not: "ENCERRADA" } } },
+      select: collectionSelect,
     }),
   ]);
 
   const isLate = (due: Date | null) => due !== null && due.getTime() < today.getTime();
 
+  const fromProduction = (t: (typeof production)[number], done: boolean): WorkTask => ({
+    kind: "production",
+    id: t.id,
+    title: t.title,
+    done,
+    doneOnLoad: done,
+    originLabel: t.business.name,
+    originColor: t.business.color,
+    originHref: null,
+    detail: [productionTypeLabels[t.type], t.client?.name ?? "Interno"].join(" · "),
+    urgent: !done && t.priority === "URGENTE",
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    overdue: !done && isLate(t.dueDate),
+    collectionId: null,
+    subtasks: t.subtasks,
+  });
+
+  const fromCollection = (t: (typeof collection)[number], done: boolean): WorkTask => ({
+    kind: "collection",
+    id: t.id,
+    title: t.title,
+    done,
+    doneOnLoad: done,
+    originLabel: t.collection.name,
+    originColor: t.collection.business.color,
+    originHref: `/negocios/${t.collection.businessId}/colecoes/${t.collectionId}`,
+    detail: "Coleção",
+    urgent: false,
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    overdue: !done && isLate(t.dueDate),
+    collectionId: t.collectionId,
+    subtasks: t.subtasks,
+  });
+
   const tasks: WorkTask[] = [
-    ...production.map((t) => ({
-      kind: "production" as const,
-      id: t.id,
-      title: t.title,
-      done: false,
-      originLabel: t.business.name,
-      originColor: t.business.color,
-      originHref: null,
-      detail: [productionTypeLabels[t.type], t.client?.name ?? "Interno"].join(" · "),
-      urgent: t.priority === "URGENTE",
-      priorityLevelId: t.priorityLevelId,
-      estimateMinutes: t.estimateMinutes,
-      dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-      overdue: isLate(t.dueDate),
-      collectionId: null,
-      subtasks: t.subtasks,
-    })),
-    ...collection.map((t) => ({
-      kind: "collection" as const,
-      id: t.id,
-      title: t.title,
-      done: false,
-      originLabel: t.collection.name,
-      originColor: t.collection.business.color,
-      originHref: `/negocios/${t.collection.businessId}/colecoes/${t.collectionId}`,
-      detail: "Coleção",
-      urgent: false,
-      priorityLevelId: t.priorityLevelId,
-      estimateMinutes: t.estimateMinutes,
-      dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-      overdue: isLate(t.dueDate),
-      collectionId: t.collectionId,
-      subtasks: t.subtasks,
-    })),
+    ...production.map((t) => fromProduction(t, false)),
+    ...collection.map((t) => fromCollection(t, false)),
+    ...doneProduction.map((t) => fromProduction(t, true)),
+    ...doneCollection.map((t) => fromCollection(t, true)),
   ];
 
-  return <WorkTasksToday
+  return (
+    <WorkTasksToday
+      dayId={dayId}
+      focusKeys={focusKeys}
       tasks={tasks}
       levels={levels}
       dayEnd={dayEnd.toISOString()}
       weekEnd={weekEnd.toISOString()}
-    />;
+    />
+  );
 }
 
 /** Rotinas e agendamentos de beleza: duas consultas próprias, também isoladas. */
@@ -202,6 +239,67 @@ async function SelfCareSection({ date }: { date: Date }) {
       <DueCareToday items={dueCare} />
     </Card>
   );
+}
+
+/**
+ * As tarefas do foco do dia, com o que a tela precisa para mostrá-las — feitas
+ * ou não. Tarefa avulsa já veio com o dia; as de produção e coleção moram em
+ * outras tabelas, então saem de duas consultas por id. Vínculo sem tarefa
+ * (apagada) é ignorado.
+ */
+async function getFocusItems(
+  dayId: string,
+  dayTasks: Awaited<ReturnType<typeof getDay>>["tasks"],
+): Promise<FocusItem[]> {
+  const rows = await prisma.dayFocus.findMany({
+    where: { dayId },
+    orderBy: { createdAt: "asc" },
+    select: { kind: true, taskId: true },
+  });
+  const idsOf = (kind: FocusKind) =>
+    rows.filter((r) => r.kind === kind).map((r) => r.taskId);
+
+  const [production, collection] = await Promise.all([
+    prisma.productionTask.findMany({
+      where: { id: { in: idsOf("production") } },
+      select: { id: true, title: true, status: true, business: { select: { name: true, color: true } } },
+    }),
+    prisma.collectionTask.findMany({
+      where: { id: { in: idsOf("collection") } },
+      select: {
+        id: true,
+        title: true,
+        done: true,
+        collectionId: true,
+        collection: {
+          select: { name: true, businessId: true, business: { select: { color: true } } },
+        },
+      },
+    }),
+  ]);
+
+  const items = rows.flatMap((row): FocusItem[] => {
+    const base = { id: focusKey(row.kind as FocusKind, row.taskId), taskId: row.taskId };
+
+    if (row.kind === "task") {
+      const t = dayTasks.find((x) => x.id === row.taskId);
+      return t
+        ? [{ ...base, kind: "task", title: t.title, done: t.done, originLabel: t.business?.name ?? null, originColor: t.business?.color ?? null, originHref: null, collectionId: null }]
+        : [];
+    }
+    if (row.kind === "production") {
+      const t = production.find((x) => x.id === row.taskId);
+      return t
+        ? [{ ...base, kind: "production", title: t.title, done: t.status === "CONCLUIDO", originLabel: t.business.name, originColor: t.business.color, originHref: null, collectionId: null }]
+        : [];
+    }
+    const t = collection.find((x) => x.id === row.taskId);
+    return t
+      ? [{ ...base, kind: "collection", title: t.title, done: t.done, originLabel: t.collection.name, originColor: t.collection.business.color, originHref: `/negocios/${t.collection.businessId}/colecoes/${t.collectionId}`, collectionId: t.collectionId }]
+      : [];
+  });
+
+  return items;
 }
 
 function SectionFallback() {
@@ -227,8 +325,9 @@ export default async function DiaPage({
   const date = (params.date ? parseDateOnly(params.date) : null) ?? today;
   const day = await getDay(date);
 
-  const [settings, mealPlans] = await Promise.all([
+  const [settings, focusItems, mealPlans] = await Promise.all([
     getUserSettings(),
+    getFocusItems(day.id, day.tasks),
     prisma.mealPlan.findMany({
       where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
       select: { mealType: true, recipe: { select: { title: true } } },
@@ -261,6 +360,15 @@ export default async function DiaPage({
           <p className="text-sm text-text-secondary">Como está o seu dia?</p>
         </div>
 
+        <DaySummary
+          tasks={{ done: day.tasks.filter((t) => t.done).length, total: day.tasks.length }}
+          habits={{ done: day.habits.filter((h) => h.done).length, total: day.habits.length }}
+          meals={{ done: meals.filter((m) => m.eaten).length, total: meals.length }}
+          water={{ done: day.waterLogs.length, total: settings.waterGoal }}
+        />
+
+        <FocusToday dayId={day.id} items={focusItems} />
+
         {/* Duas colunas de peso diferente, e não uma pilha: à esquerda o que é
             longo e muda o dia todo (tarefas e andamento dos negócios); à direita os
             registros curtos que você marca de passagem. Empilhados, os curtos
@@ -283,6 +391,7 @@ export default async function DiaPage({
                 dayId={day.id}
                 dayDate={toDateInputValue(day.date)}
                 dayInPast={day.date.getTime() < today.getTime()}
+                focusIds={focusItems.filter((f) => f.kind === "task").map((f) => f.taskId)}
                 initialTasks={day.tasks.map((t) => ({
                   id: t.id,
                   title: t.title,
@@ -296,7 +405,11 @@ export default async function DiaPage({
             </Card>
 
             <Suspense fallback={<SectionFallback />}>
-              <WorkSection date={date} />
+              <WorkSection
+                date={date}
+                dayId={day.id}
+                focusKeys={focusItems.map((f) => f.id)}
+              />
             </Suspense>
           </div>
 
