@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -20,7 +20,8 @@ import {
   type ProjectOption,
 } from "./ContentPostModal";
 import { ClientOptions } from "./ClientOptions";
-import { formatMinutes, parseMinutes, type PriorityLevelDTO } from "@/lib/task-plan";
+import { formatMinutes, parseMinutes } from "@/lib/task-plan";
+import { usePriorityLevels } from "@/components/modules/tarefas/usePriorityLevels";
 
 const typeOptions = Object.keys(productionTypeLabels);
 const priorityOptions = Object.keys(priorityLabels);
@@ -130,26 +131,12 @@ export function ProductionTaskModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [levels, setLevels] = useState<PriorityLevelDTO[]>([]);
+  const levels = usePriorityLevels();
   const [form, setForm] = useState(
     task
       ? formFromTask(task)
       : emptyForm(clients, projects, defaultClientId, defaultProjectId, defaultDate),
   );
-
-  // A lista de prioridades é da usuária (Configurações), então vem do servidor
-  // em vez de ser repassada por cada uma das telas que abrem este modal. Se a
-  // busca falhar, o select fica só com "Sem prioridade" e o resto segue salvando.
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<PriorityLevelDTO[]>("/api/priority-levels")
-      .then((list) => !cancelled && setLevels(list))
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => {

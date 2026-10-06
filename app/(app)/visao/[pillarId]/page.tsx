@@ -16,6 +16,18 @@ export default async function PillarDetailPage({
 }) {
   const { pillarId } = await params;
 
+  const [levels, businesses] = await Promise.all([
+    prisma.priorityLevel.findMany({
+      orderBy: { order: "asc" },
+      select: { id: true, name: true, color: true, order: true },
+    }),
+    prisma.business.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
+
   const pillar = await prisma.pillar.findUnique({
     where: { id: pillarId },
     include: {
@@ -35,6 +47,10 @@ export default async function PillarDetailPage({
     id: goal.id,
     title: goal.title,
     description: goal.description,
+    status: goal.status,
+    priorityLevelId: goal.priorityLevelId,
+    category: goal.category,
+    challenge: goal.challenge,
     measuredGoals: goal.measuredGoals.map((measured) => ({
       id: measured.id,
       title: measured.title,
@@ -42,6 +58,11 @@ export default async function PillarDetailPage({
       deadline: measured.deadline ? measured.deadline.toISOString() : null,
       status: measured.status,
       progress: measured.progress,
+      term: measured.term,
+      targetValue: measured.targetValue,
+      currentValue: measured.currentValue,
+      unit: measured.unit,
+      businessId: measured.businessId,
     })),
   }));
 
@@ -60,7 +81,12 @@ export default async function PillarDetailPage({
           initialItems={pillar.moodboardItems}
         />
         <PrinciplesSection pillarId={pillar.id} initialPrinciples={pillar.principles} />
-        <GoalsSection pillarId={pillar.id} initialGoals={conceptualGoals} />
+        <GoalsSection
+          pillarId={pillar.id}
+          initialGoals={conceptualGoals}
+          levels={levels}
+          businesses={businesses}
+        />
         <DesiresSection pillarId={pillar.id} initialDesires={pillar.desires} />
       </main>
     </>

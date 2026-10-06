@@ -320,6 +320,8 @@ export const businessCreateSchema = z.object({
   icon: optionalText,
   // Ausente = deixa como está (no create, cai nos módulos padrão).
   modules: z.array(z.enum(E.ModuleType)).optional(),
+  // Pilar da Central de Visão que este negócio alimenta; `null` desliga.
+  pillarId: optionalId,
 });
 export const businessPatchSchema = businessCreateSchema.partial().extend({
   active: z.boolean().optional(),

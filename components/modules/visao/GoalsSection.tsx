@@ -10,25 +10,28 @@ import {
   IconButton,
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { cn } from "@/lib/utils";
-import { measuredGoalStatusLabels } from "@/lib/labels";
+import { cn, hexToRgba } from "@/lib/utils";
+import { goalTermLabels, measuredGoalStatusLabels } from "@/lib/labels";
 import { formatDateBR } from "@/lib/utils";
+import { formatGoalValue, goalProgress } from "@/lib/vision-shared";
+import type { PriorityLevelDTO } from "@/lib/task-plan";
 import { ConceptualGoalFormModal } from "./ConceptualGoalFormModal";
-import { MeasuredGoalFormModal } from "./MeasuredGoalFormModal";
+import {
+  MeasuredGoalFormModal,
+  type BusinessOption,
+  type MeasuredGoalInitial,
+} from "./MeasuredGoalFormModal";
 
-type MeasuredGoal = {
-  id: string;
-  title: string;
-  target: string | null;
-  deadline: string | null;
-  status: string;
-  progress: number;
-};
+type MeasuredGoal = MeasuredGoalInitial;
 
 type ConceptualGoal = {
   id: string;
   title: string;
   description: string | null;
+  status: string;
+  priorityLevelId: string | null;
+  category: string | null;
+  challenge: string | null;
   measuredGoals: MeasuredGoal[];
 };
 
@@ -47,12 +50,25 @@ function MeasuredGoalRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const percent = goalProgress(goal);
+  const hasNumericTarget = goal.targetValue !== null && goal.targetValue > 0;
+
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-text-primary">{goal.title}</p>
-          {goal.target && <p className="text-xs text-text-secondary">{goal.target}</p>}
+          <p className="text-xs text-text-secondary">
+            {hasNumericTarget
+              ? `${formatGoalValue(goal.currentValue, goal.unit)} de ${formatGoalValue(goal.targetValue!, goal.unit)}`
+              : goal.target}
+            {goal.term && (
+              <span>
+                {hasNumericTarget || goal.target ? " · " : ""}
+                {goalTermLabels[goal.term]}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={onEdit} className="text-text-secondary hover:text-text-primary">
@@ -67,12 +83,12 @@ function MeasuredGoalRow({
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
         <div
           className="h-full rounded-full bg-accent transition-all"
-          style={{ width: `${Math.min(100, Math.max(0, goal.progress))}%` }}
+          style={{ width: `${percent}%` }}
         />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary">
-        <span>{goal.progress}%</span>
+        <span>{percent}%</span>
         <span>{goal.deadline ? formatDateBR(new Date(goal.deadline)) : "Sem prazo"}</span>
         <select
           value={goal.status}
@@ -94,12 +110,47 @@ function MeasuredGoalRow({
   );
 }
 
+/** Status, prioridade, categoria e desafio do objetivo conceitual, em linha. */
+function ConceptualGoalMeta({
+  goal,
+  levels,
+}: {
+  goal: ConceptualGoal;
+  levels: PriorityLevelDTO[];
+}) {
+  const level = levels.find((l) => l.id === goal.priorityLevelId);
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+      <span className="rounded-full bg-border px-2 py-0.5 font-medium text-text-secondary">
+        {measuredGoalStatusLabels[goal.status] ?? goal.status}
+      </span>
+      {level && (
+        <span
+          className="rounded-full px-2 py-0.5 font-medium"
+          style={{ backgroundColor: hexToRgba(level.color, 0.14), color: level.color }}
+        >
+          {level.name}
+        </span>
+      )}
+      {goal.category && <span className="text-text-secondary">{goal.category}</span>}
+      {goal.challenge && (
+        <span className="text-text-secondary">· Desafio: {goal.challenge}</span>
+      )}
+    </div>
+  );
+}
+
 export function GoalsSection({
   pillarId,
   initialGoals,
+  levels,
+  businesses,
 }: {
   pillarId: string;
   initialGoals: ConceptualGoal[];
+  levels: PriorityLevelDTO[];
+  businesses: BusinessOption[];
 }) {
   const [goals, setGoals] = useState(initialGoals);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -198,11 +249,12 @@ export function GoalsSection({
                   }}
                   className="flex cursor-pointer items-center justify-between gap-2 text-left"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-text-primary">{goal.title}</p>
                     {goal.description && (
                       <p className="text-xs text-text-secondary">{goal.description}</p>
                     )}
+                    <ConceptualGoalMeta goal={goal} levels={levels} />
                   </div>
                   <div className="flex items-center gap-2">
                     <IconButton
@@ -279,6 +331,7 @@ export function GoalsSection({
       {creatingMeasuredFor && (
         <MeasuredGoalFormModal
           conceptualGoalId={creatingMeasuredFor}
+          businesses={businesses}
           mode="create"
           onClose={() => setCreatingMeasuredFor(null)}
           onSaved={refresh}
@@ -287,6 +340,7 @@ export function GoalsSection({
       {editingMeasured && (
         <MeasuredGoalFormModal
           conceptualGoalId={editingMeasured.conceptualGoalId}
+          businesses={businesses}
           mode="edit"
           initial={editingMeasured.goal}
           onClose={() => setEditingMeasured(null)}

@@ -40,3 +40,26 @@ export const PILLAR_ICONS: Record<string, LucideIcon> = {
 export function getPillarIcon(icon?: string | null): LucideIcon {
   return (icon && PILLAR_ICONS[icon]) || Compass;
 }
+
+/**
+ * Cor de cada valor de status/tipo/termo, para as etiquetas das tabelas. Os
+ * valores de prioridade não entram aqui: a cor deles é da usuária (Configurações).
+ */
+export const VISION_TONES: Record<string, string> = {
+  // Status de objetivo.
+  NAO_INICIADO: "#64748B",
+  EM_ANDAMENTO: "#16A34A",
+  PAUSADO: "#DC2626",
+  CONCLUIDO: "#2563EB",
+  CANCELADO: "#78716C",
+  // Status do pilar.
+  ATIVO: "#16A34A",
+  // Tipo do pilar.
+  PESSOAL: "#2563EB",
+  NEGOCIO: "#D97706",
+  // Termo do objetivo.
+  JA: "#DC2626",
+  CURTO_PRAZO: "#D97706",
+  MEDIO_PRAZO: "#0891B2",
+  LONGO_PRAZO: "#7C3AED",
+};

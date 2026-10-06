@@ -19,6 +19,7 @@ export default async function NegociosPage() {
     description: b.description,
     color: b.color,
     icon: b.icon,
+    pillarId: b.pillarId,
     active: b.active,
     showInNav: b.showInNav,
     activeClientCount: b.clients.length,

@@ -10,6 +10,7 @@ import {
   type BadgeOrigin,
 } from "@/components/ui";
 import { PillarHighlightCard } from "@/components/modules/visao/PillarHighlightCard";
+import { goalProgress } from "@/lib/vision-shared";
 import { SyncStatusIcon } from "@/components/modules/agenda/SyncStatusIcon";
 import { HomeHabitList } from "@/components/modules/home/HomeHabitList";
 import { HomeTaskList } from "@/components/modules/home/HomeTaskList";
@@ -100,7 +101,7 @@ async function getDashboardData() {
             measuredGoals: {
               where: { status: "EM_ANDAMENTO" },
               orderBy: { deadline: "asc" },
-              select: { title: true, progress: true },
+              select: { title: true, progress: true, targetValue: true, currentValue: true },
             },
           },
         },
@@ -127,7 +128,7 @@ async function getDashboardData() {
         icon: pillar.icon,
         inProgressCount: inProgress.length,
         highlightGoal: inProgress[0]
-          ? { title: inProgress[0].title, progress: inProgress[0].progress }
+          ? { title: inProgress[0].title, progress: goalProgress(inProgress[0]) }
           : null,
       };
     })

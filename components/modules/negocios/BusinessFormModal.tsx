@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button, ErrorNote, Modal, notify } from "@/components/ui";
@@ -24,6 +24,7 @@ type BusinessFormModalProps = {
     description: string | null;
     color: string;
     icon: string | null;
+    pillarId: string | null;
     modules: ModuleType[];
   };
   onClose: () => void;
@@ -40,7 +41,22 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
     description: initial?.description ?? "",
     color: initial?.color ?? BUSINESS_COLORS[0],
     icon: initial?.icon ?? "briefcase",
+    pillarId: initial?.pillarId ?? "",
   });
+  const [pillars, setPillars] = useState<{ id: string; name: string }[]>([]);
+
+  // Os pilares vêm do servidor aqui mesmo, em vez de cada tela que abre este
+  // modal repassá-los. Se falhar, o select fica só com "Nenhum".
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ id: string; name: string }[]>("/api/vision/pillars")
+      .then((list) => !cancelled && setPillars(list))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [modules, setModules] = useState<ModuleType[]>(initial?.modules ?? DEFAULT_MODULES);
 
   function toggleModule(module: ModuleType) {
@@ -56,9 +72,13 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
 
     try {
       if (mode === "create") {
-        await api.post("/api/businesses", { ...form, modules });
+        await api.post("/api/businesses", { ...form, pillarId: form.pillarId || null, modules });
       } else if (initial) {
-        await api.patch(`/api/businesses/${initial.id}`, { ...form, modules });
+        await api.patch(`/api/businesses/${initial.id}`, {
+          ...form,
+          pillarId: form.pillarId || null,
+          modules,
+        });
       }
       router.refresh();
       notify("Salvo.");
@@ -90,6 +110,24 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
         onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
         className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       />
+
+      <div>
+        <p className="mb-1.5 text-xs font-medium text-text-secondary">
+          Pilar da Central de Visão
+        </p>
+        <select
+          value={form.pillarId}
+          onChange={(e) => setForm((prev) => ({ ...prev, pillarId: e.target.value }))}
+          className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value="">Nenhum</option>
+          {pillars.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div>
         <p className="mb-1.5 text-xs font-medium text-text-secondary">Cor</p>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorNote, Modal, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { PILLAR_COLORS, PILLAR_ICONS } from "@/lib/vision-visuals";
+import { pillarKindLabels, pillarStatusLabels } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 type PillarFormModalProps = {
@@ -16,6 +17,8 @@ type PillarFormModalProps = {
     description: string | null;
     color: string;
     icon: string | null;
+    status: string;
+    kind: string;
   };
   onClose: () => void;
 };
@@ -31,6 +34,8 @@ export function PillarFormModal({ mode, initial, onClose }: PillarFormModalProps
     description: initial?.description ?? "",
     color: initial?.color ?? PILLAR_COLORS[0],
     icon: initial?.icon ?? "heart",
+    status: initial?.status ?? "ATIVO",
+    kind: initial?.kind ?? "PESSOAL",
   });
 
   async function handleSubmit() {
@@ -74,6 +79,37 @@ export function PillarFormModal({ mode, initial, onClose }: PillarFormModalProps
         onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
         className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       />
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Status</p>
+          <select
+            value={form.status}
+            onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          >
+            {Object.entries(pillarStatusLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Tipo</p>
+          <select
+            value={form.kind}
+            onChange={(e) => setForm((prev) => ({ ...prev, kind: e.target.value }))}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          >
+            {Object.entries(pillarKindLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <div>
         <p className="mb-1.5 text-xs font-medium text-text-secondary">Cor</p>

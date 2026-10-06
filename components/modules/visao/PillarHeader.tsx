@@ -12,6 +12,8 @@ type PillarHeaderData = {
   description: string | null;
   color: string;
   icon: string | null;
+  status: string;
+  kind: string;
 };
 
 export function PillarHeader({ pillar }: { pillar: PillarHeaderData }) {
