@@ -758,6 +758,12 @@ model Business {
   wishlistItems       WishlistItem[]
   credentials         BusinessCredential[]
   products            Product[]
+
+  pillarId      String?
+  pillar        Pillar?        @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  measuredGoals MeasuredGoal[]
+
+  @@index([pillarId])
 }
 
 // Mesma ponte do ProjectCredential, um nível acima: senhas do negócio inteiro
@@ -1243,6 +1249,7 @@ model PriorityLevel {
 
   productionTasks ProductionTask[]
   collectionTasks CollectionTask[]
+  conceptualGoals ConceptualGoal[]
 }
 
 enum CollectionStatus {
@@ -1578,16 +1585,21 @@ enum PasswordCategory {
 
 // PILARES — grandes áreas da vida
 model Pillar {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
   description String?
-  color       String   @default("#6366F1")
+  color       String       @default("#6366F1")
   icon        String?
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  order       Int          @default(0)
+  // Como no Notion: pilar ativo/pausado e se é da vida pessoal ou de um negócio.
+  status      PillarStatus @default(ATIVO)
+  kind        PillarKind   @default(PESSOAL)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   conceptualGoals ConceptualGoal[]
+  // Negócios que alimentam este pilar (ex.: Empreendedorismo → Ace, Creative).
+  businesses      Business[]
   moodboardItems  MoodboardItem[]
   desires         Desire[]
   principles      Principle[]
@@ -1609,29 +1621,50 @@ model Principle {
 
 // OBJETIVOS CONCEITUAIS — o que quer ser/ter/sentir
 model ConceptualGoal {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   title       String
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // Mesmo conjunto de estados do objetivo metrificado.
+  status      MeasuredGoalStatus @default(EM_ANDAMENTO)
+  // Texto livre: Negócios, Estudo, Saúde... (select do Notion).
+  category    String?
+  // O que atrapalha: "ter constância nas postagens".
+  challenge   String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // A lista de prioridades é a mesma das tarefas (Configurações).
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
 
   pillarId      String
   pillar        Pillar         @relation(fields: [pillarId], references: [id], onDelete: Cascade)
   measuredGoals MeasuredGoal[]
 
   @@index([pillarId])
+  @@index([priorityLevelId])
 }
 
 // OBJETIVOS METRIFICADOS — versão mensurável com prazo
 model MeasuredGoal {
-  id        String             @id @default(cuid())
-  title     String
-  target    String?
-  deadline  DateTime?
-  status    MeasuredGoalStatus @default(EM_ANDAMENTO)
-  progress  Int                @default(0)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id           String             @id @default(cuid())
+  title        String
+  // `target` (texto) e `progress` (0–100 à mão) só valem para objetivo sem meta
+  // numérica; com `targetValue`, o progresso é currentValue ÷ targetValue.
+  target       String?
+  deadline     DateTime?
+  status       MeasuredGoalStatus @default(EM_ANDAMENTO)
+  progress     Int                @default(0)
+  term         GoalTerm?
+  targetValue  Float?
+  currentValue Float              @default(0)
+  // R$, seguidores, palavras...
+  unit         String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
 
   conceptualGoalId String
   conceptualGoal   ConceptualGoal @relation(fields: [conceptualGoalId], references: [id], onDelete: Cascade)
@@ -1639,9 +1672,28 @@ model MeasuredGoal {
 
   @@index([conceptualGoalId])
   @@index([status])
+  @@index([businessId])
+}
+
+enum PillarStatus {
+  ATIVO
+  PAUSADO
+}
+
+enum PillarKind {
+  PESSOAL
+  NEGOCIO
+}
+
+enum GoalTerm {
+  JA
+  CURTO_PRAZO
+  MEDIO_PRAZO
+  LONGO_PRAZO
 }
 
 enum MeasuredGoalStatus {
+  NAO_INICIADO
   EM_ANDAMENTO
   CONCLUIDO
   PAUSADO

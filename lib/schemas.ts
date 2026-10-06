@@ -17,6 +17,15 @@ const optionalId = z.string().min(1).nullish();
 const dateOnly = z.coerce.date();
 const text = z.string().trim().min(1, "não pode ficar vazio");
 const optionalText = z.string().trim().nullish().transform((v) => v || null);
+/**
+ * Para PATCH: campo ausente continua ausente ("não mexe"). `optionalText` sozinho
+ * transforma o ausente em `null` e apagaria o texto de quem só mudou outro campo.
+ */
+const optionalTextPatch = z
+  .string()
+  .trim()
+  .nullish()
+  .transform((v) => (v === undefined ? undefined : v || null));
 /** Tempo estimado de uma tarefa, em minutos inteiros (até uma semana). */
 const estimateMinutes = z.number().int().min(1).max(10080).nullish();
 const money = z.coerce.number().finite().nonnegative();
@@ -788,14 +797,28 @@ export const passwordSchema = z.object({
 export const passwordPatchSchema = passwordSchema.partial();
 
 // ------------------------------------------------------------------ visão
+const pillarColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "precisa ser uma cor #RRGGBB");
+
 export const pillarCreateSchema = z.object({
   name: text,
   description: optionalText,
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "precisa ser uma cor #RRGGBB").optional(),
+  color: pillarColor.optional(),
   icon: optionalText,
   order: z.coerce.number().int().min(0).default(0),
+  status: z.enum(E.PillarStatus).default("ATIVO"),
+  kind: z.enum(E.PillarKind).default("PESSOAL"),
 });
-export const pillarPatchSchema = pillarCreateSchema.partial();
+// Sem `.partial()` do create: ele reaplicaria `order`, `status` e `kind` padrão e
+// anularia a descrição em qualquer PATCH — trocar só o status zerava o resto.
+export const pillarPatchSchema = z.object({
+  name: text.optional(),
+  description: optionalTextPatch,
+  color: pillarColor.optional(),
+  icon: optionalTextPatch,
+  order: z.coerce.number().int().min(0).optional(),
+  status: z.enum(E.PillarStatus).optional(),
+  kind: z.enum(E.PillarKind).optional(),
+});
 
 export const principleSchema = z.object({
   title: text,
@@ -814,9 +837,25 @@ export const desirePatchSchema = desireSchema.partial();
 export const conceptualGoalCreateSchema = z.object({
   title: text,
   description: z.string().nullish(),
+  status: z.enum(E.MeasuredGoalStatus).default("EM_ANDAMENTO"),
+  category: optionalText,
+  challenge: optionalText,
+  priorityLevelId: optionalId,
   pillarId: id,
 });
-export const conceptualGoalPatchSchema = conceptualGoalCreateSchema.partial();
+export const conceptualGoalPatchSchema = z.object({
+  title: text.optional(),
+  description: z.string().nullish(),
+  status: z.enum(E.MeasuredGoalStatus).optional(),
+  category: optionalTextPatch,
+  challenge: optionalTextPatch,
+  priorityLevelId: optionalId,
+  pillarId: id.optional(),
+});
+
+/** Meta e valor atual: números de verdade. `z.number()` e não `z.coerce`, para
+ *  `null` (sem meta) não virar 0. */
+const goalAmount = z.number().finite().min(0);
 
 export const measuredGoalCreateSchema = z.object({
   title: text,
@@ -824,9 +863,28 @@ export const measuredGoalCreateSchema = z.object({
   deadline: dateOnly.nullish(),
   status: z.enum(E.MeasuredGoalStatus).default("EM_ANDAMENTO"),
   progress: z.coerce.number().int().min(0).max(100).default(0),
+  term: z.enum(E.GoalTerm).nullish(),
+  targetValue: goalAmount.nullish(),
+  currentValue: goalAmount.default(0),
+  unit: optionalText,
+  businessId: optionalId,
   conceptualGoalId: id,
 });
-export const measuredGoalPatchSchema = measuredGoalCreateSchema.partial();
+// Mesma razão do pilar: o `.partial()` do create reaplicava `status` e `progress`
+// padrão e apagava `target`, então mudar só o status zerava o progresso.
+export const measuredGoalPatchSchema = z.object({
+  title: text.optional(),
+  target: optionalTextPatch,
+  deadline: dateOnly.nullish(),
+  status: z.enum(E.MeasuredGoalStatus).optional(),
+  progress: z.coerce.number().int().min(0).max(100).optional(),
+  term: z.enum(E.GoalTerm).nullish(),
+  targetValue: goalAmount.nullish(),
+  currentValue: goalAmount.optional(),
+  unit: optionalTextPatch,
+  businessId: optionalId,
+  conceptualGoalId: id.optional(),
+});
 
 export const moodboardCreateSchema = z.object({
   type: z.enum(E.MoodboardType),

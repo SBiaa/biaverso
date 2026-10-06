@@ -292,6 +292,7 @@ export const passwordCategoryLabels: Record<string, string> = {
 };
 
 export const measuredGoalStatusLabels: Record<string, string> = {
+  NAO_INICIADO: "Não iniciado",
   EM_ANDAMENTO: "Em andamento",
   CONCLUIDO: "Concluído",
   PAUSADO: "Pausado",
@@ -424,4 +425,21 @@ export const cyclePhaseLabels: Record<string, string> = {
   FOLICULAR: "Folicular",
   OVULATORIA: "Ovulatória",
   LUTEA: "Lútea",
+};
+
+export const goalTermLabels: Record<string, string> = {
+  JA: "Já",
+  CURTO_PRAZO: "Curto prazo",
+  MEDIO_PRAZO: "Médio prazo",
+  LONGO_PRAZO: "Longo prazo",
+};
+
+export const pillarStatusLabels: Record<string, string> = {
+  ATIVO: "Ativo",
+  PAUSADO: "Pausado",
+};
+
+export const pillarKindLabels: Record<string, string> = {
+  PESSOAL: "Pessoal",
+  NEGOCIO: "Negócio",
 };
