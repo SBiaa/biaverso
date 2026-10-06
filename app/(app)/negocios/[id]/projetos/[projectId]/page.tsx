@@ -19,6 +19,7 @@ import {
 import { projectStatusColors } from "@/lib/projects-shared";
 import { projectStatusLabels } from "@/lib/labels";
 import { formatDateBR, hexToRgba, toDateInputValue } from "@/lib/utils";
+import { cardColumns, pageContainer } from "@/components/layout/page-width";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,6 @@ export default async function ProjectDetailPage({
   return (
     <>
       <Topbar
-        width="narrow"
         title={project.name}
         trail={[
           { label: "Negócios", href: "/negocios" },
@@ -123,7 +123,7 @@ export default async function ProjectDetailPage({
       />
       {/* O "Voltar para <negócio>" que ficava aqui saiu: a trilha do cabeçalho
           leva ao mesmo lugar e não empurra o conteúdo para baixo. */}
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
+      <main className={`${pageContainer("wide")} flex-1 space-y-4 py-5 md:space-y-6 md:py-8`}>
         <Card className="flex flex-col gap-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -189,17 +189,16 @@ export default async function ProjectDetailPage({
           </div>
         </Card>
 
+        {/* O que ela abre o projeto para ver vem primeiro; o material de apoio
+            (documentação, links, senhas, preços) fica em colunas embaixo. */}
         <Card>
-          <CardTitle className="mb-3">Documentação</CardTitle>
-          <ProjectDocumentation projectId={project.id} initialContent={project.content} />
-        </Card>
-
-        <Card>
-          <CardTitle className="mb-3">Tarefas</CardTitle>
+          <CardTitle className="mb-3">Tarefas e posts</CardTitle>
           <ProjectItems
             businessId={businessId}
             projectId={project.id}
             clientId={project.client?.id ?? null}
+            startDate={project.startDate ? toDateInputValue(project.startDate) : null}
+            endDate={project.endDate ? toDateInputValue(project.endDate) : null}
             posts={project.contentPosts.map(toPostRecord)}
             tasks={project.productionTasks.map(toTaskRecord)}
             clients={clients}
@@ -207,26 +206,33 @@ export default async function ProjectDetailPage({
           />
         </Card>
 
-        <Card>
-          <CardTitle className="mb-3">Documentos</CardTitle>
-          <ProjectDocuments projectId={project.id} initialDocuments={project.documents} />
-        </Card>
+        <div className={cardColumns}>
+          <Card>
+            <CardTitle className="mb-3">Documentação</CardTitle>
+            <ProjectDocumentation projectId={project.id} initialContent={project.content} />
+          </Card>
 
-        <Card>
-          <CardTitle className="mb-3">Credenciais</CardTitle>
-          <CredentialsPanel
-            endpoint={`/api/projects/${project.id}/credentials`}
-            initialCredentials={decryptCredentialLinks(project.credentials)}
-            passwordOptions={passwordOptions}
-            emptyLabel="Nenhuma credencial vinculada a este projeto."
-            unlinkLabel="Desvincular do projeto"
-          />
-        </Card>
+          <Card>
+            <CardTitle className="mb-3">Documentos</CardTitle>
+            <ProjectDocuments projectId={project.id} initialDocuments={project.documents} />
+          </Card>
 
-        <Card>
-          <CardTitle className="mb-3">Tabela de preços</CardTitle>
-          <ProjectPriceTable projectId={project.id} initialItems={project.priceTable} />
-        </Card>
+          <Card>
+            <CardTitle className="mb-3">Credenciais</CardTitle>
+            <CredentialsPanel
+              endpoint={`/api/projects/${project.id}/credentials`}
+              initialCredentials={decryptCredentialLinks(project.credentials)}
+              passwordOptions={passwordOptions}
+              emptyLabel="Nenhuma credencial vinculada a este projeto."
+              unlinkLabel="Desvincular do projeto"
+            />
+          </Card>
+
+          <Card>
+            <CardTitle className="mb-3">Tabela de preços</CardTitle>
+            <ProjectPriceTable projectId={project.id} initialItems={project.priceTable} />
+          </Card>
+        </div>
       </main>
     </>
   );
