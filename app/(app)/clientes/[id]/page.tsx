@@ -6,6 +6,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { BusinessBadge, Card, CardTitle } from "@/components/ui";
 import { ClientContactForm } from "@/components/modules/clientes/ClientContactForm";
 import { ClientBusinessLinks } from "@/components/modules/clientes/ClientBusinessLinks";
+import { ProspectPanel } from "@/components/modules/clientes/ProspectPanel";
 import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
 
 export const dynamic = "force-dynamic";
@@ -38,8 +39,19 @@ export default async function ClientDetailPage({
             joinedAt: true,
             prospectStage: true,
             nextFollowUpAt: true,
+            lastContactAt: true,
+            proposalValue: true,
             source: true,
             business: { select: { id: true, name: true, color: true } },
+            prospectTasks: {
+              orderBy: { order: "asc" },
+              select: { id: true, title: true, done: true, dueDate: true, completedAt: true },
+            },
+            prospectNotes: {
+              orderBy: { createdAt: "desc" },
+              take: 100,
+              select: { id: true, text: true, kind: true, createdAt: true },
+            },
           },
         },
       },
@@ -94,6 +106,36 @@ export default async function ClientDetailPage({
         <Card>
           <ClientContactForm client={client} />
         </Card>
+
+        {client.businessLinks
+          .filter((link) => link.status === "PROSPECT")
+          .map((link) => (
+            <ProspectPanel
+              key={link.id}
+              link={{
+                id: link.id,
+                stage: link.prospectStage,
+                source: link.source,
+                lastContactAt: link.lastContactAt ? link.lastContactAt.toISOString() : null,
+                nextFollowUpAt: link.nextFollowUpAt ? link.nextFollowUpAt.toISOString() : null,
+                proposalValue: link.proposalValue,
+                business: link.business,
+                steps: link.prospectTasks.map((t) => ({
+                  id: t.id,
+                  title: t.title,
+                  done: t.done,
+                  dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+                  completedAt: t.completedAt ? t.completedAt.toISOString() : null,
+                })),
+                notes: link.prospectNotes.map((n) => ({
+                  id: n.id,
+                  text: n.text,
+                  kind: n.kind,
+                  createdAt: n.createdAt.toISOString(),
+                })),
+              }}
+            />
+          ))}
 
         <Card className="flex flex-col gap-3">
           <CardTitle>Negócios</CardTitle>

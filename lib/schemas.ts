@@ -59,7 +59,7 @@ export const waterLogSchema = z.object({
 
 export const dayFocusSchema = z.object({
   dayId: id,
-  kind: z.enum(["task", "production", "collection"]),
+  kind: z.enum(["task", "production", "collection", "prospect"]),
   taskId: id,
   focused: z.boolean(),
 });
@@ -372,6 +372,20 @@ export const clientCreateSchema = z.object({
 export const clientPatchSchema = clientCreateSchema
   .omit({ businessId: true, businessIds: true, status: true, source: true })
   .partial();
+
+export const prospectTaskCreateSchema = z.object({
+  clientBusinessId: id,
+  title: text,
+  dueDate: dateOnly.nullish(),
+  priorityLevelId: optionalId,
+  estimateMinutes,
+});
+export const prospectTaskPatchSchema = prospectTaskCreateSchema
+  .omit({ clientBusinessId: true })
+  .partial()
+  .extend({ done: z.boolean().optional() });
+export const prospectTaskDefaultsSchema = z.object({ clientBusinessId: id });
+export const prospectNoteCreateSchema = z.object({ clientBusinessId: id, text });
 
 export const businessLinkSchema = z.object({ businessId: id });
 // Convenção de PATCH ausente-não-mexe vale aqui também: o quadro de

@@ -968,9 +968,48 @@ model ClientBusiness {
   proposalValue  Float?
   lostReason     String?
 
+  prospectTasks ProspectTask[]
+  prospectNotes ProspectNote[]
+
   @@unique([clientId, businessId])
   @@index([businessId, status])
   @@index([businessId, nextFollowUpAt])
+}
+
+/// Passo do checklist de prospecção de um vínculo. Aparece também nas tarefas do
+/// dia (como produção e coleção), por isso tem prazo, prioridade e estimativa.
+/// `key` marca os passos padrão: concluir um deles move a etapa e o último contato.
+model ProspectTask {
+  id               String         @id @default(cuid())
+  title            String
+  key              String?
+  done             Boolean        @default(false)
+  dueDate          DateTime?
+  order            Int            @default(0)
+  createdAt        DateTime       @default(now())
+  completedAt      DateTime?
+  estimateMinutes  Int?
+  priorityLevelId  String?
+  priorityLevel    PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  clientBusinessId String
+  clientBusiness   ClientBusiness @relation(fields: [clientBusinessId], references: [id], onDelete: Cascade)
+
+  @@index([clientBusinessId, order])
+  @@index([priorityLevelId])
+  @@index([dueDate, done])
+}
+
+/// Anotação do que foi identificado no prospect (NOTA) ou registro automático de
+/// mudança de etapa (EVENTO). Juntas formam a linha do tempo.
+model ProspectNote {
+  id               String         @id @default(cuid())
+  text             String
+  kind             String         @default("NOTA")
+  createdAt        DateTime       @default(now())
+  clientBusinessId String
+  clientBusiness   ClientBusiness @relation(fields: [clientBusinessId], references: [id], onDelete: Cascade)
+
+  @@index([clientBusinessId, createdAt])
 }
 
 enum ClientStatus {
@@ -1269,6 +1308,7 @@ model PriorityLevel {
 
   productionTasks ProductionTask[]
   collectionTasks CollectionTask[]
+  prospectTasks   ProspectTask[]
   conceptualGoals ConceptualGoal[]
 }
 

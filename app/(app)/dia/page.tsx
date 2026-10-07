@@ -143,7 +143,23 @@ async function WorkSection({
     },
   } as const;
 
-  const [levels, production, collection, doneProduction, doneCollection] = await Promise.all([
+  const prospectSelect = {
+    id: true,
+    title: true,
+    dueDate: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    clientBusiness: {
+      select: {
+        client: { select: { id: true, name: true } },
+        business: { select: { name: true, color: true } },
+      },
+    },
+  } as const;
+  // Só prospect em aberto: passo de quem já virou cliente ou foi perdido sai da lista.
+  const openProspect = { clientBusiness: { status: "PROSPECT" as const } };
+
+  const [levels, production, collection, doneProduction, doneCollection, prospect, doneProspect] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
@@ -163,6 +179,14 @@ async function WorkSection({
     prisma.collectionTask.findMany({
       where: { done: true, completedAt: doneThisWeek, collection: { status: { not: "ENCERRADA" } } },
       select: collectionSelect,
+    }),
+    prisma.prospectTask.findMany({
+      where: { done: false, ...openProspect },
+      select: prospectSelect,
+    }),
+    prisma.prospectTask.findMany({
+      where: { done: true, completedAt: doneThisWeek, ...openProspect },
+      select: prospectSelect,
     }),
   ]);
 
@@ -206,11 +230,32 @@ async function WorkSection({
     subtasks: t.subtasks,
   });
 
+  const fromProspect = (t: (typeof prospect)[number], done: boolean): WorkTask => ({
+    kind: "prospect",
+    id: t.id,
+    title: t.title,
+    done,
+    doneOnLoad: done,
+    originLabel: t.clientBusiness.client.name,
+    originColor: t.clientBusiness.business.color,
+    originHref: `/clientes/${t.clientBusiness.client.id}`,
+    detail: `Prospecção · ${t.clientBusiness.business.name}`,
+    urgent: false,
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    overdue: !done && isLate(t.dueDate),
+    collectionId: null,
+    subtasks: [],
+  });
+
   const tasks: WorkTask[] = [
     ...production.map((t) => fromProduction(t, false)),
     ...collection.map((t) => fromCollection(t, false)),
     ...doneProduction.map((t) => fromProduction(t, true)),
     ...doneCollection.map((t) => fromCollection(t, true)),
+    ...prospect.map((t) => fromProspect(t, false)),
+    ...doneProspect.map((t) => fromProspect(t, true)),
   ];
 
   return (
@@ -259,7 +304,7 @@ async function getFocusItems(
   const idsOf = (kind: FocusKind) =>
     rows.filter((r) => r.kind === kind).map((r) => r.taskId);
 
-  const [production, collection] = await Promise.all([
+  const [production, collection, prospect] = await Promise.all([
     prisma.productionTask.findMany({
       where: { id: { in: idsOf("production") } },
       select: { id: true, title: true, status: true, business: { select: { name: true, color: true } } },
@@ -273,6 +318,20 @@ async function getFocusItems(
         collectionId: true,
         collection: {
           select: { name: true, businessId: true, business: { select: { color: true } } },
+        },
+      },
+    }),
+    prisma.prospectTask.findMany({
+      where: { id: { in: idsOf("prospect") } },
+      select: {
+        id: true,
+        title: true,
+        done: true,
+        clientBusiness: {
+          select: {
+            client: { select: { id: true, name: true } },
+            business: { select: { color: true } },
+          },
         },
       },
     }),
@@ -291,6 +350,12 @@ async function getFocusItems(
       const t = production.find((x) => x.id === row.taskId);
       return t
         ? [{ ...base, kind: "production", title: t.title, done: t.status === "CONCLUIDO", originLabel: t.business.name, originColor: t.business.color, originHref: null, collectionId: null }]
+        : [];
+    }
+    if (row.kind === "prospect") {
+      const t = prospect.find((x) => x.id === row.taskId);
+      return t
+        ? [{ ...base, kind: "prospect", title: t.title, done: t.done, originLabel: t.clientBusiness.client.name, originColor: t.clientBusiness.business.color, originHref: `/clientes/${t.clientBusiness.client.id}`, collectionId: null }]
         : [];
     }
     const t = collection.find((x) => x.id === row.taskId);

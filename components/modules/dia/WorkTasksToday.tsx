@@ -22,8 +22,8 @@ import {
 } from "@/components/modules/tarefas/Subtasks";
 
 export type WorkTask = {
-  /** `production` ou `collection`: decide para qual rota o PATCH vai. */
-  kind: "production" | "collection";
+  /** `production`, `collection` ou `prospect`: decide para qual rota o PATCH vai. */
+  kind: "production" | "collection" | "prospect";
   id: string;
   title: string;
   done: boolean;
@@ -57,6 +57,7 @@ const RANGES: { id: Range; label: string }[] = [
 type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null };
 
 function patchUrl(task: WorkTask) {
+  if (task.kind === "prospect") return `/api/prospect-tasks/${task.id}`;
   return task.kind === "production"
     ? `/api/ace/tasks/${task.id}`
     : `/api/collections/${task.collectionId}/tasks/${task.id}`;
@@ -156,7 +157,11 @@ function TaskRow({
   onToggle: (task: WorkTask) => void;
   onPatch: (task: WorkTask, patch: Patch) => void;
 }) {
-  const subtasks = useSubtasks({ kind: task.kind, id: task.id }, task.subtasks);
+  // Passo de prospecção não tem subtarefas: o próprio checklist já é a quebra.
+  const subtasks = useSubtasks(
+    { kind: task.kind === "prospect" ? "task" : task.kind, id: task.id },
+    task.subtasks,
+  );
   // Tarefa já quebrada nasce aberta: o ponto dos passos é ver por onde começar.
   const [open, setOpen] = useState(task.subtasks.length > 0 && !task.done);
   const late = task.overdue && !task.done;
@@ -199,12 +204,14 @@ function TaskRow({
                   focused={focused}
                   title={task.title}
                 />
-                <SubtaskToggle
-                  open={open}
-                  onClick={() => setOpen((v) => !v)}
-                  doneCount={subtasks.doneCount}
-                  total={subtasks.subtasks.length}
-                />
+                {task.kind !== "prospect" && (
+                  <SubtaskToggle
+                    open={open}
+                    onClick={() => setOpen((v) => !v)}
+                    doneCount={subtasks.doneCount}
+                    total={subtasks.subtasks.length}
+                  />
+                )}
               </div>
               {task.detail && (
                 <p className="text-xs text-text-secondary">{task.detail}</p>
@@ -267,7 +274,7 @@ function TaskRow({
           )}
         </td>
       </tr>
-      {open && (
+      {open && task.kind !== "prospect" && (
         // `divide-y` do tbody separaria a tarefa dos próprios passos.
         <tr className="border-t-0">
           <td colSpan={5} className="pb-3 pl-6">
@@ -300,7 +307,7 @@ function sortTasks(tasks: WorkTask[], levels: PriorityLevelDTO[]) {
 }
 
 /**
- * Tudo o que está em andamento nos negócios e nas coleções, numa tabela só:
+ * Tudo o que está em andamento nos negócios, nas coleções e na prospecção, numa tabela só:
  * prioridade, tempo estimado, origem e prazo. É a tabela do Notion antigo —
  * dá para olhar e decidir o que fazer primeiro, e quanto tempo o dia pede.
  */
@@ -378,7 +385,7 @@ export function WorkTasksToday({
 
   function toggle(task: WorkTask) {
     const done = !task.done;
-    // Produção guarda status; coleção guarda um booleano.
+    // Produção guarda status; coleção e prospecção guardam um booleano.
     const body =
       task.kind === "production"
         ? { status: done ? "CONCLUIDO" : "A_FAZER" }
@@ -395,7 +402,7 @@ export function WorkTasksToday({
       <Card>
         <CardTitle className="mb-3">Tarefas em andamento</CardTitle>
         <p className="text-sm text-text-secondary">
-          Nenhuma tarefa em aberto nos negócios ou nas coleções.
+          Nenhuma tarefa em aberto nos negócios, nas coleções ou na prospecção.
         </p>
       </Card>
     );

@@ -10,7 +10,7 @@ import { MAX_FOCUS, type FocusKind } from "@/lib/day-focus";
 import { FocusStar } from "@/components/modules/dia/FocusStar";
 
 export type FocusItem = {
-  /** `kind:id` — único entre as três tabelas de tarefa. */
+  /** `kind:id` — único entre as tabelas de tarefa. */
   id: string;
   kind: FocusKind;
   taskId: string;
@@ -34,6 +34,8 @@ function doneRequest(item: FocusItem, done: boolean) {
       });
     case "collection":
       return api.patch(`/api/collections/${item.collectionId}/tasks/${item.taskId}`, { done });
+    case "prospect":
+      return api.patch(`/api/prospect-tasks/${item.taskId}`, { done });
   }
 }
 
