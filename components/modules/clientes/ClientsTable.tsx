@@ -41,7 +41,14 @@ function dateCell(iso: string | null) {
 }
 
 /** Lista de clientes e prospects em tabela, com "contatei hoje" em um clique. */
-export function ClientsTable({ rows }: { rows: ClientRow[] }) {
+export function ClientsTable({
+  rows,
+  mode,
+}: {
+  rows: ClientRow[];
+  mode: "cliente" | "prospect";
+}) {
+  const pipeline = mode === "prospect";
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -73,16 +80,20 @@ export function ClientsTable({ rows }: { rows: ClientRow[] }) {
 
   return (
     <Card className="overflow-x-auto p-0">
-      <table className="w-full min-w-[860px] border-collapse">
+      <table className="w-full min-w-[640px] border-collapse">
         <thead className="border-b border-border">
           <tr>
             <th className={th}>Cliente</th>
             <th className={th}>Nicho</th>
-            <th className={th}>Negócio / etapa</th>
-            <th className={th}>Último contato</th>
-            <th className={th}>Próximo follow-up</th>
-            <th className={th}>Origem</th>
-            <th className={th} />
+            <th className={th}>{pipeline ? "Negócio / etapa" : "Negócios"}</th>
+            {pipeline && (
+              <>
+                <th className={th}>Último contato</th>
+                <th className={th}>Próximo follow-up</th>
+                <th className={th}>Origem</th>
+                <th className={th} />
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -130,7 +141,7 @@ export function ClientsTable({ rows }: { rows: ClientRow[] }) {
                                 : "opacity-50"
                             }
                           />
-                          {link.status === "PROSPECT" && (
+                          {pipeline && link.status === "PROSPECT" && (
                             <span className="rounded-full bg-warning-soft-bg px-2 py-0.5 text-[10px] font-medium text-warning-soft-text">
                               {prospectStageLabels[link.stage ?? "NOVO_CONTATO"]}
                             </span>
@@ -141,44 +152,48 @@ export function ClientsTable({ rows }: { rows: ClientRow[] }) {
                   </div>
                 </td>
 
-                <td className={td}>
-                  {isProspect && !row.lastContactAt ? (
-                    <span className="text-xs font-medium text-warning-soft-text">
-                      Ainda não contatei
-                    </span>
-                  ) : (
-                    <span className="text-text-secondary">{dateCell(row.lastContactAt)}</span>
-                  )}
-                </td>
+                {pipeline && (
+                  <>
+                    <td className={td}>
+                      {isProspect && !row.lastContactAt ? (
+                        <span className="text-xs font-medium text-warning-soft-text">
+                          Ainda não contatei
+                        </span>
+                      ) : (
+                        <span className="text-text-secondary">{dateCell(row.lastContactAt)}</span>
+                      )}
+                    </td>
 
-                <td className={td}>
-                  <span
-                    className={cn(
-                      row.followUpOverdue ? "font-medium text-danger" : "text-text-secondary",
-                    )}
-                  >
-                    {dateCell(row.nextFollowUpAt)}
-                    {row.followUpOverdue && " · atrasado"}
-                  </span>
-                </td>
+                    <td className={td}>
+                      <span
+                        className={cn(
+                          row.followUpOverdue ? "font-medium text-danger" : "text-text-secondary",
+                        )}
+                      >
+                        {dateCell(row.nextFollowUpAt)}
+                        {row.followUpOverdue && " · atrasado"}
+                      </span>
+                    </td>
 
-                <td className={cn(td, "text-text-secondary")}>
-                  {row.source ? leadSourceLabels[row.source] : "—"}
-                </td>
+                    <td className={cn(td, "text-text-secondary")}>
+                      {row.source ? leadSourceLabels[row.source] : "—"}
+                    </td>
 
-                <td className={cn(td, "text-right")}>
-                  {isProspect && (
-                    <button
-                      type="button"
-                      onClick={() => markContacted(row)}
-                      disabled={busyId === row.id}
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:bg-surface disabled:opacity-50"
-                    >
-                      <Check size={13} />
-                      Contatei hoje
-                    </button>
-                  )}
-                </td>
+                    <td className={cn(td, "text-right")}>
+                      {isProspect && (
+                        <button
+                          type="button"
+                          onClick={() => markContacted(row)}
+                          disabled={busyId === row.id}
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:bg-surface disabled:opacity-50"
+                        >
+                          <Check size={13} />
+                          Contatei hoje
+                        </button>
+                      )}
+                    </td>
+                  </>
+                )}
               </tr>
             );
           })}

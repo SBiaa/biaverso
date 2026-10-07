@@ -13,9 +13,11 @@ const selectClass =
 
 /** Busca por nome e filtro por negócio, ambos guardados na URL. */
 export function ClientFilterBar({
+  tab,
   businesses,
   niches,
 }: {
+  tab: "cliente" | "prospect";
   businesses: BusinessOption[];
   niches: string[];
 }) {
@@ -90,28 +92,20 @@ export function ClientFilterBar({
         <option value="__none__">Sem negócio</option>
       </select>
 
-      <select
-        value={searchParams.get("kind") ?? ""}
-        onChange={(e) => setParam("kind", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      >
-        <option value="">Clientes e prospects</option>
-        <option value="prospect">Só prospects</option>
-        <option value="cliente">Só clientes ativos</option>
-      </select>
-
-      <select
-        value={searchParams.get("stage") ?? ""}
-        onChange={(e) => setParam("stage", e.target.value)}
-        className={selectClass}
-      >
-        <option value="">Todas as etapas</option>
-        {prospectOpenStages.map((s) => (
-          <option key={s} value={s}>
-            {prospectStageLabels[s]}
-          </option>
-        ))}
-      </select>
+      {tab === "prospect" && (
+        <select
+          value={searchParams.get("stage") ?? ""}
+          onChange={(e) => setParam("stage", e.target.value)}
+          className={selectClass}
+        >
+          <option value="">Todas as etapas</option>
+          {prospectOpenStages.map((s) => (
+            <option key={s} value={s}>
+              {prospectStageLabels[s]}
+            </option>
+          ))}
+        </select>
+      )}
 
       {niches.length > 0 && (
         <select
@@ -128,14 +122,16 @@ export function ClientFilterBar({
         </select>
       )}
 
-      <label className="flex cursor-pointer items-center gap-1.5 text-sm text-text-secondary">
-        <input
-          type="checkbox"
-          checked={searchParams.get("due") === "overdue"}
-          onChange={(e) => setParam("due", e.target.checked ? "overdue" : "")}
-        />
-        Follow-up atrasado
-      </label>
+      {tab === "prospect" && (
+        <label className="flex cursor-pointer items-center gap-1.5 text-sm text-text-secondary">
+          <input
+            type="checkbox"
+            checked={searchParams.get("due") === "overdue"}
+            onChange={(e) => setParam("due", e.target.checked ? "overdue" : "")}
+          />
+          Follow-up atrasado
+        </label>
+      )}
     </div>
   );
 }

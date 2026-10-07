@@ -4,6 +4,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { StatCard } from "@/components/ui";
 import { NewClientForm } from "@/components/modules/clientes/NewClientForm";
 import { ClientFilterBar } from "@/components/modules/clientes/ClientFilterBar";
+import { ClientTabs } from "@/components/modules/clientes/ClientTabs";
 import { ClientsTable, type ClientRow } from "@/components/modules/clientes/ClientsTable";
 import { prospectOpenStages } from "@/lib/labels";
 import { todayUtc } from "@/lib/utils";
@@ -32,34 +33,49 @@ export default async function ClientesPage({
   const query = sp.q?.trim();
   const today = todayUtc();
 
-  const where: Prisma.ClientWhereInput = {};
+  const tab: "cliente" | "prospect" = sp.kind === "prospect" ? "prospect" : "cliente";
 
-  if (query) {
-    where.OR = [
-      { name: { contains: query, mode: "insensitive" } },
-      { niche: { contains: query, mode: "insensitive" } },
-      { instagram: { contains: query, mode: "insensitive" } },
-    ];
-  }
-  if (sp.niche) where.niche = sp.niche;
-
-  if (sp.businessId === NO_BUSINESS) {
-    where.businessLinks = { none: {} };
-  } else {
-    const linkWhere: Prisma.ClientBusinessWhereInput = {};
-    if (sp.businessId) linkWhere.businessId = sp.businessId;
-    if (sp.kind === "prospect" || sp.stage || sp.due === "overdue") {
-      linkWhere.status = "PROSPECT";
-    } else if (sp.kind === "cliente") {
-      linkWhere.status = "ATIVO";
+  /** Prospect = tem algum vínculo em prospecção; cliente = o resto (ativo, pausado, sem negócio). */
+  function tabWhere(kind: "cliente" | "prospect", businessId?: string): Prisma.ClientWhereInput {
+    const scope = businessId && businessId !== NO_BUSINESS ? { businessId } : {};
+    if (businessId === NO_BUSINESS) {
+      return kind === "prospect" ? { id: "" } : { businessLinks: { none: {} } };
     }
-    const stage = prospectOpenStages.find((s) => s === sp.stage);
-    if (stage) linkWhere.prospectStage = stage;
-    if (sp.due === "overdue") linkWhere.nextFollowUpAt = { lt: today };
-    if (Object.keys(linkWhere).length > 0) where.businessLinks = { some: linkWhere };
+    if (kind === "prospect") {
+      return { businessLinks: { some: { ...scope, status: "PROSPECT" } } };
+    }
+    return businessId
+      ? { businessLinks: { some: { ...scope, status: { not: "PROSPECT" } } } }
+      : {
+          OR: [
+            { businessLinks: { none: {} } },
+            { businessLinks: { some: { status: { not: "PROSPECT" } } } },
+          ],
+        };
   }
 
-  const [clients, businesses, niches, totalClients, openProspects, overdueFollowUps] =
+  const and: Prisma.ClientWhereInput[] = [tabWhere(tab, sp.businessId)];
+  if (query) {
+    and.push({
+      OR: [
+        { name: { contains: query, mode: "insensitive" } },
+        { niche: { contains: query, mode: "insensitive" } },
+        { instagram: { contains: query, mode: "insensitive" } },
+      ],
+    });
+  }
+  if (sp.niche) and.push({ niche: sp.niche });
+  if (tab === "prospect") {
+    const stage = prospectOpenStages.find((s) => s === sp.stage);
+    const link: Prisma.ClientBusinessWhereInput = { status: "PROSPECT" };
+    if (sp.businessId && sp.businessId !== NO_BUSINESS) link.businessId = sp.businessId;
+    if (stage) link.prospectStage = stage;
+    if (sp.due === "overdue") link.nextFollowUpAt = { lt: today };
+    and.push({ businessLinks: { some: link } });
+  }
+  const where: Prisma.ClientWhereInput = { AND: and };
+
+  const [clients, businesses, niches, totalClients, clientTabCount, prospectTabCount, openProspects, overdueFollowUps] =
     await Promise.all([
       prisma.client.findMany({
         where,
@@ -98,6 +114,8 @@ export default async function ClientesPage({
         select: { niche: true },
       }),
       prisma.client.count(),
+      prisma.client.count({ where: tabWhere("cliente") }),
+      prisma.client.count({ where: tabWhere("prospect") }),
       prisma.clientBusiness.count({ where: { status: "PROSPECT" } }),
       prisma.clientBusiness.count({
         where: { status: "PROSPECT", nextFollowUpAt: { lt: today } },
@@ -138,9 +156,7 @@ export default async function ClientesPage({
   // O sort é estável: dentro de cada grupo continua a ordem por nome.
   rows.sort((a, b) => a.rank - b.rank);
 
-  const filtered = Boolean(
-    query || sp.businessId || sp.kind || sp.stage || sp.niche || sp.due,
-  );
+  const filtered = Boolean(query || sp.businessId || sp.stage || sp.niche || sp.due);
 
   return (
     <>
@@ -162,8 +178,11 @@ export default async function ClientesPage({
           />
         </div>
 
+        <ClientTabs tab={tab} clientCount={clientTabCount} prospectCount={prospectTabCount} />
+
         <div className="flex flex-wrap items-start justify-between gap-3">
           <ClientFilterBar
+            tab={tab}
             businesses={businesses}
             niches={niches.flatMap((n) => (n.niche ? [n.niche] : []))}
           />
@@ -177,7 +196,7 @@ export default async function ClientesPage({
               : "Nenhum cliente cadastrado ainda."}
           </p>
         ) : (
-          <ClientsTable rows={rows} />
+          <ClientsTable rows={rows} mode={tab} />
         )}
       </main>
     </>
