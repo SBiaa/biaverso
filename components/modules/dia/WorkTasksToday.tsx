@@ -352,9 +352,6 @@ export function WorkTasksToday({
     items.filter((t) => (r === "done" ? t.done : !t.done) && inRange(t, r));
   const countOpen = (r: Range) => openIn(r).length;
   const doneCount = items.filter((t) => t.done).length;
-  // Quanto cada recorte pede de tempo: mostra se o dia cabe antes de abrir a lista.
-  const minutesIn = (r: Range) =>
-    openIn(r).reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0);
 
   function update(key: string, change: Partial<WorkTask>) {
     setItems((prev) =>
@@ -452,7 +449,6 @@ export function WorkTasksToday({
             )}
           >
             {r.label} · {countOpen(r.id)}
-            {minutesIn(r.id) > 0 && ` · ${formatMinutes(minutesIn(r.id))}`}
           </button>
         ))}
       </div>
