@@ -45,10 +45,11 @@ export type WorkTask = {
   subtasks: SubtaskItem[];
 };
 
-type Range = "today" | "week" | "all" | "done";
+type Range = "today" | "tomorrow" | "week" | "all" | "done";
 
 const RANGES: { id: Range; label: string }[] = [
   { id: "today", label: "Hoje" },
+  { id: "tomorrow", label: "Amanhã" },
   { id: "week", label: "Semana" },
   { id: "all", label: "Tudo" },
   { id: "done", label: "Feitas" },
@@ -336,14 +337,19 @@ export function WorkTasksToday({
   // Atrasada entra em Hoje e em Semana: o que venceu antes continua à vista.
   // Sem prazo só aparece em "Tudo" — não dá para dizer que é da semana.
   const limits = { day: new Date(dayEnd).getTime(), week: new Date(weekEnd).getTime() };
-  const inRange = (t: WorkTask, r: Range) =>
+  // Amanhã é só o que vence no dia seguinte: o atrasado continua em Hoje.
+  const tomorrowEnd = limits.day + 24 * 60 * 60 * 1000;
+  const inRange = (t: WorkTask, r: Range) => {
     // "Feitas" é tudo que está concluído; as outras abas escondem o que já
     // chegou concluído, mas mantêm o que ela acabou de marcar (riscado, no fim).
-    r === "done"
-      ? t.done
-      : !(t.done && t.doneOnLoad) &&
-        (r === "all" ||
-    (t.dueDate !== null && new Date(t.dueDate).getTime() < limits[r === "today" ? "day" : "week"]));
+    if (r === "done") return t.done;
+    if (t.done && t.doneOnLoad) return false;
+    if (r === "all") return true;
+    if (t.dueDate === null) return false;
+    const due = new Date(t.dueDate).getTime();
+    if (r === "tomorrow") return due >= limits.day && due < tomorrowEnd;
+    return due < limits[r === "today" ? "day" : "week"];
+  };
 
   const visible = useMemo(
     () => sortTasks(items.filter((t) => inRange(t, range)), levels),
@@ -464,7 +470,9 @@ export function WorkTasksToday({
         <p className="py-2 text-sm text-text-secondary">
           {range === "done"
             ? "Nada concluído nesta semana."
-            : `Nada com prazo ${range === "today" ? "até hoje" : "até o fim da semana"}.`}
+            : range === "tomorrow"
+              ? "Nada com prazo para amanhã."
+              : `Nada com prazo ${range === "today" ? "até hoje" : "até o fim da semana"}.`}
         </p>
       )}
 
