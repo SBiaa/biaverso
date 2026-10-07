@@ -27,6 +27,7 @@ export default async function ClientDetailPage({
         email: true,
         phone: true,
         instagram: true,
+        niche: true,
         notes: true,
         businessLinks: {
           orderBy: { joinedAt: "asc" },

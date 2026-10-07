@@ -932,6 +932,9 @@ model Client {
   phone         String?
   instagram     String?
   notes         String?
+  /// Nicho de atuação ("odontologia", "moda feminina"…). Texto livre: serve pra
+  /// filtrar e agrupar prospects na lista de clientes.
+  niche         String?
   /// Cor da clienta no calendário e nos cards do Ace. Nula = cor automática,
   /// derivada do nome (ver lib/client-visuals.ts) — assim cada uma já nasce
   /// diferente das outras sem ninguém precisar escolher.

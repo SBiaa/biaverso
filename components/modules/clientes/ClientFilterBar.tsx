@@ -4,10 +4,21 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 
+import { prospectOpenStages, prospectStageLabels } from "@/lib/labels";
+
 type BusinessOption = { id: string; name: string };
 
+const selectClass =
+  "rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
+
 /** Busca por nome e filtro por negócio, ambos guardados na URL. */
-export function ClientFilterBar({ businesses }: { businesses: BusinessOption[] }) {
+export function ClientFilterBar({
+  businesses,
+  niches,
+}: {
+  businesses: BusinessOption[];
+  niches: string[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -59,7 +70,7 @@ export function ClientFilterBar({ businesses }: { businesses: BusinessOption[] }
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nome…"
+          placeholder="Buscar nome, nicho, @…"
           aria-label="Buscar cliente"
           className="w-full rounded-md border border-border py-1.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
@@ -86,7 +97,45 @@ export function ClientFilterBar({ businesses }: { businesses: BusinessOption[] }
       >
         <option value="">Clientes e prospects</option>
         <option value="prospect">Só prospects</option>
+        <option value="cliente">Só clientes ativos</option>
       </select>
+
+      <select
+        value={searchParams.get("stage") ?? ""}
+        onChange={(e) => setParam("stage", e.target.value)}
+        className={selectClass}
+      >
+        <option value="">Todas as etapas</option>
+        {prospectOpenStages.map((s) => (
+          <option key={s} value={s}>
+            {prospectStageLabels[s]}
+          </option>
+        ))}
+      </select>
+
+      {niches.length > 0 && (
+        <select
+          value={searchParams.get("niche") ?? ""}
+          onChange={(e) => setParam("niche", e.target.value)}
+          className={selectClass}
+        >
+          <option value="">Todos os nichos</option>
+          {niches.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      )}
+
+      <label className="flex cursor-pointer items-center gap-1.5 text-sm text-text-secondary">
+        <input
+          type="checkbox"
+          checked={searchParams.get("due") === "overdue"}
+          onChange={(e) => setParam("due", e.target.checked ? "overdue" : "")}
+        />
+        Follow-up atrasado
+      </label>
     </div>
   );
 }

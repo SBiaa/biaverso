@@ -16,6 +16,7 @@ type Client = {
   email: string | null;
   phone: string | null;
   instagram: string | null;
+  niche: string | null;
   notes: string | null;
 };
 
@@ -28,6 +29,7 @@ export function ClientContactForm({ client }: { client: Client }) {
     email: client.email ?? "",
     phone: client.phone ?? "",
     instagram: client.instagram ?? "",
+    niche: client.niche ?? "",
     notes: client.notes ?? "",
     color: client.color ?? "",
   });
@@ -67,6 +69,7 @@ export function ClientContactForm({ client }: { client: Client }) {
             Editar
           </Button>
         </div>
+        <p className="text-sm text-text-secondary">Nicho: {client.niche ?? "—"}</p>
         <p className="text-sm text-text-secondary">E-mail: {client.email ?? "—"}</p>
         <p className="text-sm text-text-secondary">Telefone: {client.phone ?? "—"}</p>
         <p className="text-sm text-text-secondary">
@@ -118,6 +121,12 @@ export function ClientContactForm({ client }: { client: Client }) {
           value={form.instagram}
           onChange={(e) => update("instagram", e.target.value)}
           placeholder="Instagram"
+          className={inputClass}
+        />
+        <input
+          value={form.niche}
+          onChange={(e) => update("niche", e.target.value)}
+          placeholder="Nicho"
           className={inputClass}
         />
       </div>
@@ -180,6 +189,7 @@ export function ClientContactForm({ client }: { client: Client }) {
               email: client.email ?? "",
               phone: client.phone ?? "",
               instagram: client.instagram ?? "",
+              niche: client.niche ?? "",
               notes: client.notes ?? "",
               color: client.color ?? "",
             });

@@ -24,6 +24,7 @@ export function NewProspectForm({ businessId }: { businessId: string }) {
     email: "",
     phone: "",
     instagram: "",
+    niche: "",
     source: "",
   });
 
@@ -44,7 +45,7 @@ export function NewProspectForm({ businessId }: { businessId: string }) {
         status: "PROSPECT",
       });
       setOpen(false);
-      setForm({ name: "", email: "", phone: "", instagram: "", source: "" });
+      setForm({ name: "", email: "", phone: "", instagram: "", niche: "", source: "" });
       router.refresh();
       notify("Prospect adicionado.");
     } catch (e) {
@@ -85,6 +86,12 @@ export function NewProspectForm({ businessId }: { businessId: string }) {
           className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
       </div>
+      <input
+        placeholder="Nicho (ex.: odontologia)"
+        value={form.niche}
+        onChange={(e) => update("niche", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
       <div className="flex gap-2">
         <input
           placeholder="Instagram (opcional)"

@@ -8,7 +8,7 @@ import { api, errorMessage } from "@/lib/client-api";
 
 type BusinessOption = { id: string; name: string; color: string };
 
-const emptyForm = { name: "", email: "", phone: "", instagram: "", notes: "" };
+const emptyForm = { name: "", email: "", phone: "", instagram: "", niche: "", notes: "" };
 
 /**
  * Cadastro de cliente do registro global. Diferente do form de dentro do
@@ -90,6 +90,12 @@ export function NewClientForm({ businesses }: { businesses: BusinessOption[] }) 
           value={form.instagram}
           onChange={(e) => update("instagram", e.target.value)}
           placeholder="Instagram (opcional)"
+          className={inputClass}
+        />
+        <input
+          value={form.niche}
+          onChange={(e) => update("niche", e.target.value)}
+          placeholder="Nicho (ex.: odontologia)"
           className={inputClass}
         />
       </div>

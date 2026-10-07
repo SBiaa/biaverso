@@ -350,6 +350,7 @@ export const clientCreateSchema = z.object({
   email: z.email("e-mail inválido").nullish().or(z.literal("").transform(() => null)),
   phone: optionalText,
   instagram: optionalText,
+  niche: optionalText,
   notes: optionalText,
   // Cor no calendário. Só hexadecimal, porque vai direto num `style` do card.
   // Vazio/nulo = volta pra cor automática.
