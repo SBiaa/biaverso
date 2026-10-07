@@ -24,11 +24,12 @@ import { cn } from "@/lib/utils";
  * verdade, e o botão de salvar do modal só precisa ser `type="submit"`.
  */
 
-type ModalSize = "sm" | "md";
+type ModalSize = "sm" | "md" | "lg";
 
 const sizeClass: Record<ModalSize, string> = {
   sm: "max-w-sm",
   md: "max-w-md",
+  lg: "max-w-4xl",
 };
 
 const FOCUSABLE = [

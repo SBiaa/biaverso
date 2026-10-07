@@ -163,52 +163,63 @@ function ImportedContentDetails({ post }: { post: PostInitial }) {
 
   if (!hasContent) return null;
 
+  const sectionTitle =
+    "mb-1.5 text-xs font-medium uppercase tracking-wide text-text-secondary";
+
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-hover/40 p-2.5 text-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-hover/40 p-3 text-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
         Conteúdo importado
       </p>
 
-      {post.pilar && (
-        <p>
-          <span className="text-text-secondary">Pilar: </span>
-          {contentPilarLabels[post.pilar] ?? post.pilar}
-        </p>
+      {(post.pilar || post.objective) && (
+        <div className="flex flex-wrap gap-1.5">
+          {post.pilar && (
+            <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+              {contentPilarLabels[post.pilar] ?? post.pilar}
+            </span>
+          )}
+          {post.objective && (
+            <span className="rounded-full bg-hover-strong px-2.5 py-0.5 text-xs text-text-secondary">
+              {post.objective}
+            </span>
+          )}
+        </div>
       )}
-      {post.objective && (
-        <p>
-          <span className="text-text-secondary">Objetivo: </span>
-          {post.objective}
-        </p>
-      )}
+
       {post.hook && (
-        <p>
-          <span className="text-text-secondary">Gancho: </span>
-          {post.hook}
-        </p>
+        <div>
+          <p className={sectionTitle}>Gancho</p>
+          <p className="leading-relaxed">{post.hook}</p>
+        </div>
       )}
       {post.cta && (
-        <p>
-          <span className="text-text-secondary">CTA: </span>
-          {post.cta}
-        </p>
+        <div>
+          <p className={sectionTitle}>CTA</p>
+          <p className="leading-relaxed">{post.cta}</p>
+        </div>
       )}
       {post.storySupport && (
-        <p>
-          <span className="text-text-secondary">Story de apoio: </span>
-          {post.storySupport}
-        </p>
-      )}
-      {hasHashtags && (
-        <p className="text-xs text-accent">{post.hashtags!.map((h) => `#${h}`).join(" ")}</p>
+        <div>
+          <p className={sectionTitle}>Story de apoio</p>
+          <p className="leading-relaxed">{post.storySupport}</p>
+        </div>
       )}
 
       {slides.length > 0 && (
         <div>
-          <p className="text-text-secondary">Slides</p>
-          <ol className="list-decimal pl-4">
+          <p className={sectionTitle}>Slides ({slides.length})</p>
+          <ol className="flex flex-col gap-1.5">
             {slides.map((s) => (
-              <li key={s.numero}>{s.texto}</li>
+              <li
+                key={s.numero}
+                className="flex gap-2.5 rounded-md border border-border bg-surface p-2"
+              >
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-hover-strong text-xs font-medium text-text-secondary">
+                  {s.numero}
+                </span>
+                <span className="leading-relaxed">{s.texto}</span>
+              </li>
             ))}
           </ol>
         </div>
@@ -216,12 +227,15 @@ function ImportedContentDetails({ post }: { post: PostInitial }) {
 
       {roteiro.length > 0 && (
         <div>
-          <p className="text-text-secondary">Roteiro</p>
-          <ul className="flex flex-col gap-1">
+          <p className={sectionTitle}>Roteiro</p>
+          <ul className="flex flex-col gap-1.5">
             {roteiro.map((r, i) => (
-              <li key={i}>
-                <span className="font-medium">{r.tempo}</span> — {r.acao}
-                {r.fala && <span className="italic"> (&quot;{r.fala}&quot;)</span>}
+              <li key={i} className="rounded-md border border-border bg-surface p-2">
+                <span className="text-xs font-medium text-accent">{r.tempo}</span>
+                <p className="leading-relaxed">{r.acao}</p>
+                {r.fala && (
+                  <p className="mt-0.5 italic text-text-secondary">&ldquo;{r.fala}&rdquo;</p>
+                )}
               </li>
             ))}
           </ul>
@@ -230,18 +244,50 @@ function ImportedContentDetails({ post }: { post: PostInitial }) {
 
       {briefing && (
         <div>
-          <p className="text-text-secondary">Briefing visual</p>
-          <p>{briefing.conceito}</p>
-          {briefing.elementos?.length > 0 && (
-            <p className="text-xs">Elementos: {briefing.elementos.join(", ")}</p>
-          )}
-          {briefing.texto_na_arte && (
-            <p className="text-xs">Texto na arte: {briefing.texto_na_arte}</p>
-          )}
-          {briefing.paleta && <p className="text-xs">Paleta: {briefing.paleta}</p>}
+          <p className={sectionTitle}>Briefing visual</p>
+          <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+            <p className="leading-relaxed">{briefing.conceito}</p>
+            {briefing.elementos?.length > 0 && (
+              <p className="text-xs text-text-secondary">
+                <span className="font-medium">Elementos:</span> {briefing.elementos.join(", ")}
+              </p>
+            )}
+            {briefing.texto_na_arte && (
+              <p className="text-xs text-text-secondary">
+                <span className="font-medium">Texto na arte:</span> {briefing.texto_na_arte}
+              </p>
+            )}
+            {briefing.paleta && (
+              <p className="text-xs text-text-secondary">
+                <span className="font-medium">Paleta:</span> {briefing.paleta}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {hasHashtags && (
+        <div className="flex flex-wrap gap-1">
+          {post.hashtags!.map((h) => (
+            <span key={h} className="rounded bg-accent/10 px-1.5 py-0.5 text-xs text-accent">
+              #{h}
+            </span>
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+const fieldClass =
+  "w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs text-text-secondary">{label}</span>
+      {children}
+    </label>
   );
 }
 
@@ -424,115 +470,136 @@ export function ContentPostModal({
   return (
     <Modal
       title={isEdit ? "Editar post" : "Novo post"}
-      size="md"
+      size="lg"
       onClose={onClose}
       onSubmit={handleSubmit}
     >
+      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="flex flex-col gap-3">
+          <Field label="Título">
+            <textarea
+              placeholder="Título"
+              value={form.title}
+              onChange={(e) => update("title", e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.preventDefault();
+              }}
+              rows={3}
+              className={`${fieldClass} resize-y`}
+            />
+          </Field>
 
-      <input
-        placeholder="Título"
-        value={form.title}
-        onChange={(e) => update("title", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Formato">
+              <select
+                value={form.type}
+                onChange={(e) => update("type", e.target.value)}
+                className={fieldClass}
+              >
+                {typeOptions.map((t) => (
+                  <option key={t} value={t}>
+                    {postTypeLabels[t]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Rede">
+              <select
+                value={form.network}
+                onChange={(e) => update("network", e.target.value)}
+                className={fieldClass}
+              >
+                {networkOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {socialNetworkLabels[n]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <select
-          value={form.type}
-          onChange={(e) => update("type", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>
-              {postTypeLabels[t]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={form.network}
-          onChange={(e) => update("network", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {networkOptions.map((n) => (
-            <option key={n} value={n}>
-              {socialNetworkLabels[n]}
-            </option>
-          ))}
-        </select>
-      </div>
+          <Field label="Status">
+            <select
+              value={form.status}
+              onChange={(e) => update("status", e.target.value)}
+              className={fieldClass}
+            >
+              {statusOptions.map((s) => (
+                <option key={s} value={s}>
+                  {contentStatusLabels[s]}
+                </option>
+              ))}
+            </select>
+          </Field>
 
-      <select
-        value={form.status}
-        onChange={(e) => update("status", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      >
-        {statusOptions.map((s) => (
-          <option key={s} value={s}>
-            {contentStatusLabels[s]}
-          </option>
-        ))}
-      </select>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Publicação">
+              <input
+                type="date"
+                value={form.publishDate}
+                onChange={(e) => update("publishDate", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Finalização">
+              <input
+                type="date"
+                value={form.completedAt}
+                onChange={(e) => update("completedAt", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+          </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <p className="mb-1 text-xs text-text-secondary">Publicação</p>
-          <input
-            type="date"
-            value={form.publishDate}
-            onChange={(e) => update("publishDate", e.target.value)}
-            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
+          <Field label="Negócio">
+            <select
+              value={form.clientId}
+              onChange={(e) => update("clientId", e.target.value)}
+              className={fieldClass}
+            >
+              <option value={INTERNAL_CLIENT}>Projeto interno</option>
+              <ClientOptions clients={clients} />
+            </select>
+          </Field>
+          <Field label="Projeto">
+            <select
+              value={form.projectId}
+              onChange={(e) => update("projectId", e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">Sem projeto</option>
+              {clientProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
-        <div>
-          <p className="mb-1 text-xs text-text-secondary">Finalização</p>
-          <input
-            type="date"
-            value={form.completedAt}
-            onChange={(e) => update("completedAt", e.target.value)}
-            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
+
+        <div className="flex flex-col gap-3">
+          <Field label="Legenda">
+            <textarea
+              placeholder="Legenda"
+              value={form.caption}
+              onChange={(e) => update("caption", e.target.value)}
+              rows={5}
+              className={`${fieldClass} resize-y`}
+            />
+          </Field>
+          <Field label="Notas">
+            <textarea
+              placeholder="Notas"
+              value={form.notes}
+              onChange={(e) => update("notes", e.target.value)}
+              rows={3}
+              className={`${fieldClass} resize-y`}
+            />
+          </Field>
+
+          {post && <ImportedContentDetails post={post} />}
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <select
-          value={form.clientId}
-          onChange={(e) => update("clientId", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          <option value={INTERNAL_CLIENT}>Projeto interno</option>
-          <ClientOptions clients={clients} />
-        </select>
-        <select
-          value={form.projectId}
-          onChange={(e) => update("projectId", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          <option value="">Sem projeto</option>
-          {clientProjects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <textarea
-        placeholder="Legenda"
-        value={form.caption}
-        onChange={(e) => update("caption", e.target.value)}
-        rows={2}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <textarea
-        placeholder="Notas"
-        value={form.notes}
-        onChange={(e) => update("notes", e.target.value)}
-        rows={2}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-
-      {post && <ImportedContentDetails post={post} />}
 
       {isEdit && duplicateOpen && (
         <div className="flex flex-col gap-2 rounded-md border border-border bg-hover/40 p-2.5">
