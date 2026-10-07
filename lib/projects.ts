@@ -1,6 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { donePostStatuses, doneTaskStatuses } from "@/lib/ace-shared";
-import { addUtcDays, todayUtc } from "@/lib/utils";
+import { addUtcDays, toDateInputValue, todayUtc } from "@/lib/utils";
+import {
+  contentStatusLabels,
+  postTypeLabels,
+  productionStatusLabels,
+  productionTypeLabels,
+  projectStatusLabels,
+} from "@/lib/labels";
+import { contentStatusColors, productionStatusColors } from "@/lib/ace-shared";
+import type { ProjectItem } from "@/components/modules/projetos/ProjectCalendar";
 import { getWeekStart } from "@/lib/cardapio";
 
 // Server-only: importa "@/lib/prisma", então nunca pode ser importado de um
@@ -105,4 +114,92 @@ export async function getProjectsOverview(
       overdueProjects: cards.filter((p) => p.overdue).length,
     },
   };
+}
+
+/**
+ * Itens do calendário geral: tarefas e posts dos projetos informados, mais o
+ * fim de cada projeto. Já vêm no formato do calendário, com o projeto de origem.
+ */
+export async function getProjectsCalendarItems(
+  projects: ProjectCard[],
+): Promise<ProjectItem[]> {
+  const byId = new Map(projects.map((p) => [p.id, p]));
+  const ids = [...byId.keys()];
+  if (ids.length === 0) return [];
+
+  const [tasks, posts] = await Promise.all([
+    prisma.productionTask.findMany({
+      where: { projectId: { in: ids } },
+      select: {
+        id: true, title: true, type: true, status: true,
+        dueDate: true, completedAt: true, projectId: true,
+      },
+    }),
+    prisma.contentPost.findMany({
+      where: { projectId: { in: ids } },
+      select: {
+        id: true, title: true, type: true, status: true,
+        publishDate: true, completedAt: true, projectId: true,
+      },
+    }),
+  ]);
+
+  const contextOf = (projectId: string | null) => {
+    const p = projectId ? byId.get(projectId) : undefined;
+    if (!p) return undefined;
+    return {
+      projectName: p.name,
+      businessName: p.businessName,
+      color: p.businessColor,
+      href: `/negocios/${p.businessId}/projetos/${p.id}`,
+    };
+  };
+  const day = (d: Date | null) => (d ? toDateInputValue(d) : null);
+
+  const items: ProjectItem[] = [
+    ...tasks.map<ProjectItem>((t) => ({
+      key: `task-${t.id}`,
+      kind: "task",
+      id: t.id,
+      title: t.title,
+      typeLabel: productionTypeLabels[t.type] ?? t.type,
+      statusLabel: productionStatusLabels[t.status] ?? t.status,
+      statusColor: productionStatusColors[t.status] ?? "",
+      date: day(t.dueDate),
+      finishedOn: day(t.completedAt),
+      done: doneTaskStatuses.includes(t.status),
+      context: contextOf(t.projectId),
+    })),
+    ...posts.map<ProjectItem>((p) => ({
+      key: `post-${p.id}`,
+      kind: "post",
+      id: p.id,
+      title: p.title,
+      typeLabel: postTypeLabels[p.type] ?? p.type,
+      statusLabel: contentStatusLabels[p.status] ?? p.status,
+      statusColor: contentStatusColors[p.status] ?? "",
+      date: day(p.publishDate),
+      finishedOn: day(p.completedAt),
+      done: donePostStatuses.includes(p.status),
+      context: contextOf(p.projectId),
+    })),
+    // Fim do projeto, só dos que ainda estão rolando.
+    ...projects
+      .filter((p) => p.endDate && p.status !== "CONCLUIDO" && p.status !== "CANCELADO")
+      .map<ProjectItem>((p) => ({
+        key: `project-${p.id}`,
+        kind: "project",
+        id: p.id,
+        title: p.name,
+        typeLabel: "Projeto",
+        statusLabel: projectStatusLabels[p.status] ?? p.status,
+        statusColor: "bg-surface border border-border text-text-primary",
+        date: toDateInputValue(p.endDate!),
+        finishedOn: null,
+        done: false,
+        context: contextOf(p.id),
+      })),
+  ];
+
+  return items.filter((i) => i.date);
 }

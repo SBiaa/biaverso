@@ -4,7 +4,8 @@ import { Topbar } from "@/components/layout/Topbar";
 import { StatCard } from "@/components/ui";
 import { ProjectGrid } from "@/components/modules/projetos/ProjectGrid";
 import { ProjectFilterBar } from "@/components/modules/projetos/ProjectFilterBar";
-import { getProjectsOverview } from "@/lib/projects";
+import { getProjectsCalendarItems, getProjectsOverview } from "@/lib/projects";
+import { ProjectsOverviewTabs } from "@/components/modules/projetos/ProjectsOverviewTabs";
 import { projectSortOptions, type ProjectSort } from "@/lib/projects-shared";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,8 @@ export default async function ProjetosPage({
     ? (sp.sort as ProjectSort)
     : "prazo";
 
+  const calendarItems = await getProjectsCalendarItems(filtered);
+
   return (
     <>
       <Topbar title="Projetos" />
@@ -76,10 +79,15 @@ export default async function ProjetosPage({
 
         <ProjectFilterBar businesses={businesses} />
 
-        <ProjectGrid
-          projects={filtered}
-          sort={sort}
-          showBusinessGroups={!sp.businessId}
+        <ProjectsOverviewTabs
+          items={calendarItems}
+          grid={
+            <ProjectGrid
+              projects={filtered}
+              sort={sort}
+              showBusinessGroups={!sp.businessId}
+            />
+          }
         />
       </main>
     </>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, FileText, ListTodo, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, FolderKanban, ListTodo, Plus } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -19,7 +19,8 @@ import { cn, formatMonthYearBR, todayInputValue } from "@/lib/utils";
 /** Item do projeto já pronto para a tela: serve à tabela e ao calendário. */
 export type ProjectItem = {
   key: string;
-  kind: "post" | "task";
+  /** "project" é o fim do projeto: aparece no calendário geral, mas não se arrasta. */
+  kind: "post" | "task" | "project";
   id: string;
   title: string;
   typeLabel: string;
@@ -31,6 +32,8 @@ export type ProjectItem = {
   finishedOn: string | null;
   /** Já saiu da fila: publicado, concluído ou cancelado. */
   done: boolean;
+  /** Só no calendário geral: de qual projeto/negócio o item é. */
+  context?: { projectName: string; businessName: string; color: string; href: string };
 };
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -57,19 +60,28 @@ function ItemChip({ item, onOpen }: { item: ProjectItem; onOpen: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.key,
     data: { item },
+    disabled: item.kind === "project",
   });
 
   return (
     <button
       ref={setNodeRef}
-      style={transform ? { transform: CSS.Translate.toString(transform) } : undefined}
       {...listeners}
       {...attributes}
       type="button"
       onClick={onOpen}
-      title={`${item.typeLabel} · ${item.statusLabel}`}
+      title={
+        item.context
+          ? `${item.context.projectName} · ${item.context.businessName} · ${item.typeLabel} · ${item.statusLabel}`
+          : `${item.typeLabel} · ${item.statusLabel}`
+      }
+      style={{
+        ...(transform ? { transform: CSS.Translate.toString(transform) } : {}),
+        ...(item.context ? { borderLeft: `3px solid ${item.context.color}` } : {}),
+      }}
       className={cn(
-        "flex touch-none cursor-grab items-start gap-1 rounded px-1.5 py-1 text-left text-[11px] leading-tight active:cursor-grabbing",
+        "flex touch-none items-start gap-1 rounded px-1.5 py-1 text-left text-[11px] leading-tight",
+        item.kind === "project" ? "cursor-pointer" : "cursor-grab active:cursor-grabbing",
         item.statusColor,
         item.done && "opacity-60",
         isDragging && "relative z-20 opacity-70 shadow-md",
@@ -77,10 +89,14 @@ function ItemChip({ item, onOpen }: { item: ProjectItem; onOpen: () => void }) {
     >
       {item.kind === "post" ? (
         <FileText size={11} className="mt-px shrink-0" />
-      ) : (
+      ) : item.kind === "task" ? (
         <ListTodo size={11} className="mt-px shrink-0" />
+      ) : (
+        <FolderKanban size={11} className="mt-px shrink-0" />
       )}
-      <span className="line-clamp-2 font-medium">{item.title}</span>
+      <span className="line-clamp-2 font-medium">
+        {item.kind === "project" ? `Fim: ${item.title}` : item.title}
+      </span>
     </button>
   );
 }
@@ -101,7 +117,7 @@ function DayCell({
   /** Posts que precisam estar prontos neste dia (a finalização é aqui). */
   finishing: ProjectItem[];
   onOpen: (item: ProjectItem) => void;
-  onAdd: (kind: "post" | "task", date: string) => void;
+  onAdd?: (kind: "post" | "task", date: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: date });
   const [menu, setMenu] = useState(false);
@@ -124,7 +140,7 @@ function DayCell({
         >
           {day}
         </span>
-        <div className="relative">
+        <div className={cn("relative", !onAdd && "hidden")}>
           <button
             type="button"
             onClick={() => setMenu((v) => !v)}
@@ -143,7 +159,7 @@ function DayCell({
                     type="button"
                     onClick={() => {
                       setMenu(false);
-                      onAdd(kind, date);
+                      onAdd?.(kind, date);
                     }}
                     className="rounded px-1.5 py-1 text-[11px] hover:bg-hover"
                   >
@@ -187,11 +203,15 @@ export function ProjectCalendar({
   onOpen,
   onAdd,
   onMoved,
+  showFinishing = true,
 }: {
   items: ProjectItem[];
+  /** Falso no calendário geral, onde os lembretes pontilhados só poluiriam. */
+  showFinishing?: boolean;
   initialMonth: { year: number; month: number };
   onOpen: (item: ProjectItem) => void;
-  onAdd: (kind: "post" | "task", date: string) => void;
+  /** Ausente no calendário geral (lá o item novo nasce dentro do projeto). */
+  onAdd?: (kind: "post" | "task", date: string) => void;
   /** Depois de gravar a nova data, para a tela recarregar do servidor. */
   onMoved: () => void;
 }) {
@@ -218,7 +238,7 @@ export function ProjectCalendar({
   for (const item of localItems) {
     if (item.date) byDate.set(item.date, [...(byDate.get(item.date) ?? []), item]);
     // Post já publicado ou cancelado não precisa mais de lembrete de finalização.
-    if (item.kind === "post" && item.finishedOn && !item.done) {
+    if (showFinishing && item.kind === "post" && item.finishedOn && !item.done) {
       finishingByDate.set(item.finishedOn, [
         ...(finishingByDate.get(item.finishedOn) ?? []),
         item,
@@ -236,7 +256,7 @@ export function ProjectCalendar({
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     const item = active.data.current?.item as ProjectItem | undefined;
-    if (!over || !item) return;
+    if (!over || !item || item.kind === "project") return;
 
     const target = String(over.id);
     if (item.date === target) return;
@@ -280,7 +300,12 @@ export function ProjectCalendar({
             {formatMonthYearBR(month, year)}
           </span>
         </div>
-        <p className="hidden items-center gap-1 text-[11px] text-text-secondary sm:flex">
+        <p
+          className={cn(
+            "hidden items-center gap-1 text-[11px] text-text-secondary",
+            showFinishing && "sm:flex",
+          )}
+        >
           <span className="rounded border border-dashed border-border px-1 text-[10px] font-semibold uppercase">
             Finalizar
           </span>
