@@ -7,6 +7,11 @@ import { Topbar } from "@/components/layout/Topbar";
 import { BusinessBadge, Card, CardTitle } from "@/components/ui";
 import { ClientContactForm } from "@/components/modules/clientes/ClientContactForm";
 import { ClientBusinessLinks } from "@/components/modules/clientes/ClientBusinessLinks";
+import {
+  ClientBusinessSummary,
+  type BusinessSummary,
+} from "@/components/modules/clientes/ClientBusinessSummary";
+import { getPendingItems } from "@/lib/ace";
 import { ProspectPanel } from "@/components/modules/clientes/ProspectPanel";
 import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
 
@@ -26,6 +31,7 @@ export default async function ClientDetailPage({
         id: true,
         name: true,
         color: true,
+        photo: true,
         email: true,
         phone: true,
         instagram: true,
@@ -72,7 +78,35 @@ export default async function ClientDetailPage({
 
   if (!client) notFound();
 
-  const hasProspect = client.businessLinks.some((l) => l.status === "PROSPECT");
+  // Com algum negócio vinculado a página ganha a coluna da direita (prospecção
+  // e resumo); sem nenhum, continua a página estreita de cadastro.
+  const hasProspect = client.businessLinks.length > 0;
+
+  const summaries: BusinessSummary[] = await Promise.all(
+    client.businessLinks
+      .filter((link) => link.status !== "PROSPECT")
+      .map(async (link) => {
+        const [projects, pending] = await Promise.all([
+          prisma.project.findMany({
+            where: { businessId: link.businessId, clientId: client.id, status: "EM_ANDAMENTO" },
+            orderBy: { createdAt: "desc" },
+            select: { id: true, name: true, status: true, endDate: true },
+          }),
+          getPendingItems(client.id, link.businessId),
+        ]);
+        return {
+          businessId: link.businessId,
+          clientId: client.id,
+          status: link.status,
+          business: link.business,
+          projects: projects.map((p) => ({
+            ...p,
+            endDate: p.endDate ? p.endDate.toISOString() : null,
+          })),
+          pending,
+        };
+      }),
+  );
 
   return (
     <>
@@ -206,6 +240,9 @@ export default async function ClientDetailPage({
                     }}
                   />
                 ))}
+              {summaries.map((summary) => (
+                <ClientBusinessSummary key={summary.businessId} summary={summary} />
+              ))}
             </div>
           )}
         </div>
