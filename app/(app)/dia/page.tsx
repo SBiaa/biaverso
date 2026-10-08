@@ -204,7 +204,7 @@ async function WorkSection({
     deliveredAt: true,
   } as const;
 
-  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies] = await Promise.all([
+  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, orders] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
@@ -260,7 +260,12 @@ async function WorkSection({
       },
       select: studySelect,
     }),
+    prisma.workTaskOrder.findMany({ select: { kind: true, taskId: true, position: true } }),
   ]);
+
+  // Ordem que ela montou arrastando; quem não tem posição fica na ordem automática.
+  const positions = new Map(orders.map((o) => [`${o.kind}:${o.taskId}`, o.position]));
+  const positionOf = (kind: string, id: string) => positions.get(`${kind}:${id}`) ?? null;
 
   // "Enviar a proposta" só aparece depois de "Criar a proposta" concluída.
   const prospect = onlyNextSteps(openProspectTasks);
@@ -270,6 +275,7 @@ async function WorkSection({
   const fromProduction = (t: (typeof production)[number], done: boolean): WorkTask => ({
     kind: "production",
     id: t.id,
+    position: positionOf("production", t.id),
     title: t.title,
     done,
     doneOnLoad: done,
@@ -291,6 +297,7 @@ async function WorkSection({
   const fromCollection = (t: (typeof collection)[number], done: boolean): WorkTask => ({
     kind: "collection",
     id: t.id,
+    position: positionOf("collection", t.id),
     title: t.title,
     done,
     doneOnLoad: done,
@@ -311,6 +318,7 @@ async function WorkSection({
   const fromProspect = (t: (typeof prospect)[number], done: boolean): WorkTask => ({
     kind: "prospect",
     id: t.id,
+    position: positionOf("prospect", t.id),
     title: t.title,
     done,
     doneOnLoad: done,
@@ -339,6 +347,7 @@ async function WorkSection({
     return {
       kind: "lesson",
       id: t.id,
+      position: positionOf("lesson", t.id),
       title: t.title,
       done,
       doneOnLoad: done,
@@ -365,6 +374,7 @@ async function WorkSection({
   const fromStudy = (t: (typeof studies)[number], done: boolean): WorkTask => ({
     kind: "study",
     id: t.id,
+    position: positionOf("study", t.id),
     title: t.title,
     done,
     doneOnLoad: done,

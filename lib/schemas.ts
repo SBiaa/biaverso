@@ -64,6 +64,19 @@ export const dayFocusSchema = z.object({
   focused: z.boolean(),
 });
 
+/** Ordem de execução das tarefas em andamento: a lista inteira, já na ordem nova. */
+export const workTaskOrderSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        kind: z.enum(["production", "collection", "prospect", "lesson", "study"]),
+        taskId: id,
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+
 export const taskCreateSchema = z.object({
   title: text,
   origin: z.enum(E.Origin).default("PESSOAL"),

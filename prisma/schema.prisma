@@ -2376,3 +2376,17 @@ enum CycleMood {
   ANSIOSA
   TRISTE
 }
+
+/// Ordem de execução que ela montou arrastando as tarefas na tabela "Tarefas em
+/// andamento" do dia a dia. As tarefas moram em tabelas diferentes (produção,
+/// coleção, prospecção, aula, estudo), então o vínculo é por `kind` + `taskId`,
+/// sem chave estrangeira — igual ao `DayFocus`. Tarefa sem linha aqui fica na
+/// ordem automática (prioridade, depois prazo), depois das que ela posicionou.
+model WorkTaskOrder {
+  id       String @id @default(cuid())
+  kind     String
+  taskId   String
+  position Int
+
+  @@unique([kind, taskId])
+}
