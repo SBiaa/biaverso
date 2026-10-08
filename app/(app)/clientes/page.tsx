@@ -84,6 +84,7 @@ export default async function ClientesPage({
           id: true,
           name: true,
           color: true,
+          photo: true,
           niche: true,
           email: true,
           phone: true,
@@ -136,6 +137,7 @@ export default async function ClientesPage({
       id: client.id,
       name: client.name,
       color: client.color,
+      photo: client.photo,
       niche: client.niche,
       contact: [client.email, client.phone, client.instagram].filter(Boolean).join(" · "),
       links: client.businessLinks.map((l) => ({

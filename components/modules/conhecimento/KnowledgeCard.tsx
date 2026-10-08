@@ -19,24 +19,31 @@ type Knowledge = {
   status: string;
   summary: string | null;
   link: string | null;
+  subjectId: string | null;
   startedAt: string | null;
   finishedAt: string | null;
 };
 
-export function KnowledgeCard({ item: initialItem }: { item: Knowledge }) {
+export function KnowledgeCard({
+  item: initialItem,
+  subjects,
+}: {
+  item: Knowledge;
+  subjects: { id: string; label: string }[];
+}) {
   const router = useRouter();
   const [item, setItem] = useState(initialItem);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function save(status: string) {
+  async function save(change: { status: string } | { subjectId: string | null }) {
     const previous = item;
     setError(null);
-    setItem((prev) => ({ ...prev, status }));
+    setItem((prev) => ({ ...prev, ...change }));
 
     try {
       // O servidor devolve o item já com startedAt/finishedAt resolvidos.
-      setItem(await api.patch<Knowledge>(`/api/knowledge/${item.id}`, { status }));
+      setItem(await api.patch<Knowledge>(`/api/knowledge/${item.id}`, change));
     } catch (e) {
       setItem(previous);
       setError(errorMessage(e));
@@ -87,7 +94,7 @@ export function KnowledgeCard({ item: initialItem }: { item: Knowledge }) {
         </span>
         <select
           value={item.status}
-          onChange={(e) => save(e.target.value)}
+          onChange={(e) => save({ status: e.target.value })}
           className="w-fit rounded-md border border-border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
         >
           {statusOptions.map((s) => (
@@ -97,6 +104,20 @@ export function KnowledgeCard({ item: initialItem }: { item: Knowledge }) {
           ))}
         </select>
       </div>
+
+      <select
+        value={item.subjectId ?? ""}
+        onChange={(e) => save({ subjectId: e.target.value || null })}
+        aria-label="Assunto"
+        className="w-full rounded-md border border-border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
+      >
+        <option value="">Sem assunto</option>
+        {subjects.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
+          </option>
+        ))}
+      </select>
 
       {item.source && <p className="text-xs text-text-secondary">{item.source}</p>}
       {item.summary && <p className="text-xs text-text-secondary">{item.summary}</p>}

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseBody, parseQuery, route } from "@/lib/api";
-import { aceListQuerySchema, productionTaskCreateSchema } from "@/lib/schemas";
+import { aceListQuerySchema, productionTaskCreateWithStepsSchema } from "@/lib/schemas";
 import { linkClientToBusiness, resolveTaskCompletedAt, scopeClientFilter } from "@/lib/ace";
 import type { Prisma } from "@/app/generated/prisma/client";
 
@@ -27,7 +27,10 @@ export const GET = route(async (request: Request) => {
 });
 
 export const POST = route(async (request: Request) => {
-  const { completedAt, ...data } = await parseBody(request, productionTaskCreateSchema);
+  const { completedAt, steps, ...data } = await parseBody(
+    request,
+    productionTaskCreateWithStepsSchema,
+  );
 
   const task = await prisma.productionTask.create({
     data: {
@@ -35,6 +38,7 @@ export const POST = route(async (request: Request) => {
       dueDate: data.dueDate ?? null,
       projectId: data.projectId ?? null,
       completedAt: resolveTaskCompletedAt(data.status, completedAt, null),
+      subtasks: { create: steps.map((title, order) => ({ title, order })) },
     },
   });
 

@@ -10,11 +10,26 @@ export function ClientAvatar({
   size = "md",
   className,
 }: {
-  client: { name: string; color: string | null };
+  client: { name: string; color: string | null; photo?: string | null };
   size?: "md" | "lg";
   className?: string;
 }) {
   const color = getClientColor(client);
+  if (client.photo) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- data URL, nada a otimizar
+      <img
+        src={client.photo}
+        alt={client.name}
+        className={cn(
+          "shrink-0 rounded-full object-cover",
+          size === "md" && "size-9",
+          size === "lg" && "size-14",
+          className,
+        )}
+      />
+    );
+  }
   return (
     <div
       className={cn(

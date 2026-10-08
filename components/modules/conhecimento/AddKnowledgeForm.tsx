@@ -10,7 +10,7 @@ const typeOptions = Object.keys(knowledgeTypeLabels);
 const areaOptions = Object.keys(knowledgeAreaLabels);
 const statusOptions = Object.keys(knowledgeStatusLabels);
 
-export function AddKnowledgeForm() {
+export function AddKnowledgeForm({ subjects }: { subjects: { id: string; label: string }[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -23,6 +23,7 @@ export function AddKnowledgeForm() {
     status: "QUERO_ESTUDAR",
     summary: "",
     link: "",
+    subjectId: "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -35,7 +36,7 @@ export function AddKnowledgeForm() {
     setError(null);
 
     try {
-      await api.post("/api/knowledge", form);
+      await api.post("/api/knowledge", { ...form, subjectId: form.subjectId || null });
       setOpen(false);
       setForm({
         title: "",
@@ -45,6 +46,7 @@ export function AddKnowledgeForm() {
         status: "QUERO_ESTUDAR",
         summary: "",
         link: "",
+        subjectId: "",
       });
       router.refresh();
       notify("Salvo.");
@@ -103,6 +105,19 @@ export function AddKnowledgeForm() {
           ))}
         </select>
       </div>
+      <select
+        value={form.subjectId}
+        onChange={(e) => update("subjectId", e.target.value)}
+        aria-label="Assunto"
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      >
+        <option value="">Sem assunto (material solto)</option>
+        {subjects.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
+          </option>
+        ))}
+      </select>
       <input
         placeholder="Fonte/link (opcional)"
         value={form.source}

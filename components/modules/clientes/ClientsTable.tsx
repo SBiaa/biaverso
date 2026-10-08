@@ -14,6 +14,7 @@ export type ClientRow = {
   id: string;
   name: string;
   color: string | null;
+  photo: string | null;
   niche: string | null;
   contact: string;
   links: {

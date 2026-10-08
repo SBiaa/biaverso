@@ -107,6 +107,10 @@ export function ProjectItems({
       date: dayOf(t.dueDate),
       finishedOn: dayOf(t.completedAt),
       done: (doneTaskStatuses as string[]).includes(t.status),
+      steps:
+        t.subtasks.length > 0
+          ? { done: t.subtasks.filter((s) => s.done).length, total: t.subtasks.length }
+          : undefined,
     }));
     const fromPosts = posts.map<ProjectItem>((p) => ({
       key: `post-${p.id}`,
@@ -287,6 +291,17 @@ export function ProjectItems({
                           >
                             {item.title}
                           </span>
+                          {item.steps && (
+                            <span
+                              title="Passos feitos"
+                              className={cn(
+                                "mt-px shrink-0 text-xs tabular-nums text-text-secondary",
+                                item.steps.done === item.steps.total && "text-accent",
+                              )}
+                            >
+                              {item.steps.done}/{item.steps.total}
+                            </span>
+                          )}
                         </span>
                       </td>
                       <td className="whitespace-nowrap py-2 pr-3 align-top text-text-secondary">

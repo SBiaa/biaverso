@@ -359,6 +359,14 @@ export const clientCreateSchema = z.object({
     .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Use uma cor em hexadecimal.")
     .nullish()
     .or(z.literal("").transform(() => null)),
+  // Foto de perfil: data URL de imagem já reduzida no navegador. O teto de
+  // ~400 KB barra qualquer coisa que não passou pelo redimensionamento.
+  photo: z
+    .string()
+    .max(400_000, "Foto grande demais.")
+    .regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/, "Foto inválida.")
+    .nullish()
+    .or(z.literal("").transform(() => null)),
   // O cadastro global cria o cliente solto ou já ligado a vários negócios; o
   // form de dentro do negócio continua mandando um `businessId` só. Os dois
   // caminhos são aceitos e a rota junta tudo.
@@ -522,6 +530,14 @@ export const productionTaskCreateSchema = z.object({
   notes: optionalText,
   priorityLevelId: optionalId,
   estimateMinutes,
+});
+/**
+ * Criação com os passos já digitados na modal: a tarefa ainda não tem id, então
+ * os títulos vêm junto e nascem na mesma gravação. Fica fora do schema base de
+ * propósito — o PATCH deriva dele, e passos se editam um a um em /api/subtasks.
+ */
+export const productionTaskCreateWithStepsSchema = productionTaskCreateSchema.extend({
+  steps: z.array(text).max(50).default([]),
 });
 export const productionTaskPatchSchema = productionTaskCreateSchema
   .omit({ businessId: true, status: true })
@@ -781,6 +797,7 @@ export const knowledgeCreateSchema = z.object({
   status: z.enum(E.KnowledgeStudyStatus).default("QUERO_ESTUDAR"),
   summary: optionalText,
   link: optionalText,
+  subjectId: optionalId,
 });
 
 export const knowledgePatchSchema = z.object({
@@ -791,6 +808,72 @@ export const knowledgePatchSchema = z.object({
   status: z.enum(E.KnowledgeStudyStatus).optional(),
   summary: optionalText,
   link: optionalText,
+  // null desliga do assunto (volta a ser material solto); ausente não mexe.
+  subjectId: optionalId,
+});
+
+// ---------------------------------------------- estudos: área/assunto/curso/aula
+export const studyAreaCreateSchema = z.object({
+  name: text,
+  emoji: optionalText,
+});
+
+export const studyAreaPatchSchema = z.object({
+  name: text.optional(),
+  emoji: optionalTextPatch,
+});
+
+export const studySubjectCreateSchema = z.object({
+  areaId: id,
+  name: text,
+  description: optionalText,
+});
+
+export const studySubjectPatchSchema = z.object({
+  name: text.optional(),
+  description: optionalTextPatch,
+  status: z.enum(E.KnowledgeStudyStatus).optional(),
+});
+
+export const studyCourseCreateSchema = z.object({
+  subjectId: id,
+  title: text,
+  instructor: optionalText,
+  platform: optionalText,
+  link: optionalText,
+});
+
+export const studyCoursePatchSchema = z.object({
+  title: text.optional(),
+  instructor: optionalTextPatch,
+  platform: optionalTextPatch,
+  link: optionalTextPatch,
+  notes: optionalTextPatch,
+  status: z.enum(E.KnowledgeStudyStatus).optional(),
+});
+
+export const studyLessonCreateSchema = z.object({
+  courseId: id,
+  // Várias aulas de uma vez: uma por linha, como se cola de uma lista de curso.
+  titles: z.array(text).min(1).max(200),
+});
+
+/** Reordenar assuntos de uma área ou aulas de um curso: a lista toda na ordem nova. */
+export const studyReorderSchema = z.object({
+  parentId: id,
+  ids: z.array(id).min(1),
+});
+
+export const studyLessonPatchSchema = z.object({
+  title: text.optional(),
+  link: optionalTextPatch,
+  notes: optionalTextPatch,
+  done: z.boolean().optional(),
+  // Execução = o dia que quer fazer; prazo = o máximo. Ausente não mexe, null limpa.
+  scheduledDate: dateOnly.nullish(),
+  dueDate: dateOnly.nullish(),
+  priorityLevelId: optionalId,
+  estimateMinutes,
 });
 
 export const ideaCreateSchema = z.object({

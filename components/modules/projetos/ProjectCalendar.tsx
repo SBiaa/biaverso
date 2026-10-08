@@ -32,6 +32,8 @@ export type ProjectItem = {
   finishedOn: string | null;
   /** Já saiu da fila: publicado, concluído ou cancelado. */
   done: boolean;
+  /** Passos da tarefa (feitos/total); ausente em post e quando não há passos. */
+  steps?: { done: number; total: number };
   /** Só no calendário geral: de qual projeto/negócio o item é. */
   context?: { projectName: string; businessName: string; color: string; href: string };
 };
@@ -97,6 +99,11 @@ function ItemChip({ item, onOpen }: { item: ProjectItem; onOpen: () => void }) {
       <span className="line-clamp-2 font-medium">
         {item.kind === "project" ? `Fim: ${item.title}` : item.title}
       </span>
+      {item.steps && (
+        <span className="ml-auto shrink-0 font-semibold tabular-nums">
+          {item.steps.done}/{item.steps.total}
+        </span>
+      )}
     </button>
   );
 }

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Camera, Pencil } from "lucide-react";
 import { Button, CardTitle, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
+import { resizeClientPhoto } from "@/lib/client-photo";
+import { ClientAvatar } from "./ClientAvatar";
 import { CLIENT_COLORS, autoClientColor, getClientColor } from "@/lib/client-visuals";
 
 type Client = {
@@ -13,6 +15,7 @@ type Client = {
   name: string;
   /** Nula = cor automática, derivada do nome. */
   color: string | null;
+  photo: string | null;
   email: string | null;
   phone: string | null;
   instagram: string | null;
@@ -32,12 +35,24 @@ export function ClientContactForm({ client }: { client: Client }) {
     niche: client.niche ?? "",
     notes: client.notes ?? "",
     color: client.color ?? "",
+    photo: client.photo ?? "",
   });
+  const fileInput = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function pickPhoto(file: File | undefined) {
+    if (!file) return;
+    try {
+      update("photo", await resizeClientPhoto(file));
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
   }
 
   async function save() {
@@ -97,6 +112,36 @@ export function ClientContactForm({ client }: { client: Client }) {
   return (
     <div className="flex flex-col gap-2">
       <CardTitle>Contato</CardTitle>
+
+      <div className="flex items-center gap-3">
+        <ClientAvatar
+          client={{ name: form.name || client.name, color: form.color || client.color, photo: form.photo }}
+          size="lg"
+        />
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            void pickPhoto(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+        <Button variant="secondary" onClick={() => fileInput.current?.click()}>
+          <Camera size={14} />
+          {form.photo ? "Trocar foto" : "Adicionar foto"}
+        </Button>
+        {form.photo && (
+          <button
+            type="button"
+            onClick={() => update("photo", "")}
+            className="text-xs text-text-secondary underline-offset-2 hover:underline"
+          >
+            Remover
+          </button>
+        )}
+      </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
         <input
@@ -192,6 +237,7 @@ export function ClientContactForm({ client }: { client: Client }) {
               niche: client.niche ?? "",
               notes: client.notes ?? "",
               color: client.color ?? "",
+              photo: client.photo ?? "",
             });
           }}
         >

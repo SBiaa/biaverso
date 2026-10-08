@@ -7,7 +7,7 @@ const typeOptions = Object.keys(knowledgeTypeLabels);
 const areaOptions = Object.keys(knowledgeAreaLabels);
 const statusOptions = Object.keys(knowledgeStatusLabels);
 
-export function KnowledgeFilters() {
+export function KnowledgeFilters({ subjects }: { subjects: { id: string; label: string }[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -46,6 +46,20 @@ export function KnowledgeFilters() {
         {areaOptions.map((a) => (
           <option key={a} value={a}>
             {knowledgeAreaLabels[a]}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={searchParams.get("subject") ?? ""}
+        onChange={(e) => setParam("subject", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      >
+        <option value="">Todos os assuntos</option>
+        <option value="none">Sem assunto</option>
+        {subjects.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
           </option>
         ))}
       </select>

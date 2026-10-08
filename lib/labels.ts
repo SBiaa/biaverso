@@ -263,6 +263,7 @@ export const productionStatusLabels: Record<string, string> = {
   AGUARDANDO_APROVACAO: "Aguardando aprovação",
   CONCLUIDO: "Concluído",
   CANCELADO: "Cancelado",
+  PRAZO_PERDIDO: "Prazo perdido",
 };
 
 export const orderStatusLabels: Record<string, string> = {

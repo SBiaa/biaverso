@@ -29,6 +29,7 @@ export const KANBAN_COLUMNS = [
   { key: "EM_ANDAMENTO", label: "Em andamento" },
   { key: "AGUARDANDO_APROVACAO", label: "Aguardando aprovação" },
   { key: "CONCLUIDO", label: "Concluído" },
+  { key: "PRAZO_PERDIDO", label: "Prazo perdido" },
 ] as const;
 
 export type KanbanColumnKey = (typeof KANBAN_COLUMNS)[number]["key"];
@@ -46,6 +47,7 @@ const productionStatusToColumn: Record<string, KanbanColumnKey | null> = {
   EM_ANDAMENTO: "EM_ANDAMENTO",
   AGUARDANDO_APROVACAO: "AGUARDANDO_APROVACAO",
   CONCLUIDO: "CONCLUIDO",
+  PRAZO_PERDIDO: "PRAZO_PERDIDO",
   CANCELADO: null,
 };
 
@@ -67,7 +69,11 @@ export const productionStatusColors: Record<string, string> = {
   AGUARDANDO_APROVACAO: "bg-blue-100 text-blue-700",
   CONCLUIDO: "bg-emerald-100 text-emerald-700",
   CANCELADO: "bg-red-100 text-red-700",
+  PRAZO_PERDIDO: "bg-red-100 text-red-700",
 };
+
+/** Dias de atraso a partir dos quais a tarefa vira "prazo perdido". */
+export const MISSED_DEADLINE_AFTER_DAYS = 7;
 
 export const donePostStatuses: ContentStatus[] = ["PUBLICADO", "CANCELADO"];
 export const doneTaskStatuses: ProductionStatus[] = ["CONCLUIDO", "CANCELADO"];
@@ -179,6 +185,7 @@ export function toTaskRecord(task: {
   projectId: string | null;
   priorityLevelId: string | null;
   estimateMinutes: number | null;
+  subtasks: { id: string; title: string; done: boolean }[];
 }) {
   return {
     id: task.id,
@@ -194,6 +201,7 @@ export function toTaskRecord(task: {
     projectId: task.projectId,
     priorityLevelId: task.priorityLevelId,
     estimateMinutes: task.estimateMinutes,
+    subtasks: task.subtasks.map(({ id, title, done }) => ({ id, title, done })),
   };
 }
 
@@ -201,6 +209,7 @@ export type ClientOverview = {
   id: string;
   name: string;
   color: string | null;
+  photo: string | null;
   activeProjectCount: number;
   nextDelivery: { date: string; title: string; kind: AceItemKind } | null;
 };
@@ -211,6 +220,7 @@ export type ProspectOverview = {
   clientId: string;
   name: string;
   color: string | null;
+  photo: string | null;
   email: string | null;
   phone: string | null;
   instagram: string | null;

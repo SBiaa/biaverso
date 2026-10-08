@@ -32,7 +32,10 @@ export default async function AceClientProfilePage({
       where: { businessId, clientId },
       include: {
         contentPosts: { orderBy: { publishDate: "asc" } },
-        productionTasks: { orderBy: { dueDate: "asc" } },
+        productionTasks: {
+          orderBy: { dueDate: "asc" },
+          include: { subtasks: { orderBy: { order: "asc" } } },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),

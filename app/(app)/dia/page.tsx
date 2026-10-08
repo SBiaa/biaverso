@@ -5,7 +5,7 @@ import {
   materializeHabits,
   materializeRoutineTasks,
 } from "@/lib/day";
-import { parseDateOnly, toDateInputValue, todayUtc } from "@/lib/utils";
+import { formatDateBR, parseDateOnly, toDateInputValue, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, CardTitle, Skeleton } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
@@ -22,6 +22,7 @@ import { WorkTasksToday, type WorkTask } from "@/components/modules/dia/WorkTask
 import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
 import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
+import { syncMissedTaskDeadlines } from "@/lib/ace";
 import { productionTypeLabels } from "@/lib/labels";
 import { getUserSettings } from "@/lib/settings";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
@@ -105,6 +106,8 @@ async function WorkSection({
   dayId: string;
   focusKeys: string[];
 }) {
+  await syncMissedTaskDeadlines();
+
   const today = todayUtc();
   // Semana de segunda a domingo, como o cardápio. O corte é exclusivo.
   const dayEnd = new Date(date.getTime() + 86_400_000);
@@ -119,6 +122,7 @@ async function WorkSection({
     id: true,
     title: true,
     type: true,
+    status: true,
     priority: true,
     dueDate: true,
     completedAt: true,
@@ -165,7 +169,28 @@ async function WorkSection({
   // Só prospect em aberto: passo de quem já virou cliente ou foi perdido sai da lista.
   const openProspect = { clientBusiness: { status: "PROSPECT" as const } };
 
-  const [levels, production, collection, doneProduction, doneCollection, prospect, doneProspect] = await Promise.all([
+  // Aula só entra com alguma data (execução ou prazo): sem isso, todo curso
+  // cadastrado despejaria as aulas na lista. Curso pausado/abandonado fica fora.
+  const lessonSelect = {
+    id: true,
+    title: true,
+    done: true,
+    scheduledDate: true,
+    dueDate: true,
+    completedAt: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    course: {
+      select: {
+        id: true,
+        title: true,
+        subject: { select: { name: true, area: { select: { name: true } } } },
+      },
+    },
+  } as const;
+  const activeCourse = { course: { status: { notIn: ["PAUSADO", "ABANDONADO"] as ("PAUSADO" | "ABANDONADO")[] } } };
+
+  const [levels, production, collection, doneProduction, doneCollection, prospect, doneProspect, lessons, doneLessons] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
@@ -194,6 +219,22 @@ async function WorkSection({
       where: { done: true, ...doneInDay, ...openProspect },
       select: prospectSelect,
     }),
+    prisma.studyLesson.findMany({
+      where: {
+        done: false,
+        OR: [{ scheduledDate: { not: null } }, { dueDate: { not: null } }],
+        ...activeCourse,
+      },
+      select: lessonSelect,
+    }),
+    prisma.studyLesson.findMany({
+      where: {
+        done: true,
+        OR: [{ completedAt: dayRange }, { scheduledDate: dayRange }],
+        ...activeCourse,
+      },
+      select: lessonSelect,
+    }),
   ]);
 
   const isLate = (due: Date | null) => due !== null && due.getTime() < today.getTime();
@@ -214,6 +255,7 @@ async function WorkSection({
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
     completedAt: t.completedAt ? t.completedAt.toISOString() : null,
     overdue: !done && isLate(t.dueDate),
+    missed: t.status === "PRAZO_PERDIDO",
     collectionId: null,
     subtasks: t.subtasks,
   });
@@ -258,6 +300,40 @@ async function WorkSection({
     subtasks: [],
   });
 
+  // O dia em que a aula cai é o de execução; sem ele, vale o prazo. O atraso
+  // olha o que vier primeiro, porque passar de qualquer um dos dois já é atraso.
+  const fromLesson = (t: (typeof lessons)[number], done: boolean): WorkTask => {
+    const day = t.scheduledDate ?? t.dueDate;
+    const first =
+      t.scheduledDate && t.dueDate
+        ? new Date(Math.min(t.scheduledDate.getTime(), t.dueDate.getTime()))
+        : day;
+    return {
+      kind: "lesson",
+      id: t.id,
+      title: t.title,
+      done,
+      doneOnLoad: done,
+      originLabel: t.course.subject.area.name,
+      originColor: "#6366F1",
+      originHref: `/conhecimento/curso/${t.course.id}`,
+      detail: [
+        `Aula · ${t.course.title}`,
+        t.scheduledDate && t.dueDate ? `prazo ${formatDateBR(t.dueDate)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      urgent: false,
+      priorityLevelId: t.priorityLevelId,
+      estimateMinutes: t.estimateMinutes,
+      dueDate: day ? day.toISOString() : null,
+      completedAt: t.completedAt ? t.completedAt.toISOString() : null,
+      overdue: !done && isLate(first),
+      collectionId: null,
+      subtasks: [],
+    };
+  };
+
   const tasks: WorkTask[] = [
     ...production.map((t) => fromProduction(t, false)),
     ...collection.map((t) => fromCollection(t, false)),
@@ -265,6 +341,8 @@ async function WorkSection({
     ...doneCollection.map((t) => fromCollection(t, true)),
     ...prospect.map((t) => fromProspect(t, false)),
     ...doneProspect.map((t) => fromProspect(t, true)),
+    ...lessons.map((t) => fromLesson(t, false)),
+    ...doneLessons.map((t) => fromLesson(t, true)),
   ];
 
   return (

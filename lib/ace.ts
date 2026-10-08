@@ -4,6 +4,7 @@ import { contentStatusLabels, productionStatusLabels } from "@/lib/labels";
 import {
   donePostStatuses,
   doneTaskStatuses,
+  MISSED_DEADLINE_AFTER_DAYS,
   isPostOverdue,
   isTaskOverdue,
   type ClientOverview,
@@ -16,6 +17,31 @@ import type { Prisma } from "@/app/generated/prisma/client";
 // Server-only: this file imports "@/lib/prisma", so it must never be imported
 // from a "use client" component — see "@/lib/ace-shared" for the client-safe subset.
 export * from "@/lib/ace-shared";
+
+/**
+ * Tarefa aberta com mais de uma semana de atraso vira PRAZO_PERDIDO; se o prazo
+ * for remarcado para dentro da semana (ou apagado), volta para A_FAZER. Roda ao
+ * abrir as telas que listam tarefas, como o ATRASADO das contas fixas.
+ */
+export async function syncMissedTaskDeadlines() {
+  const limit = new Date(todayUtc());
+  limit.setUTCDate(limit.getUTCDate() - MISSED_DEADLINE_AFTER_DAYS);
+
+  await prisma.productionTask.updateMany({
+    where: {
+      status: { in: ["A_FAZER", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] },
+      dueDate: { lt: limit },
+    },
+    data: { status: "PRAZO_PERDIDO" },
+  });
+  await prisma.productionTask.updateMany({
+    where: {
+      status: "PRAZO_PERDIDO",
+      OR: [{ dueDate: null }, { dueDate: { gte: limit } }],
+    },
+    data: { status: "A_FAZER" },
+  });
+}
 
 export async function getClientsOverview(
   businessId: string,
@@ -73,6 +99,7 @@ export async function getClientsOverview(
       id: client.id,
       name: client.name,
       color: client.color,
+      photo: client.photo,
       activeProjectCount: client.projects.filter((p) => p.status === "EM_ANDAMENTO").length,
       nextDelivery: upcoming
         ? { date: upcoming.date.toISOString(), title: upcoming.title, kind: upcoming.kind }
@@ -88,7 +115,7 @@ export async function getProspectsOverview(businessId: string): Promise<Prospect
     orderBy: { joinedAt: "desc" },
     include: {
       client: {
-        select: { id: true, name: true, color: true, email: true, phone: true, instagram: true },
+        select: { id: true, name: true, color: true, photo: true, email: true, phone: true, instagram: true },
       },
     },
   });
@@ -98,6 +125,7 @@ export async function getProspectsOverview(businessId: string): Promise<Prospect
     clientId: link.clientId,
     name: link.client.name,
     color: link.client.color,
+    photo: link.client.photo,
     email: link.client.email,
     phone: link.client.phone,
     instagram: link.client.instagram,
@@ -280,6 +308,11 @@ export const taskRecordSelect = {
   projectId: true,
   priorityLevelId: true,
   estimateMinutes: true,
+  // A modal da tarefa mostra e edita os passos, então eles vêm junto.
+  subtasks: {
+    orderBy: { order: "asc" },
+    select: { id: true, title: true, done: true },
+  },
 } satisfies Prisma.ProductionTaskSelect;
 
 // Das telas que mostram o cliente ao lado do item, só nome e cor são lidos.

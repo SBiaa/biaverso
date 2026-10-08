@@ -939,6 +939,9 @@ model Client {
   /// derivada do nome (ver lib/client-visuals.ts) — assim cada uma já nasce
   /// diferente das outras sem ninguém precisar escolher.
   color         String?
+  /// Foto de perfil como data URL (JPEG já reduzido no navegador, ~256px). Nula =
+  /// bolinha com as iniciais. Fica no banco pra não depender de storage externo.
+  photo         String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   businessLinks ClientBusiness[]
@@ -1176,6 +1179,9 @@ enum ProductionStatus {
   AGUARDANDO_APROVACAO
   CONCLUIDO
   CANCELADO
+  // Gravado sozinho quando o prazo passa de uma semana sem a tarefa ser feita
+  // (ver `syncMissedTaskDeadlines`). Conta como aberta: ainda dá para fazer.
+  PRAZO_PERDIDO
 }
 
 // LOJA — PEDIDOS E COLEÇÕES (módulos PEDIDOS e COLECOES)
@@ -1309,6 +1315,7 @@ model PriorityLevel {
   productionTasks ProductionTask[]
   collectionTasks CollectionTask[]
   prospectTasks   ProspectTask[]
+  studyLessons    StudyLesson[]
   conceptualGoals ConceptualGoal[]
 }
 
@@ -1500,8 +1507,91 @@ model Knowledge {
   link       String?
   startedAt  DateTime?
   finishedAt DateTime?
+  /// Assunto a que o material pertence. Nulo = material solto, como sempre foi.
+  subjectId  String?
+  subject    StudySubject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
+
+  @@index([subjectId])
+}
+
+// ESTUDOS: Área → Assunto → Curso → Aula.
+// A área é criada por ela (não é enum) para a lista crescer sem mexer no código.
+// O enum KnowledgeArea acima continua só nos materiais soltos antigos.
+model StudyArea {
+  id        String         @id @default(cuid())
+  name      String
+  emoji     String?
+  color     String?
+  order     Int            @default(0)
+  subjects  StudySubject[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model StudySubject {
+  id          String               @id @default(cuid())
+  areaId      String
+  area        StudyArea            @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  status      KnowledgeStudyStatus @default(QUERO_ESTUDAR)
+  order       Int                  @default(0)
+  courses     StudyCourse[]
+  materials   Knowledge[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([areaId])
+}
+
+model StudyCourse {
+  id         String               @id @default(cuid())
+  subjectId  String
+  subject    StudySubject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title      String
+  /// Quem ensina.
+  instructor String?
+  /// Onde fazer: Udemy, YouTube, Alura...
+  platform   String?
+  link       String?
+  notes      String?
+  status     KnowledgeStudyStatus @default(QUERO_ESTUDAR)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  lessons    StudyLesson[]
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@index([subjectId])
+}
+
+model StudyLesson {
+  id              String         @id @default(cuid())
+  courseId        String
+  course          StudyCourse    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title           String
+  link            String?
+  /// O que aprendeu nessa aula.
+  notes           String?
+  order           Int            @default(0)
+  done            Boolean        @default(false)
+  completedAt     DateTime?
+  /// Dia em que ela quer fazer a aula.
+  scheduledDate   DateTime?
+  /// Prazo máximo para terminar.
+  dueDate         DateTime?
+  /// Mesmos dois campos das outras tarefas do Dia a dia: ordem e tempo.
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  estimateMinutes Int?
+  createdAt       DateTime       @default(now())
+
+  @@index([courseId])
+  @@index([priorityLevelId])
+  @@index([scheduledDate])
+  @@index([dueDate])
 }
 
 enum KnowledgeType {

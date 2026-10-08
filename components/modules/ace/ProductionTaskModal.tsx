@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Trash2 } from "lucide-react";
 
 import {
   Button,
   confirmAction,
   ErrorNote,
+  IconButton,
   Modal,
   notify,
 } from "@/components/ui";
@@ -22,6 +24,11 @@ import {
 import { ClientOptions } from "./ClientOptions";
 import { formatMinutes, parseMinutes } from "@/lib/task-plan";
 import { usePriorityLevels } from "@/components/modules/tarefas/usePriorityLevels";
+import {
+  SubtaskList,
+  useSubtasks,
+  type SubtaskItem,
+} from "@/components/modules/tarefas/Subtasks";
 
 const typeOptions = Object.keys(productionTypeLabels);
 const priorityOptions = Object.keys(priorityLabels);
@@ -42,8 +49,88 @@ export type TaskRecord = {
   projectId: string | null;
   priorityLevelId: string | null;
   estimateMinutes: number | null;
+  subtasks: SubtaskItem[];
 };
 type TaskInitial = TaskRecord;
+
+/** Tarefa existente: cada passo grava na hora, pela API de subtarefas. */
+function SavedSteps({ taskId, initial }: { taskId: string; initial: SubtaskItem[] }) {
+  const router = useRouter();
+  const steps = useSubtasks({ kind: "production", id: taskId }, initial);
+
+  // O contador (2/5) da tabela e do calendário vem do servidor: recarrega quando
+  // um passo muda, menos na montagem.
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    router.refresh();
+  }, [steps.subtasks, router]);
+
+  return <SubtaskList {...steps} />;
+}
+
+/**
+ * Tarefa nova: ainda não tem id, então os passos ficam só na tela e seguem
+ * junto com a tarefa quando ela é salva.
+ */
+function DraftSteps({
+  steps,
+  onChange,
+}: {
+  steps: string[];
+  onChange: (steps: string[]) => void;
+}) {
+  const [title, setTitle] = useState("");
+
+  function add() {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    onChange([...steps, trimmed]);
+    setTitle("");
+  }
+
+  return (
+    <div className="flex flex-col gap-1 border-l border-border pl-3">
+      {steps.map((step, i) => (
+        <div key={i} className="flex items-center gap-2 text-sm">
+          <span className="min-w-0 flex-1 text-text-primary">{step}</span>
+          <IconButton
+            title="Apagar passo"
+            tone="danger"
+            onClick={() => onChange(steps.filter((_, j) => j !== i))}
+          >
+            <Trash2 size={15} />
+          </IconButton>
+        </div>
+      ))}
+      <div className="flex items-center gap-1.5">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Quebrar em um passo…"
+          className="min-w-0 flex-1 rounded-md border border-border px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-accent"
+        />
+        <IconButton
+          title="Adicionar passo"
+          onClick={add}
+          disabled={!title.trim()}
+          className="border border-border disabled:opacity-40"
+        >
+          <Plus size={15} />
+        </IconButton>
+      </div>
+    </div>
+  );
+}
 
 function dateInputValue(date: string | Date | null) {
   if (!date) return "";
@@ -132,6 +219,7 @@ export function ProductionTaskModal({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const levels = usePriorityLevels();
+  const [draftSteps, setDraftSteps] = useState<string[]>([]);
   const [form, setForm] = useState(
     task
       ? formFromTask(task)
@@ -178,7 +266,7 @@ export function ProductionTaskModal({
 
     try {
       if (isEdit) await api.patch(`/api/ace/tasks/${task!.id}`, payload);
-      else await api.post("/api/ace/tasks", payload);
+      else await api.post("/api/ace/tasks", { ...payload, steps: draftSteps });
       router.refresh();
       notify("Salvo.");
       onClose();
@@ -214,6 +302,8 @@ export function ProductionTaskModal({
       businessId,
       clientId: form.clientId || null,
       projectId: form.projectId || null,
+      // A cópia leva os passos, todos por fazer.
+      steps: task!.subtasks.map((s) => s.title),
     };
 
     try {
@@ -289,6 +379,15 @@ export function ProductionTaskModal({
         className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       />
 
+      <div>
+        <p className="mb-1 text-xs text-text-secondary">Passos</p>
+        {isEdit ? (
+          <SavedSteps taskId={task!.id} initial={task!.subtasks} />
+        ) : (
+          <DraftSteps steps={draftSteps} onChange={setDraftSteps} />
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <div>
           <p className="mb-1 text-xs text-text-secondary">Prioridade</p>
@@ -334,7 +433,10 @@ export function ProductionTaskModal({
           onChange={(e) => update("status", e.target.value)}
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         >
-          {statusOptions.map((s) => (
+          {/* Prazo perdido é gravado pelo sistema; só aparece quando já é o status. */}
+          {statusOptions
+            .filter((s) => s !== "PRAZO_PERDIDO" || form.status === s)
+            .map((s) => (
             <option key={s} value={s}>
               {productionStatusLabels[s]}
             </option>

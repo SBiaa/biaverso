@@ -22,8 +22,8 @@ import {
 } from "@/components/modules/tarefas/Subtasks";
 
 export type WorkTask = {
-  /** `production`, `collection` ou `prospect`: decide para qual rota o PATCH vai. */
-  kind: "production" | "collection" | "prospect";
+  /** `production`, `collection`, `prospect` ou `lesson`: decide para qual rota o PATCH vai. */
+  kind: "production" | "collection" | "prospect" | "lesson";
   id: string;
   title: string;
   done: boolean;
@@ -42,6 +42,8 @@ export type WorkTask = {
   /** Quando foi concluída; só existe para tarefa feita. */
   completedAt: string | null;
   overdue: boolean;
+  /** Passou de uma semana de atraso (status PRAZO_PERDIDO); só tarefa de produção. */
+  missed?: boolean;
   /** Só tarefa de coleção precisa do id da coleção na rota. */
   collectionId: string | null;
   subtasks: SubtaskItem[];
@@ -50,13 +52,14 @@ export type WorkTask = {
 /** Em "Feitas": por quando foi concluída, ou pelo dia em que estava marcada. */
 type DoneBy = "completed" | "due";
 
-type Range = "today" | "tomorrow" | "week" | "all" | "done";
+type Range = "today" | "tomorrow" | "week" | "all" | "missed" | "done";
 
 const RANGES: { id: Range; label: string }[] = [
   { id: "today", label: "Hoje" },
   { id: "tomorrow", label: "Amanhã" },
   { id: "week", label: "Semana" },
   { id: "all", label: "Tudo" },
+  { id: "missed", label: "Prazo perdido" },
   { id: "done", label: "Feitas" },
 ];
 
@@ -64,6 +67,7 @@ type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null 
 
 function patchUrl(task: WorkTask) {
   if (task.kind === "prospect") return `/api/prospect-tasks/${task.id}`;
+  if (task.kind === "lesson") return `/api/study/lessons/${task.id}`;
   return task.kind === "production"
     ? `/api/ace/tasks/${task.id}`
     : `/api/collections/${task.collectionId}/tasks/${task.id}`;
@@ -168,7 +172,7 @@ function TaskRow({
 }) {
   // Passo de prospecção não tem subtarefas: o próprio checklist já é a quebra.
   const subtasks = useSubtasks(
-    { kind: task.kind === "prospect" ? "task" : task.kind, id: task.id },
+    { kind: task.kind === "prospect" || task.kind === "lesson" ? "task" : task.kind, id: task.id },
     task.subtasks,
   );
   // Tarefa já quebrada nasce aberta: o ponto dos passos é ver por onde começar.
@@ -206,14 +210,16 @@ function TaskRow({
                   {task.title}
                   {task.urgent && <span className="sr-only"> (urgente)</span>}
                 </span>
-                <FocusStar
-                  dayId={dayId}
-                  kind={task.kind}
-                  taskId={task.id}
-                  focused={focused}
-                  title={task.title}
-                />
-                {task.kind !== "prospect" && (
+                {task.kind !== "lesson" && (
+                  <FocusStar
+                    dayId={dayId}
+                    kind={task.kind}
+                    taskId={task.id}
+                    focused={focused}
+                    title={task.title}
+                  />
+                )}
+                {task.kind !== "prospect" && task.kind !== "lesson" && (
                   <SubtaskToggle
                     open={open}
                     onClick={() => setOpen((v) => !v)}
@@ -283,7 +289,7 @@ function TaskRow({
           )}
         </td>
       </tr>
-      {open && task.kind !== "prospect" && (
+      {open && task.kind !== "prospect" && task.kind !== "lesson" && (
         // `divide-y` do tbody separaria a tarefa dos próprios passos.
         <tr className="border-t-0">
           <td colSpan={5} className="pb-3 pl-6">
@@ -360,6 +366,9 @@ export function WorkTasksToday({
     }
     if (t.done && t.doneOnLoad) return false;
     if (r === "all") return true;
+    // Prazo perdido tem aba própria: não volta a poluir Hoje, Amanhã e Semana.
+    if (r === "missed") return !!t.missed;
+    if (t.missed) return false;
     if (t.dueDate === null) return false;
     const due = new Date(t.dueDate).getTime();
     if (r === "tomorrow") return due >= limits.day && due < tomorrowEnd;
@@ -535,7 +544,7 @@ export function WorkTasksToday({
                 key={task.kind + task.id}
                 task={task}
                 dayId={dayId}
-                focused={focusKeys.includes(focusKey(task.kind, task.id))}
+                focused={task.kind !== "lesson" && focusKeys.includes(focusKey(task.kind, task.id))}
                 levels={levels}
                 showCompleted={range === "done" && doneBy === "completed"}
                 onToggle={toggle}
