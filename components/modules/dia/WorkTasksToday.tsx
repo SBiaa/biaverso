@@ -39,11 +39,16 @@ export type WorkTask = {
   priorityLevelId: string | null;
   estimateMinutes: number | null;
   dueDate: string | null;
+  /** Quando foi concluída; só existe para tarefa feita. */
+  completedAt: string | null;
   overdue: boolean;
   /** Só tarefa de coleção precisa do id da coleção na rota. */
   collectionId: string | null;
   subtasks: SubtaskItem[];
 };
+
+/** Em "Feitas": por quando foi concluída, ou pelo dia em que estava marcada. */
+type DoneBy = "completed" | "due";
 
 type Range = "today" | "tomorrow" | "week" | "all" | "done";
 
@@ -148,6 +153,7 @@ function TaskRow({
   dayId,
   focused,
   levels,
+  showCompleted,
   onToggle,
   onPatch,
 }: {
@@ -155,6 +161,8 @@ function TaskRow({
   dayId: string;
   focused: boolean;
   levels: PriorityLevelDTO[];
+  /** Mostra a data de conclusão no lugar do prazo. */
+  showCompleted: boolean;
   onToggle: (task: WorkTask) => void;
   onPatch: (task: WorkTask, patch: Patch) => void;
 }) {
@@ -261,9 +269,9 @@ function TaskRow({
           )}
         </td>
         <td className="whitespace-nowrap py-2 align-top">
-          {task.dueDate ? (
+          {(showCompleted ? task.completedAt : task.dueDate) ? (
             <span className={cn("text-text-secondary", late && "font-medium text-red-600")}>
-              {formatDateBR(new Date(task.dueDate))}
+              {formatDateBR(new Date((showCompleted ? task.completedAt : task.dueDate)!))}
             </span>
           ) : (
             <span className="text-text-secondary/60">Sem prazo</span>
@@ -332,6 +340,7 @@ export function WorkTasksToday({
   const router = useRouter();
   const [items, setItems] = useState(tasks);
   const [range, setRange] = useState<Range>("all");
+  const [doneBy, setDoneBy] = useState<DoneBy>("completed");
   const [error, setError] = useState<string | null>(null);
 
   // Atrasada entra em Hoje e em Semana: o que venceu antes continua à vista.
@@ -342,7 +351,13 @@ export function WorkTasksToday({
   const inRange = (t: WorkTask, r: Range) => {
     // "Feitas" é tudo que está concluído; as outras abas escondem o que já
     // chegou concluído, mas mantêm o que ela acabou de marcar (riscado, no fim).
-    if (r === "done") return t.done;
+    if (r === "done") {
+      if (!t.done) return false;
+      const when = doneBy === "completed" ? t.completedAt : t.dueDate;
+      if (!when) return false;
+      const time = new Date(when).getTime();
+      return time >= limits.day - 24 * 60 * 60 * 1000 && time < limits.day;
+    }
     if (t.done && t.doneOnLoad) return false;
     if (r === "all") return true;
     if (t.dueDate === null) return false;
@@ -354,7 +369,7 @@ export function WorkTasksToday({
   const visible = useMemo(
     () => sortTasks(items.filter((t) => inRange(t, range)), levels),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, levels, range, dayEnd, weekEnd],
+    [items, levels, range, doneBy, dayEnd, weekEnd],
   );
   const open = visible.filter((t) => !t.done);
   const lateCount = open.filter((t) => t.overdue).length;
@@ -364,7 +379,7 @@ export function WorkTasksToday({
   const openIn = (r: Range) =>
     items.filter((t) => (r === "done" ? t.done : !t.done) && inRange(t, r));
   const countOpen = (r: Range) => openIn(r).length;
-  const doneCount = items.filter((t) => t.done).length;
+  const doneCount = countOpen("done");
 
   function update(key: string, change: Partial<WorkTask>) {
     setItems((prev) =>
@@ -396,7 +411,7 @@ export function WorkTasksToday({
       task.kind === "production"
         ? { status: done ? "CONCLUIDO" : "A_FAZER" }
         : { done };
-    return save(task, { done }, body);
+    return save(task, { done, completedAt: done ? new Date().toISOString() : null }, body);
   }
 
   function patch(task: WorkTask, change: Patch) {
@@ -421,7 +436,7 @@ export function WorkTasksToday({
         <p className="flex flex-wrap items-center gap-x-3 text-xs text-text-secondary">
           {range === "done" ? (
             <span>
-              {doneCount} {doneCount === 1 ? "feita" : "feitas"} na semana
+              {doneCount} {doneCount === 1 ? "feita" : "feitas"} no dia
             </span>
           ) : (
             <span>
@@ -466,10 +481,25 @@ export function WorkTasksToday({
         ))}
       </div>
 
+      {range === "done" && (
+        <div className="mb-3 flex items-center gap-2 text-xs text-text-secondary">
+          <span>Data:</span>
+          <select
+            value={doneBy}
+            onChange={(e) => setDoneBy(e.target.value as DoneBy)}
+            aria-label="Data usada em Feitas"
+            className="cursor-pointer rounded-md border border-border bg-transparent px-2 py-1 text-xs text-text-primary outline-none focus:ring-2 focus:ring-accent"
+          >
+            <option value="completed">Finalização (quando concluí)</option>
+            <option value="due">Execução (dia marcado)</option>
+          </select>
+        </div>
+      )}
+
       {visible.length === 0 && (
         <p className="py-2 text-sm text-text-secondary">
           {range === "done"
-            ? "Nada concluído nesta semana."
+            ? "Nada concluído neste dia."
             : range === "tomorrow"
               ? "Nada com prazo para amanhã."
               : `Nada com prazo ${range === "today" ? "até hoje" : "até o fim da semana"}.`}
@@ -495,7 +525,7 @@ export function WorkTasksToday({
                 Origem
               </th>
               <th scope="col" className="pb-2 font-medium">
-                Prazo
+                {range === "done" && doneBy === "completed" ? "Concluída em" : "Prazo"}
               </th>
             </tr>
           </thead>
@@ -507,6 +537,7 @@ export function WorkTasksToday({
                 dayId={dayId}
                 focused={focusKeys.includes(focusKey(task.kind, task.id))}
                 levels={levels}
+                showCompleted={range === "done" && doneBy === "completed"}
                 onToggle={toggle}
                 onPatch={patch}
               />

@@ -67,6 +67,7 @@ async function getDay(date: Date) {
           origin: true,
           type: true,
           dueDate: true,
+    completedAt: true,
           business: { select: { name: true, color: true } },
           subtasks: {
             orderBy: { order: "asc" },
@@ -108,9 +109,11 @@ async function WorkSection({
   // Semana de segunda a domingo, como o cardápio. O corte é exclusivo.
   const dayEnd = new Date(date.getTime() + 86_400_000);
   const weekEnd = new Date(date.getTime() + (8 - (date.getUTCDay() || 7)) * 86_400_000);
-  // Concluídas da semana do dia aberto: é o que a aba "Feitas" mostra.
-  const weekStart = new Date(weekEnd.getTime() - 7 * 86_400_000);
-  const doneThisWeek = { gte: weekStart, lt: weekEnd };
+  // Concluídas no dia aberto: é o que a aba "Feitas" mostra.
+  // Pela data de finalização (completedAt) ou pela de execução (o prazo do dia):
+  // o seletor do card escolhe, então traz as duas e a tela filtra.
+  const dayRange = { gte: date, lt: dayEnd };
+  const doneInDay = { OR: [{ completedAt: dayRange }, { dueDate: dayRange }] };
 
   const productionSelect = {
     id: true,
@@ -118,6 +121,7 @@ async function WorkSection({
     type: true,
     priority: true,
     dueDate: true,
+    completedAt: true,
     priorityLevelId: true,
     estimateMinutes: true,
     business: { select: { name: true, color: true } },
@@ -131,6 +135,7 @@ async function WorkSection({
     id: true,
     title: true,
     dueDate: true,
+    completedAt: true,
     priorityLevelId: true,
     estimateMinutes: true,
     collectionId: true,
@@ -147,6 +152,7 @@ async function WorkSection({
     id: true,
     title: true,
     dueDate: true,
+    completedAt: true,
     priorityLevelId: true,
     estimateMinutes: true,
     clientBusiness: {
@@ -173,11 +179,11 @@ async function WorkSection({
       select: collectionSelect,
     }),
     prisma.productionTask.findMany({
-      where: { status: "CONCLUIDO", completedAt: doneThisWeek },
+      where: { status: "CONCLUIDO", ...doneInDay },
       select: productionSelect,
     }),
     prisma.collectionTask.findMany({
-      where: { done: true, completedAt: doneThisWeek, collection: { status: { not: "ENCERRADA" } } },
+      where: { done: true, ...doneInDay, collection: { status: { not: "ENCERRADA" } } },
       select: collectionSelect,
     }),
     prisma.prospectTask.findMany({
@@ -185,7 +191,7 @@ async function WorkSection({
       select: prospectSelect,
     }),
     prisma.prospectTask.findMany({
-      where: { done: true, completedAt: doneThisWeek, ...openProspect },
+      where: { done: true, ...doneInDay, ...openProspect },
       select: prospectSelect,
     }),
   ]);
@@ -206,6 +212,7 @@ async function WorkSection({
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
     overdue: !done && isLate(t.dueDate),
     collectionId: null,
     subtasks: t.subtasks,
@@ -225,6 +232,7 @@ async function WorkSection({
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
     overdue: !done && isLate(t.dueDate),
     collectionId: t.collectionId,
     subtasks: t.subtasks,
@@ -244,6 +252,7 @@ async function WorkSection({
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
     overdue: !done && isLate(t.dueDate),
     collectionId: null,
     subtasks: [],
