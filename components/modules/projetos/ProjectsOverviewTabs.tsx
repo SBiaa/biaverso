@@ -29,7 +29,7 @@ export function ProjectsOverviewTabs({
 
   const { overdue, upcoming } = useMemo(() => {
     const open = items
-      .filter((i) => !i.done && i.date)
+      .filter((i) => !i.done && !i.missed && i.date)
       .sort((a, b) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : 0));
     return {
       overdue: open.filter((i) => i.date! < today),

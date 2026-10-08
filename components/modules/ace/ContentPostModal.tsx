@@ -524,7 +524,10 @@ export function ContentPostModal({
               onChange={(e) => update("status", e.target.value)}
               className={fieldClass}
             >
-              {statusOptions.map((s) => (
+              {/* Prazo perdido é gravado pelo sistema; só aparece se já for o status. */}
+              {statusOptions
+                .filter((s) => s !== "PRAZO_PERDIDO" || form.status === s)
+                .map((s) => (
                 <option key={s} value={s}>
                   {contentStatusLabels[s]}
                 </option>

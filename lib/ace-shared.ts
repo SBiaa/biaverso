@@ -39,6 +39,7 @@ const contentStatusToColumn: Record<string, KanbanColumnKey | null> = {
   EM_CRIACAO: "EM_ANDAMENTO",
   APROVADO: "AGUARDANDO_APROVACAO",
   PUBLICADO: "CONCLUIDO",
+  PRAZO_PERDIDO: "PRAZO_PERDIDO",
   CANCELADO: null,
 };
 
@@ -61,6 +62,7 @@ export const contentStatusColors: Record<string, string> = {
   APROVADO: "bg-blue-100 text-blue-700",
   PUBLICADO: "bg-emerald-100 text-emerald-700",
   CANCELADO: "bg-red-100 text-red-700",
+  PRAZO_PERDIDO: "bg-red-100 text-red-700",
 };
 
 export const productionStatusColors: Record<string, string> = {
@@ -86,7 +88,8 @@ export function getUtcDayRange(date: Date) {
 }
 
 export function isOverdue(dueDate: Date | null, status: string, doneStatuses: string[]) {
-  if (!dueDate || doneStatuses.includes(status)) return false;
+  // Prazo perdido é um estado à parte: já está contado lá, não como atrasado.
+  if (!dueDate || status === "PRAZO_PERDIDO" || doneStatuses.includes(status)) return false;
   return dueDate.getTime() < todayUtc().getTime();
 }
 

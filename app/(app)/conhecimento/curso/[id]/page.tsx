@@ -7,10 +7,13 @@ export const dynamic = "force-dynamic";
 
 export default async function CoursePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ aula?: string }>;
 }) {
   const { id } = await params;
+  const { aula } = await searchParams;
 
   const course = await prisma.studyCourse.findUnique({
     where: { id },
@@ -36,6 +39,7 @@ export default async function CoursePage({
       <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 py-5 md:px-8 md:py-8">
         <CourseView
           backHref={areaHref}
+          initialLessonId={aula ?? null}
           course={{
             id: course.id,
             title: course.title,
@@ -53,6 +57,7 @@ export default async function CoursePage({
             link: l.link,
             notes: l.notes,
             done: l.done,
+            completedAt: l.completedAt ? l.completedAt.toISOString() : null,
             scheduledDate: l.scheduledDate ? l.scheduledDate.toISOString() : null,
             dueDate: l.dueDate ? l.dueDate.toISOString() : null,
           }))}

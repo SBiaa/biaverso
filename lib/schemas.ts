@@ -858,6 +858,8 @@ export const studyLessonCreateSchema = z.object({
   titles: z.array(text).min(1).max(200),
 });
 
+export const studyCourseScheduleSchema = z.object({ startDate: dateOnly });
+
 /** Reordenar assuntos de uma área ou aulas de um curso: a lista toda na ordem nova. */
 export const studyReorderSchema = z.object({
   parentId: id,

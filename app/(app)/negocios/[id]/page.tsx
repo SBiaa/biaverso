@@ -25,7 +25,7 @@ import {
   getClientsOverview,
   getProspectsOverview,
   getKanbanColumn,
-  syncMissedTaskDeadlines,
+  syncMissedDeadlines,
   isPostOverdue,
   isTaskOverdue,
   scopeClientFilter,
@@ -93,7 +93,7 @@ export default async function BusinessDetailPage({
   });
   if (!business) notFound();
 
-  await syncMissedTaskDeadlines();
+  await syncMissedDeadlines();
 
   const tabs = buildBusinessTabs(id, business.modules);
   const tab = resolveTab(tabs, sp.tab);

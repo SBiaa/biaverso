@@ -5,6 +5,8 @@ import { AddKnowledgeForm } from "@/components/modules/conhecimento/AddKnowledge
 import { KnowledgeCard } from "@/components/modules/conhecimento/KnowledgeCard";
 import { AddAreaForm } from "@/components/modules/conhecimento/AddAreaForm";
 import { AreaGrid } from "@/components/modules/conhecimento/AreaGrid";
+import { StudyOverview } from "@/components/modules/conhecimento/StudyOverview";
+import { getStudyStats } from "@/lib/study-stats";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +27,8 @@ export default async function ConhecimentoPage({
   // "none" = só os que ainda não estão em nenhum assunto.
   if (params.subject) where.subjectId = params.subject === "none" ? null : params.subject;
 
-  const [areas, items, subjectRows] = await Promise.all([
+  const [stats, areas, items, subjectRows] = await Promise.all([
+    getStudyStats(),
     prisma.studyArea.findMany({
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       select: {
@@ -55,9 +58,11 @@ export default async function ConhecimentoPage({
     <>
       <Topbar title="Conhecimento" />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-6 px-4 py-5 md:px-8 md:py-8 md:space-y-8">
+        {stats.coursesTotal > 0 && <StudyOverview stats={stats} />}
+
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-text-primary">Áreas de estudo</h2>
+            <h2 className="text-sm font-semibold text-text-primary">Cadernos por área</h2>
             <AddAreaForm />
           </div>
 

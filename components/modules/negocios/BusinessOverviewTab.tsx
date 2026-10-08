@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   CalendarClock,
+  CalendarX,
   FileText,
   FolderKanban,
   ListTodo,
@@ -29,6 +30,61 @@ const kindIcons: Record<string, typeof FileText> = {
 };
 
 /**
+ * O que ficou sem fazer: tarefas e posts que passaram de uma semana do prazo,
+ * por mês em que deveriam ter saído. Barras em CSS, sem biblioteca — são seis
+ * números.
+ */
+function MissedChart({ missed }: { missed: NonNullable<BusinessOverview["missed"]> }) {
+  const max = Math.max(1, ...missed.months.map((m) => m.tasks + m.posts));
+
+  return (
+    <Card className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <CardTitle className="flex items-center gap-2">
+          <CalendarX size={15} className="text-text-secondary" />
+          Prazos perdidos
+        </CardTitle>
+        <span className="text-xs text-text-secondary">
+          {missed.total} no total · últimos 6 meses
+        </span>
+      </div>
+
+      <div className="flex h-32 items-end gap-3" role="img" aria-label="Prazos perdidos por mês">
+        {missed.months.map((m) => {
+          const total = m.tasks + m.posts;
+          return (
+            <div
+              key={m.label}
+              className="flex h-full flex-1 flex-col items-center justify-end gap-1"
+              title={`${m.label}: ${m.posts} posts, ${m.tasks} tarefas`}
+            >
+              <span className="text-xs text-text-secondary">{total > 0 ? total : ""}</span>
+              <div
+                className="flex w-full max-w-10 flex-col justify-end overflow-hidden rounded-t-md"
+                style={{ height: `${(total / max) * 80}%` }}
+              >
+                <div className="bg-red-500" style={{ flexGrow: m.posts }} />
+                <div className="bg-red-300" style={{ flexGrow: m.tasks }} />
+              </div>
+              <span className="text-xs capitalize text-text-secondary">{m.label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-4 text-xs text-text-secondary">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-sm bg-red-500" /> Posts
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-sm bg-red-300" /> Tarefas
+        </span>
+      </div>
+    </Card>
+  );
+}
+
+/**
  * Home do negócio: o resumo de tudo antes de entrar nas abas de trabalho.
  * Cada bloco só aparece se o módulo correspondente estiver ligado — um negócio
  * só de loja não precisa ver card de cronograma vazio.
@@ -48,7 +104,7 @@ export function BusinessOverviewTab({
   /** Abas ligadas, para os atalhos do rodapé. */
   tabs: { key: string; label: string; href: string; ownPage: boolean }[];
 }) {
-  const { stats, deadlines, overdueCount, recentTransactions } = overview;
+  const { stats, deadlines, overdueCount, missed, recentTransactions } = overview;
 
   const cards = [
     stats.activeProjects !== null && {
@@ -103,6 +159,8 @@ export function BusinessOverviewTab({
       )}
 
       {schedule}
+
+      {missed && missed.total > 0 && <MissedChart missed={missed} />}
 
       {cards.length > 0 && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">

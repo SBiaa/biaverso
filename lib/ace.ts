@@ -19,11 +19,12 @@ import type { Prisma } from "@/app/generated/prisma/client";
 export * from "@/lib/ace-shared";
 
 /**
- * Tarefa aberta com mais de uma semana de atraso vira PRAZO_PERDIDO; se o prazo
- * for remarcado para dentro da semana (ou apagado), volta para A_FAZER. Roda ao
- * abrir as telas que listam tarefas, como o ATRASADO das contas fixas.
+ * Tarefa ou post aberto com mais de uma semana de atraso vira PRAZO_PERDIDO; se
+ * a data for remarcada para dentro da semana (ou apagada), volta para o começo
+ * da fila. Roda ao abrir as telas que listam os dois, como o ATRASADO das
+ * contas fixas.
  */
-export async function syncMissedTaskDeadlines() {
+export async function syncMissedDeadlines() {
   const limit = new Date(todayUtc());
   limit.setUTCDate(limit.getUTCDate() - MISSED_DEADLINE_AFTER_DAYS);
 
@@ -40,6 +41,21 @@ export async function syncMissedTaskDeadlines() {
       OR: [{ dueDate: null }, { dueDate: { gte: limit } }],
     },
     data: { status: "A_FAZER" },
+  });
+
+  await prisma.contentPost.updateMany({
+    where: {
+      status: { in: ["PLANEJADO", "EM_CRIACAO", "APROVADO"] },
+      publishDate: { lt: limit },
+    },
+    data: { status: "PRAZO_PERDIDO" },
+  });
+  await prisma.contentPost.updateMany({
+    where: {
+      status: "PRAZO_PERDIDO",
+      OR: [{ publishDate: null }, { publishDate: { gte: limit } }],
+    },
+    data: { status: "PLANEJADO" },
   });
 }
 

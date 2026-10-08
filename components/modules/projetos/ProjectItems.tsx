@@ -107,6 +107,7 @@ export function ProjectItems({
       date: dayOf(t.dueDate),
       finishedOn: dayOf(t.completedAt),
       done: (doneTaskStatuses as string[]).includes(t.status),
+      missed: t.status === "PRAZO_PERDIDO",
       steps:
         t.subtasks.length > 0
           ? { done: t.subtasks.filter((s) => s.done).length, total: t.subtasks.length }
@@ -123,6 +124,7 @@ export function ProjectItems({
       date: dayOf(p.publishDate),
       finishedOn: dayOf(p.completedAt),
       done: (donePostStatuses as string[]).includes(p.status),
+      missed: p.status === "PRAZO_PERDIDO",
     }));
     return [...fromTasks, ...fromPosts];
   }, [posts, tasks]);
@@ -149,7 +151,8 @@ export function ProjectItems({
 
   const count = (f: Filter) => items.filter((i) => f === "tudo" || i.kind === f).length;
   const openCount = items.filter((i) => !i.done).length;
-  const lateCount = items.filter((i) => !i.done && i.date && i.date < today).length;
+  const lateCount = items.filter((i) => !i.done && !i.missed && i.date && i.date < today).length;
+  const missedCount = items.filter((i) => !i.done && i.missed).length;
 
   function open(item: ProjectItem) {
     if (item.kind === "post") {
@@ -189,6 +192,9 @@ export function ProjectItems({
               <span className="font-medium text-red-600">
                 {lateCount} {lateCount === 1 ? "atrasado" : "atrasados"}
               </span>
+            )}
+            {missedCount > 0 && (
+              <span className="text-text-secondary">{missedCount} com prazo perdido</span>
             )}
           </p>
         </div>
@@ -272,7 +278,7 @@ export function ProjectItems({
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map((item) => {
-                  const late = !item.done && item.date !== null && item.date < today;
+                  const late = !item.done && !item.missed && item.date !== null && item.date < today;
                   const Icon = item.kind === "post" ? FileText : ListTodo;
                   return (
                     <tr

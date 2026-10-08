@@ -23,7 +23,7 @@ import {
 
 export type WorkTask = {
   /** `production`, `collection`, `prospect` ou `lesson`: decide para qual rota o PATCH vai. */
-  kind: "production" | "collection" | "prospect" | "lesson";
+  kind: "production" | "collection" | "prospect" | "lesson" | "study";
   id: string;
   title: string;
   done: boolean;
@@ -68,6 +68,7 @@ type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null 
 function patchUrl(task: WorkTask) {
   if (task.kind === "prospect") return `/api/prospect-tasks/${task.id}`;
   if (task.kind === "lesson") return `/api/study/lessons/${task.id}`;
+  if (task.kind === "study") return `/api/spiritual-studies/${task.id}`;
   return task.kind === "production"
     ? `/api/ace/tasks/${task.id}`
     : `/api/collections/${task.collectionId}/tasks/${task.id}`;
@@ -172,12 +173,17 @@ function TaskRow({
 }) {
   // Passo de prospecção não tem subtarefas: o próprio checklist já é a quebra.
   const subtasks = useSubtasks(
-    { kind: task.kind === "prospect" || task.kind === "lesson" ? "task" : task.kind, id: task.id },
+    {
+      kind: task.kind === "prospect" || task.kind === "lesson" || task.kind === "study" ? "task" : task.kind,
+      id: task.id,
+    },
     task.subtasks,
   );
   // Tarefa já quebrada nasce aberta: o ponto dos passos é ver por onde começar.
   const [open, setOpen] = useState(task.subtasks.length > 0 && !task.done);
   const late = task.overdue && !task.done;
+  // Aula e estudo espiritual não têm foco, subtarefas, prioridade nem tempo.
+  const plain = task.kind === "lesson" || task.kind === "study";
 
   return (
     <>
@@ -210,16 +216,16 @@ function TaskRow({
                   {task.title}
                   {task.urgent && <span className="sr-only"> (urgente)</span>}
                 </span>
-                {task.kind !== "lesson" && (
+                {!plain && (
                   <FocusStar
                     dayId={dayId}
-                    kind={task.kind}
+                    kind={task.kind as "production" | "collection" | "prospect"}
                     taskId={task.id}
                     focused={focused}
                     title={task.title}
                   />
                 )}
-                {task.kind !== "prospect" && task.kind !== "lesson" && (
+                {task.kind !== "prospect" && !plain && (
                   <SubtaskToggle
                     open={open}
                     onClick={() => setOpen((v) => !v)}
@@ -235,20 +241,28 @@ function TaskRow({
           </div>
         </td>
         <td className="py-2 pr-3 align-top">
-          <PrioritySelect
-            task={task}
-            levels={levels}
-            onChange={(priorityLevelId) => onPatch(task, { priorityLevelId })}
-          />
+          {task.kind === "study" ? (
+            <span className="text-text-secondary/60">—</span>
+          ) : (
+            <PrioritySelect
+              task={task}
+              levels={levels}
+              onChange={(priorityLevelId) => onPatch(task, { priorityLevelId })}
+            />
+          )}
         </td>
         <td className="py-2 pr-3 align-top">
-          <EstimateInput
-            // Remonta se o valor voltar do servidor diferente (erro de gravação).
-            key={task.estimateMinutes ?? "none"}
-            minutes={task.estimateMinutes}
-            disabled={task.done}
-            onCommit={(estimateMinutes) => onPatch(task, { estimateMinutes })}
-          />
+          {task.kind === "study" ? (
+            <span className="text-text-secondary/60">—</span>
+          ) : (
+            <EstimateInput
+              // Remonta se o valor voltar do servidor diferente (erro de gravação).
+              key={task.estimateMinutes ?? "none"}
+              minutes={task.estimateMinutes}
+              disabled={task.done}
+              onCommit={(estimateMinutes) => onPatch(task, { estimateMinutes })}
+            />
+          )}
         </td>
         <td className="py-2 pr-3 align-top">
           {task.originHref ? (
@@ -289,7 +303,7 @@ function TaskRow({
           )}
         </td>
       </tr>
-      {open && task.kind !== "prospect" && task.kind !== "lesson" && (
+      {open && task.kind !== "prospect" && !plain && (
         // `divide-y` do tbody separaria a tarefa dos próprios passos.
         <tr className="border-t-0">
           <td colSpan={5} className="pb-3 pl-6">
@@ -419,7 +433,9 @@ export function WorkTasksToday({
     const body =
       task.kind === "production"
         ? { status: done ? "CONCLUIDO" : "A_FAZER" }
-        : { done };
+        : task.kind === "study"
+          ? { status: done ? "FEITO" : "A_FAZER" }
+          : { done };
     return save(task, { done, completedAt: done ? new Date().toISOString() : null }, body);
   }
 
@@ -544,7 +560,11 @@ export function WorkTasksToday({
                 key={task.kind + task.id}
                 task={task}
                 dayId={dayId}
-                focused={task.kind !== "lesson" && focusKeys.includes(focusKey(task.kind, task.id))}
+                focused={
+                  task.kind !== "lesson" &&
+                  task.kind !== "study" &&
+                  focusKeys.includes(focusKey(task.kind, task.id))
+                }
                 levels={levels}
                 showCompleted={range === "done" && doneBy === "completed"}
                 onToggle={toggle}

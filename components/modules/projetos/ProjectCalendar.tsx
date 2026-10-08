@@ -32,6 +32,8 @@ export type ProjectItem = {
   finishedOn: string | null;
   /** Já saiu da fila: publicado, concluído ou cancelado. */
   done: boolean;
+  /** Estado "prazo perdido": fora da conta de atrasados, contado à parte. */
+  missed?: boolean;
   /** Passos da tarefa (feitos/total); ausente em post e quando não há passos. */
   steps?: { done: number; total: number };
   /** Só no calendário geral: de qual projeto/negócio o item é. */

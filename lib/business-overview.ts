@@ -34,6 +34,8 @@ export type BusinessOverview = {
   /** Vencendo nos próximos 7 dias ou já atrasado, do mais urgente ao menos. */
   deadlines: DeadlineItem[];
   overdueCount: number;
+  /** Prazos perdidos (tarefas e posts), por mês do prazo, dos últimos 6 meses. */
+  missed: { total: number; months: { label: string; tasks: number; posts: number }[] } | null;
   recentTransactions: {
     id: string;
     name: string;
@@ -76,6 +78,7 @@ export async function getBusinessOverview(
           select: {
             id: true,
             title: true,
+            status: true,
             dueDate: true,
             client: { select: { name: true } },
           },
@@ -87,6 +90,7 @@ export async function getBusinessOverview(
           select: {
             id: true,
             title: true,
+            status: true,
             publishDate: true,
             client: { select: { name: true } },
           },
@@ -137,8 +141,10 @@ export async function getBusinessOverview(
 
   const deadlines: DeadlineItem[] = [];
 
+  // Prazo perdido tem conta e gráfico próprios: fica fora dos atrasados e da
+  // lista de prazos, senão o aviso vermelho nunca zera.
   for (const task of tasks ?? []) {
-    if (!task.dueDate) continue;
+    if (!task.dueDate || task.status === "PRAZO_PERDIDO") continue;
     deadlines.push({
       id: task.id,
       kind: "task",
@@ -150,7 +156,7 @@ export async function getBusinessOverview(
   }
 
   for (const post of posts ?? []) {
-    if (!post.publishDate) continue;
+    if (!post.publishDate || post.status === "PRAZO_PERDIDO") continue;
     deadlines.push({
       id: post.id,
       kind: "post",
@@ -182,6 +188,13 @@ export async function getBusinessOverview(
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 8);
 
+  const missed = buildMissed(
+    (tasks ?? []).filter((t) => t.status === "PRAZO_PERDIDO").map((t) => t.dueDate),
+    (posts ?? []).filter((p) => p.status === "PRAZO_PERDIDO").map((p) => p.publishDate),
+    today,
+    tasks !== null || posts !== null,
+  );
+
   const monthIn = entradas ? (entradas._sum.amount ?? 0) : null;
   const monthOut = saidas ? (saidas._sum.amount ?? 0) : null;
 
@@ -189,9 +202,9 @@ export async function getBusinessOverview(
     stats: {
       activeProjects,
       activeClients,
-      openTasks: tasks?.length ?? null,
+      openTasks: tasks ? tasks.filter((t) => t.status !== "PRAZO_PERDIDO").length : null,
       // "Planejados" no sentido de ainda não publicados.
-      plannedPosts: posts?.length ?? null,
+      plannedPosts: posts ? posts.filter((p) => p.status !== "PRAZO_PERDIDO").length : null,
       openOrders: orders?.length ?? null,
       monthIn,
       monthOut,
@@ -199,6 +212,7 @@ export async function getBusinessOverview(
     },
     deadlines: visible,
     overdueCount,
+    missed,
     recentTransactions: (recentTransactions ?? []).map((t) => ({
       id: t.id,
       name: t.name,
@@ -207,5 +221,40 @@ export async function getBusinessOverview(
       date: t.date.toISOString(),
       category: t.category,
     })),
+  };
+}
+
+/** Conta os prazos perdidos por mês do prazo (os 6 últimos meses, o atual incluso). */
+function buildMissed(
+  taskDates: (Date | null)[],
+  postDates: (Date | null)[],
+  today: Date,
+  enabled: boolean,
+): BusinessOverview["missed"] {
+  if (!enabled) return null;
+
+  const key = (d: Date) => d.getUTCFullYear() * 12 + d.getUTCMonth();
+  const current = key(today);
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const k = current - 5 + i;
+    const date = new Date(Date.UTC(Math.floor(k / 12), k % 12, 1));
+    const label = date
+      .toLocaleDateString("pt-BR", { month: "short", timeZone: "UTC" })
+      .replace(".", "");
+    return { k, label, tasks: 0, posts: 0 };
+  });
+
+  for (const d of taskDates) {
+    const m = d && months.find((x) => x.k === key(d));
+    if (m) m.tasks += 1;
+  }
+  for (const d of postDates) {
+    const m = d && months.find((x) => x.k === key(d));
+    if (m) m.posts += 1;
+  }
+
+  return {
+    total: taskDates.length + postDates.length,
+    months: months.map(({ label, tasks, posts }) => ({ label, tasks, posts })),
   };
 }

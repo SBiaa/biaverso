@@ -241,6 +241,7 @@ export const contentStatusLabels: Record<string, string> = {
   APROVADO: "Aprovado",
   PUBLICADO: "Publicado",
   CANCELADO: "Cancelado",
+  PRAZO_PERDIDO: "Prazo perdido",
 };
 
 export const productionTypeLabels: Record<string, string> = {

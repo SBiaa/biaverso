@@ -168,6 +168,7 @@ export async function getProjectsCalendarItems(
       date: day(t.dueDate),
       finishedOn: day(t.completedAt),
       done: doneTaskStatuses.includes(t.status),
+      missed: t.status === "PRAZO_PERDIDO",
       context: contextOf(t.projectId),
     })),
     ...posts.map<ProjectItem>((p) => ({
@@ -181,6 +182,7 @@ export async function getProjectsCalendarItems(
       date: day(p.publishDate),
       finishedOn: day(p.completedAt),
       done: donePostStatuses.includes(p.status),
+      missed: p.status === "PRAZO_PERDIDO",
       context: contextOf(p.projectId),
     })),
     // Fim do projeto, só dos que ainda estão rolando.

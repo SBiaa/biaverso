@@ -22,11 +22,13 @@ import { WorkTasksToday, type WorkTask } from "@/components/modules/dia/WorkTask
 import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
 import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
-import { syncMissedTaskDeadlines } from "@/lib/ace";
+import { syncMissedDeadlines } from "@/lib/ace";
 import { productionTypeLabels } from "@/lib/labels";
+import { studyKindLabels } from "@/lib/espiritual-shared";
 import { getUserSettings } from "@/lib/settings";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
 import { focusKey, type FocusKind } from "@/lib/day-focus";
+import { onlyNextSteps } from "@/lib/prospect-shared";
 import type { BadgeOrigin } from "@/components/ui";
 import type { MealType } from "@/app/generated/prisma/client";
 
@@ -106,7 +108,7 @@ async function WorkSection({
   dayId: string;
   focusKeys: string[];
 }) {
-  await syncMissedTaskDeadlines();
+  await syncMissedDeadlines();
 
   const today = todayUtc();
   // Semana de segunda a domingo, como o cardápio. O corte é exclusivo.
@@ -154,6 +156,8 @@ async function WorkSection({
 
   const prospectSelect = {
     id: true,
+    key: true,
+    clientBusinessId: true,
     title: true,
     dueDate: true,
     completedAt: true,
@@ -190,7 +194,17 @@ async function WorkSection({
   } as const;
   const activeCourse = { course: { status: { notIn: ["PAUSADO", "ABANDONADO"] as ("PAUSADO" | "ABANDONADO")[] } } };
 
-  const [levels, production, collection, doneProduction, doneCollection, prospect, doneProspect, lessons, doneLessons] = await Promise.all([
+  // Exercícios e textos do espiritual: abertos entram sempre (têm poucos e o prazo
+  // é opcional); os feitos, pelo dia da entrega ou do prazo.
+  const studySelect = {
+    id: true,
+    title: true,
+    kind: true,
+    dueDate: true,
+    deliveredAt: true,
+  } as const;
+
+  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
@@ -235,7 +249,21 @@ async function WorkSection({
       },
       select: lessonSelect,
     }),
+    prisma.spiritualStudy.findMany({
+      where: { status: { in: ["A_FAZER", "EM_ANDAMENTO"] } },
+      select: studySelect,
+    }),
+    prisma.spiritualStudy.findMany({
+      where: {
+        status: { in: ["FEITO", "ENTREGUE"] },
+        OR: [{ deliveredAt: dayRange }, { dueDate: dayRange }],
+      },
+      select: studySelect,
+    }),
   ]);
+
+  // "Enviar a proposta" só aparece depois de "Criar a proposta" concluída.
+  const prospect = onlyNextSteps(openProspectTasks);
 
   const isLate = (due: Date | null) => due !== null && due.getTime() < today.getTime();
 
@@ -254,7 +282,7 @@ async function WorkSection({
     estimateMinutes: t.estimateMinutes,
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
     completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-    overdue: !done && isLate(t.dueDate),
+    overdue: !done && t.status !== "PRAZO_PERDIDO" && isLate(t.dueDate),
     missed: t.status === "PRAZO_PERDIDO",
     collectionId: null,
     subtasks: t.subtasks,
@@ -334,7 +362,29 @@ async function WorkSection({
     };
   };
 
+  const fromStudy = (t: (typeof studies)[number], done: boolean): WorkTask => ({
+    kind: "study",
+    id: t.id,
+    title: t.title,
+    done,
+    doneOnLoad: done,
+    originLabel: "Espiritual",
+    originColor: "#8B5CF6",
+    originHref: "/espiritual/estudos",
+    detail: studyKindLabels[t.kind] ?? t.kind,
+    urgent: false,
+    priorityLevelId: null,
+    estimateMinutes: null,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    completedAt: t.deliveredAt ? t.deliveredAt.toISOString() : null,
+    overdue: !done && isLate(t.dueDate),
+    collectionId: null,
+    subtasks: [],
+  });
+
   const tasks: WorkTask[] = [
+    ...studies.map((t) => fromStudy(t, false)),
+    ...doneStudies.map((t) => fromStudy(t, true)),
     ...production.map((t) => fromProduction(t, false)),
     ...collection.map((t) => fromCollection(t, false)),
     ...doneProduction.map((t) => fromProduction(t, true)),

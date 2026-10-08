@@ -1120,6 +1120,9 @@ enum ContentStatus {
   APROVADO
   PUBLICADO
   CANCELADO
+  // Gravado sozinho quando a data de publicação passa de uma semana sem o post
+  // sair (ver `syncMissedDeadlines`). Conta como aberto: ainda dá para publicar.
+  PRAZO_PERDIDO
 }
 
 // `clientId` nulo = tarefa interna do próprio negócio.
