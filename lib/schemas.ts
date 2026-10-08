@@ -88,6 +88,7 @@ export const taskCreateSchema = z.object({
 export const taskPatchSchema = z.object({
   title: text.optional(),
   done: z.boolean().optional(),
+  status: z.enum(E.TaskStatus).optional(),
   dueDate: dateOnly.nullish(),
 });
 

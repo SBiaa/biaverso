@@ -16,11 +16,22 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
     data.title = patch.title;
   }
 
-  if (patch.done !== undefined) {
-    data.done = patch.done;
+  // `done` e `status` andam juntos: concluir por qualquer um dos dois acerta o
+  // outro. Se vierem os dois, o status manda.
+  const done = patch.status !== undefined ? patch.status === "CONCLUIDA" : patch.done;
+
+  if (done !== undefined) {
+    data.done = done;
     // Desmarcar limpa a data: senão uma tarefa reaberta continuaria contando
     // como sinal de vida do projeto no dia da primeira conclusão.
-    data.completedAt = patch.done ? new Date() : null;
+    data.completedAt = done ? new Date() : null;
+  }
+
+  if (patch.status !== undefined) {
+    data.status = patch.status;
+  } else if (patch.done !== undefined) {
+    // Reabrir pelo círculo volta para "a fazer".
+    data.status = patch.done ? "CONCLUIDA" : "A_FAZER";
   }
 
   if (patch.dueDate !== undefined) {

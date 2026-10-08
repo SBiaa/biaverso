@@ -67,6 +67,7 @@ async function getDay(date: Date) {
           id: true,
           title: true,
           done: true,
+          status: true,
           origin: true,
           type: true,
           dueDate: true,
@@ -204,7 +205,7 @@ async function WorkSection({
     deliveredAt: true,
   } as const;
 
-  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, orders] = await Promise.all([
+  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, orders, businesses] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
@@ -261,6 +262,11 @@ async function WorkSection({
       select: studySelect,
     }),
     prisma.workTaskOrder.findMany({ select: { kind: true, taskId: true, position: true } }),
+    prisma.business.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
+    }),
   ]);
 
   // Ordem que ela montou arrastando; quem não tem posição fica na ordem automática.
@@ -413,6 +419,9 @@ async function WorkSection({
       levels={levels}
       dayEnd={dayEnd.toISOString()}
       weekEnd={weekEnd.toISOString()}
+      dayDate={toDateInputValue(date)}
+      dayInPast={date.getTime() < today.getTime()}
+      businesses={businesses}
     />
   );
 }
@@ -608,6 +617,7 @@ export default async function DiaPage({
                   id: t.id,
                   title: t.title,
                   done: t.done,
+                  status: t.status,
                   origin: t.origin as BadgeOrigin,
                   business: t.business,
                   overdue: !t.done && t.dueDate !== null && t.dueDate.getTime() < today.getTime(),

@@ -17,11 +17,14 @@ import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { FocusStar } from "@/components/modules/dia/FocusStar";
 import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
+import { TaskStatusPicker } from "@/components/modules/tarefas/TaskStatusPicker";
+import type { TaskStatus } from "@/app/generated/prisma/enums";
 
 type TaskItem = {
   id: string;
   title: string;
   done: boolean;
+  status: TaskStatus;
   origin: BadgeOrigin;
   business: { name: string; color: string } | null;
   overdue: boolean;
@@ -46,12 +49,14 @@ function TaskRow({
   dayId,
   focused,
   onToggle,
+  onStatus,
   onRename,
 }: {
   task: TaskItem;
   dayId: string;
   focused: boolean;
   onToggle: (id: string) => void;
+  onStatus: (id: string, status: TaskStatus) => void;
   onRename: (id: string, title: string) => Promise<unknown>;
 }) {
   const subtasks = useSubtasks({ kind: "task", id: task.id }, task.subtasks);
@@ -98,6 +103,11 @@ function TaskRow({
               Atrasado
             </AttentionBadge>
           )}
+          <TaskStatusPicker
+            status={task.status}
+            title={task.title}
+            onChange={(status) => onStatus(task.id, status)}
+          />
           <SubtaskToggle
             open={open}
             onClick={() => setOpen((v) => !v)}
@@ -146,13 +156,34 @@ export function TaskListByOrigin({
   async function toggle(id: string) {
     const previous = tasks;
     const nextDone = !tasks.find((t) => t.id === id)?.done;
+    // Reabrir pelo círculo volta para "a fazer", igual à rota.
+    const nextStatus: TaskStatus = nextDone ? "CONCLUIDA" : "A_FAZER";
 
     setError(null);
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: nextDone } : t)));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, done: nextDone, status: nextStatus } : t)),
+    );
 
     try {
       await api.patch(`/api/tasks/${id}`, { done: nextDone });
       // O resumo do dia, no topo, vem do servidor.
+      router.refresh();
+    } catch (e) {
+      setTasks(previous);
+      setError(errorMessage(e));
+    }
+  }
+
+  async function changeStatus(id: string, status: TaskStatus) {
+    const previous = tasks;
+
+    setError(null);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status, done: status === "CONCLUIDA" } : t)),
+    );
+
+    try {
+      await api.patch(`/api/tasks/${id}`, { status });
       router.refresh();
     } catch (e) {
       setTasks(previous);
@@ -188,6 +219,7 @@ export function TaskListByOrigin({
           id: task.id,
           title: task.title,
           done: false,
+          status: "A_FAZER",
           origin,
           business: null,
           overdue: dayInPast,
@@ -222,6 +254,7 @@ export function TaskListByOrigin({
                 dayId={dayId}
                 focused={focusIds.includes(task.id)}
                 onToggle={toggle}
+                onStatus={changeStatus}
                 onRename={rename}
               />
             ))}

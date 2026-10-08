@@ -104,6 +104,10 @@ model Task {
   id          String    @id @default(cuid())
   title       String
   done        Boolean   @default(false)
+  // Em que pé a tarefa está. `done` continua existindo porque o radar, as
+  // avaliações e o resumo do dia contam por ele: os dois andam juntos
+  // (`done` ⇔ status CONCLUIDA) e quem os mantém em sincronia é a rota PATCH.
+  status      TaskStatus @default(A_FAZER)
   type        TaskType  @default(AVULSA)
   origin      Origin    @default(PESSOAL)
   dueDate     DateTime?
@@ -142,6 +146,16 @@ model Task {
   @@index([templateId])
   // Templates de rotina são as tarefas com dayId nulo.
   @@index([type, dayId])
+}
+
+enum TaskStatus {
+  A_FAZER
+  INICIADA
+  PAUSADA
+  AGUARDANDO
+  TRAVADA
+  COM_ANSIEDADE
+  CONCLUIDA
 }
 
 enum TaskType {

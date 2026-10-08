@@ -28,8 +28,10 @@ import {
   Circle,
   Clock,
   GripVertical,
+  Plus,
 } from "lucide-react";
-import { AttentionBadge, Card, CardTitle, ErrorNote } from "@/components/ui";
+import { AttentionBadge, Button, Card, CardTitle, ErrorNote } from "@/components/ui";
+import { NewWorkTaskForm, type BusinessOption } from "@/components/modules/dia/NewWorkTaskForm";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatDateBR, hexToRgba } from "@/lib/utils";
 import { focusKey } from "@/lib/day-focus";
@@ -422,6 +424,9 @@ export function WorkTasksToday({
   levels,
   dayEnd,
   weekEnd,
+  dayDate,
+  dayInPast,
+  businesses,
 }: {
   dayId: string;
   /** `kind:id` das tarefas que estão no foco do dia. */
@@ -431,9 +436,14 @@ export function WorkTasksToday({
   /** Fim (exclusivo) do dia em foco e da semana dele, em ISO. */
   dayEnd: string;
   weekEnd: string;
+  /** Dia aberto (YYYY-MM-DD): o prazo que a tarefa nova já traz. */
+  dayDate: string;
+  dayInPast: boolean;
+  businesses: BusinessOption[];
 }) {
   const router = useRouter();
   const [items, setItems] = useState(tasks);
+  const [adding, setAdding] = useState(false);
   const [range, setRange] = useState<Range>("all");
   const [doneBy, setDoneBy] = useState<DoneBy>("completed");
   const [error, setError] = useState<string | null>(null);
@@ -565,10 +575,36 @@ export function WorkTasksToday({
     return save(task, change, change);
   }
 
+  const addButton = businesses.length > 0 && !adding && (
+    <Button variant="secondary" onClick={() => setAdding(true)}>
+      <Plus size={16} />
+      Nova tarefa
+    </Button>
+  );
+  const addForm = adding && (
+    <NewWorkTaskForm
+      businesses={businesses}
+      levels={levels}
+      dayDate={dayDate}
+      dayInPast={dayInPast}
+      onCancel={() => setAdding(false)}
+      onCreated={(task) => {
+        setItems((prev) => [...prev, task]);
+        setAdding(false);
+        // Os totais do topo (foco, resumo) vêm do servidor.
+        router.refresh();
+      }}
+    />
+  );
+
   if (items.length === 0) {
     return (
       <Card>
-        <CardTitle className="mb-3">Tarefas em andamento</CardTitle>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <CardTitle>Tarefas em andamento</CardTitle>
+          {addButton}
+        </div>
+        {addForm}
         <p className="text-sm text-text-secondary">
           Nenhuma tarefa em aberto nos negócios, nas coleções ou na prospecção.
         </p>
@@ -578,8 +614,12 @@ export function WorkTasksToday({
 
   return (
     <Card>
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <CardTitle>Tarefas em andamento</CardTitle>
+        {addButton}
+      </div>
+      {addForm}
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="flex flex-wrap items-center gap-x-3 text-xs text-text-secondary">
           {range === "done" ? (
             <span>
