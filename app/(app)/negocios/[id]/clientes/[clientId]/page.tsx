@@ -79,48 +79,54 @@ export default async function AceClientProfilePage({
   return (
     <>
       <Topbar
-        width="narrow"
+        width="wide"
         title={client.name}
         trail={[
           { label: "Negócios", href: "/negocios" },
           { label: businessName, href: `/negocios/${businessId}` },
         ]}
       />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
-        <Card className="flex items-center gap-4">
-          <ClientAvatar client={client} size="lg" />
-          <div>
-            <p className="text-lg font-semibold text-text-primary">{client.name}</p>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {client.businessLinks.map((link) => (
-                <BusinessBadge key={link.id} business={link.business} />
-              ))}
-            </div>
+      <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 py-5 md:px-8 md:py-8">
+        <div className="grid items-start gap-4 xl:grid-cols-[22rem_minmax(0,1fr)] xl:gap-6">
+          <div className="flex min-w-0 flex-col gap-4 md:gap-6">
+            <Card className="flex items-center gap-4">
+              <ClientAvatar client={client} size="lg" />
+              <div className="min-w-0">
+                <p className="text-lg font-semibold text-text-primary">{client.name}</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {client.businessLinks.map((link) => (
+                    <BusinessBadge key={link.id} business={link.business} />
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            <Card className="flex flex-col gap-2">
+              <CardTitle>Contato</CardTitle>
+              <p className="text-sm text-text-secondary">E-mail: {client.email ?? "—"}</p>
+              <p className="text-sm text-text-secondary">Telefone: {client.phone ?? "—"}</p>
+              <p className="text-sm text-text-secondary">Instagram: {client.instagram ?? "—"}</p>
+            </Card>
+
+            <PendingItemsSection items={pending} />
           </div>
-        </Card>
 
-        <Card className="flex flex-col gap-2">
-          <CardTitle>Contato</CardTitle>
-          <p className="text-sm text-text-secondary">E-mail: {client.email ?? "—"}</p>
-          <p className="text-sm text-text-secondary">Telefone: {client.phone ?? "—"}</p>
-          <p className="text-sm text-text-secondary">Instagram: {client.instagram ?? "—"}</p>
-        </Card>
+          <div className="flex min-w-0 flex-col gap-4 md:gap-6">
+            <ProjectsSection
+              businessId={businessId}
+              clientId={clientId}
+              projects={projectsWithItems}
+              clients={businessClients.map((c) => ({
+                id: c.id,
+                name: c.name,
+                linked: c.businessLinks.length > 0,
+              }))}
+              projectOptions={projectOptions}
+            />
 
-        <ProjectsSection
-          businessId={businessId}
-          clientId={clientId}
-          projects={projectsWithItems}
-          clients={businessClients.map((c) => ({
-            id: c.id,
-            name: c.name,
-            linked: c.businessLinks.length > 0,
-          }))}
-          projectOptions={projectOptions}
-        />
-
-        <MonthlyHistorySection months={monthlyHistory} />
-
-        <PendingItemsSection items={pending} />
+            <MonthlyHistorySection months={monthlyHistory} />
+          </div>
+        </div>
       </main>
     </>
   );
