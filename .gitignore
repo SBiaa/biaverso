@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# sessão do leitor de WhatsApp: quem tem estes arquivos tem a conta
+/.whatsapp-auth/
