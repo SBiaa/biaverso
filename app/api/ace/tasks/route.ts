@@ -38,7 +38,13 @@ export const POST = route(async (request: Request) => {
       dueDate: data.dueDate ?? null,
       projectId: data.projectId ?? null,
       completedAt: resolveTaskCompletedAt(data.status, completedAt, null),
-      subtasks: { create: steps.map((title, order) => ({ title, order })) },
+      subtasks: {
+        create: steps.map((step, order) =>
+          typeof step === "string"
+            ? { title: step, order }
+            : { title: step.title, stage: step.stage ?? null, order },
+        ),
+      },
     },
   });
 

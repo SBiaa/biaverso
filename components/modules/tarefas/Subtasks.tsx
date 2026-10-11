@@ -6,7 +6,8 @@ import { ErrorNote, IconButton, InlineEdit } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
-export type SubtaskItem = { id: string; title: string; done: boolean };
+/** `stage` só vem preenchido nas tarefas de produção dos clientes. */
+export type SubtaskItem = { id: string; title: string; done: boolean; stage?: string | null };
 
 /** De qual lista vem a tarefa dona dos passos. */
 export type SubtaskParent = { kind: "task" | "production" | "collection"; id: string };
@@ -26,7 +27,7 @@ export function useSubtasks(parent: SubtaskParent, initial: SubtaskItem[]) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  async function add(title: string) {
+  async function add(title: string, stage?: string) {
     const trimmed = title.trim();
     if (!trimmed) return false;
 
@@ -36,9 +37,13 @@ export function useSubtasks(parent: SubtaskParent, initial: SubtaskItem[]) {
     try {
       const created = await api.post<SubtaskItem>("/api/subtasks", {
         title: trimmed,
+        stage: stage?.trim() || undefined,
         ...parentField(parent),
       });
-      setSubtasks((prev) => [...prev, { id: created.id, title: created.title, done: false }]);
+      setSubtasks((prev) => [
+        ...prev,
+        { id: created.id, title: created.title, done: false, stage: created.stage ?? null },
+      ]);
       return true;
     } catch (e) {
       // Não entra na lista o que não foi gravado.
@@ -84,9 +89,29 @@ export function useSubtasks(parent: SubtaskParent, initial: SubtaskItem[]) {
     }
   }
 
+  /** Renomeia uma etapa: troca o nome em todos os passos que estão nela. */
+  async function renameStage(from: string, to: string) {
+    const target = to.trim();
+    if (!target || target === from) return;
+
+    const previous = subtasks;
+    const ids = subtasks.filter((s) => s.stage === from).map((s) => s.id);
+
+    setError(null);
+    setSubtasks((prev) => prev.map((s) => (s.stage === from ? { ...s, stage: target } : s)));
+
+    try {
+      await Promise.all(ids.map((id) => api.patch(`/api/subtasks/${id}`, { stage: target })));
+    } catch (e) {
+      setSubtasks(previous);
+      setError(errorMessage(e));
+    }
+  }
+
   return {
     subtasks,
     rename,
+    renameStage,
     doneCount: subtasks.filter((s) => s.done).length,
     error,
     saving,
@@ -96,7 +121,7 @@ export function useSubtasks(parent: SubtaskParent, initial: SubtaskItem[]) {
   };
 }
 
-type SubtasksProps = Omit<ReturnType<typeof useSubtasks>, "doneCount"> & {
+type SubtasksProps = Omit<ReturnType<typeof useSubtasks>, "doneCount" | "renameStage"> & {
   /** No template de rotina não há o que marcar: quem é feito é o passo do dia. */
   checkable?: boolean;
 };

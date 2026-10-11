@@ -4,7 +4,7 @@ import { parseBody, route } from "@/lib/api";
 import { subtaskCreateSchema } from "@/lib/schemas";
 
 export const POST = route(async (request: Request) => {
-  const { title, taskId, productionTaskId, collectionTaskId } = await parseBody(
+  const { title, stage, taskId, productionTaskId, collectionTaskId } = await parseBody(
     request,
     subtaskCreateSchema,
   );
@@ -24,7 +24,7 @@ export const POST = route(async (request: Request) => {
   });
 
   const subtask = await prisma.subtask.create({
-    data: { title, ...owner, order: last ? last.order + 1 : 0 },
+    data: { title, stage, ...owner, order: last ? last.order + 1 : 0 },
   });
 
   return NextResponse.json(subtask);

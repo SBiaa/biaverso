@@ -327,7 +327,7 @@ export const taskRecordSelect = {
   // A modal da tarefa mostra e edita os passos, então eles vêm junto.
   subtasks: {
     orderBy: { order: "asc" },
-    select: { id: true, title: true, done: true },
+    select: { id: true, title: true, done: true, stage: true },
   },
 } satisfies Prisma.ProductionTaskSelect;
 

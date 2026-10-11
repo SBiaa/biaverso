@@ -2,13 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
 
 import {
   Button,
   confirmAction,
   ErrorNote,
-  IconButton,
   Modal,
   notify,
 } from "@/components/ui";
@@ -22,13 +20,10 @@ import {
   type ProjectOption,
 } from "./ContentPostModal";
 import { ClientOptions } from "./ClientOptions";
+import { StagedSteps } from "./StagedSteps";
 import { formatMinutes, parseMinutes } from "@/lib/task-plan";
 import { usePriorityLevels } from "@/components/modules/tarefas/usePriorityLevels";
-import {
-  SubtaskList,
-  useSubtasks,
-  type SubtaskItem,
-} from "@/components/modules/tarefas/Subtasks";
+import { useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
 
 const typeOptions = Object.keys(productionTypeLabels);
 const priorityOptions = Object.keys(priorityLabels);
@@ -54,7 +49,15 @@ export type TaskRecord = {
 type TaskInitial = TaskRecord;
 
 /** Tarefa existente: cada passo grava na hora, pela API de subtarefas. */
-function SavedSteps({ taskId, initial }: { taskId: string; initial: SubtaskItem[] }) {
+function SavedSteps({
+  taskId,
+  type,
+  initial,
+}: {
+  taskId: string;
+  type: string;
+  initial: SubtaskItem[];
+}) {
   const router = useRouter();
   const steps = useSubtasks({ kind: "production", id: taskId }, initial);
 
@@ -69,67 +72,76 @@ function SavedSteps({ taskId, initial }: { taskId: string; initial: SubtaskItem[
     router.refresh();
   }, [steps.subtasks, router]);
 
-  return <SubtaskList {...steps} />;
+  return (
+    <StagedSteps
+      steps={steps.subtasks.map((s) => ({ ...s, stage: s.stage ?? null }))}
+      checkable
+      type={type}
+      error={steps.error}
+      saving={steps.saving}
+      onAdd={steps.add}
+      onToggle={steps.toggle}
+      onRename={steps.rename}
+      onRemove={steps.remove}
+      onRenameStage={steps.renameStage}
+      // Um a um, na ordem: o servidor põe cada passo no fim da lista.
+      onApplyTemplate={async (items) => {
+        for (const item of items) {
+          if (!(await steps.add(item.title, item.stage))) break;
+        }
+      }}
+    />
+  );
 }
 
 /**
  * Tarefa nova: ainda não tem id, então os passos ficam só na tela e seguem
  * junto com a tarefa quando ela é salva.
  */
+type DraftStep = { id: string; title: string; stage: string | null };
+
 function DraftSteps({
   steps,
+  type,
   onChange,
 }: {
-  steps: string[];
-  onChange: (steps: string[]) => void;
+  steps: DraftStep[];
+  type: string;
+  onChange: (steps: DraftStep[]) => void;
 }) {
-  const [title, setTitle] = useState("");
-
-  function add() {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    onChange([...steps, trimmed]);
-    setTitle("");
-  }
-
   return (
-    <div className="flex flex-col gap-1 border-l border-border pl-3">
-      {steps.map((step, i) => (
-        <div key={i} className="flex items-center gap-2 text-sm">
-          <span className="min-w-0 flex-1 text-text-primary">{step}</span>
-          <IconButton
-            title="Apagar passo"
-            tone="danger"
-            onClick={() => onChange(steps.filter((_, j) => j !== i))}
-          >
-            <Trash2 size={15} />
-          </IconButton>
-        </div>
-      ))}
-      <div className="flex items-center gap-1.5">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add();
-            }
-          }}
-          placeholder="Quebrar em um passo…"
-          className="min-w-0 flex-1 rounded-md border border-border px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <IconButton
-          title="Adicionar passo"
-          onClick={add}
-          disabled={!title.trim()}
-          className="border border-border disabled:opacity-40"
-        >
-          <Plus size={15} />
-        </IconButton>
-      </div>
-    </div>
+    <StagedSteps
+      steps={steps.map((s) => ({ ...s, done: false }))}
+      checkable={false}
+      type={type}
+      onAdd={(title, stage) => {
+        const trimmed = title.trim();
+        if (!trimmed) return false;
+        onChange([...steps, { id: crypto.randomUUID(), title: trimmed, stage: stage ?? null }]);
+        return true;
+      }}
+      onToggle={() => {}}
+      onRename={async (id, title) =>
+        onChange(steps.map((s) => (s.id === id ? { ...s, title } : s)))
+      }
+      onRemove={(id) => onChange(steps.filter((s) => s.id !== id))}
+      onRenameStage={async (from, to) => {
+        const target = to.trim();
+        if (target) onChange(steps.map((s) => (s.stage === from ? { ...s, stage: target } : s)));
+      }}
+      onApplyTemplate={(items) =>
+        onChange([
+          ...steps,
+          ...items.map((i) => ({ id: crypto.randomUUID(), title: i.title, stage: i.stage })),
+        ])
+      }
+    />
   );
+}
+
+/** Texto puro quando o passo não tem etapa: é o que a API já aceitava. */
+function stepsPayload(steps: { title: string; stage?: string | null }[]) {
+  return steps.map((s) => (s.stage ? { title: s.title, stage: s.stage } : s.title));
 }
 
 function dateInputValue(date: string | Date | null) {
@@ -219,7 +231,7 @@ export function ProductionTaskModal({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const levels = usePriorityLevels();
-  const [draftSteps, setDraftSteps] = useState<string[]>([]);
+  const [draftSteps, setDraftSteps] = useState<DraftStep[]>([]);
   const [form, setForm] = useState(
     task
       ? formFromTask(task)
@@ -266,7 +278,7 @@ export function ProductionTaskModal({
 
     try {
       if (isEdit) await api.patch(`/api/ace/tasks/${task!.id}`, payload);
-      else await api.post("/api/ace/tasks", { ...payload, steps: draftSteps });
+      else await api.post("/api/ace/tasks", { ...payload, steps: stepsPayload(draftSteps) });
       router.refresh();
       notify("Salvo.");
       onClose();
@@ -303,7 +315,7 @@ export function ProductionTaskModal({
       clientId: form.clientId || null,
       projectId: form.projectId || null,
       // A cópia leva os passos, todos por fazer.
-      steps: task!.subtasks.map((s) => s.title),
+      steps: stepsPayload(task!.subtasks),
     };
 
     try {
@@ -382,9 +394,9 @@ export function ProductionTaskModal({
       <div>
         <p className="mb-1 text-xs text-text-secondary">Passos</p>
         {isEdit ? (
-          <SavedSteps taskId={task!.id} initial={task!.subtasks} />
+          <SavedSteps taskId={task!.id} type={form.type} initial={task!.subtasks} />
         ) : (
-          <DraftSteps steps={draftSteps} onChange={setDraftSteps} />
+          <DraftSteps steps={draftSteps} type={form.type} onChange={setDraftSteps} />
         )}
       </div>
 

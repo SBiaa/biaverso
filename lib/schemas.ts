@@ -97,6 +97,8 @@ export const taskPatchSchema = z.object({
 export const subtaskCreateSchema = z
   .object({
     title: text,
+    // Só as tarefas de produção agrupam os passos em etapas.
+    stage: text.optional(),
     taskId: optionalId,
     productionTaskId: optionalId,
     collectionTaskId: optionalId,
@@ -109,6 +111,8 @@ export const subtaskCreateSchema = z
 export const subtaskPatchSchema = z.object({
   title: text.optional(),
   done: z.boolean().optional(),
+  // `null` tira o passo da etapa.
+  stage: text.nullish(),
 });
 
 export const routineCreateSchema = z.object({
@@ -551,7 +555,11 @@ export const productionTaskCreateSchema = z.object({
  * propósito — o PATCH deriva dele, e passos se editam um a um em /api/subtasks.
  */
 export const productionTaskCreateWithStepsSchema = productionTaskCreateSchema.extend({
-  steps: z.array(text).max(50).default([]),
+  // Texto puro = passo sem etapa; com `stage`, entra agrupado.
+  steps: z
+    .array(z.union([text, z.object({ title: text, stage: text.optional() })]))
+    .max(50)
+    .default([]),
 });
 export const productionTaskPatchSchema = productionTaskCreateSchema
   .omit({ businessId: true, status: true })

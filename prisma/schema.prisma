@@ -175,6 +175,11 @@ model Subtask {
   order     Int      @default(0)
   createdAt DateTime @default(now())
 
+  // Etapa do passo (Roteiro, Gravação, Edição...) — só as tarefas de produção
+  // dos clientes usam. É texto livre de propósito: renomear uma etapa é trocar
+  // o nome nos passos dela, e os passos antigos continuam com nulo ("sem etapa").
+  stage String?
+
   taskId String?
   task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 

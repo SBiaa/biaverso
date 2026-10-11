@@ -188,7 +188,7 @@ export function toTaskRecord(task: {
   projectId: string | null;
   priorityLevelId: string | null;
   estimateMinutes: number | null;
-  subtasks: { id: string; title: string; done: boolean }[];
+  subtasks: { id: string; title: string; done: boolean; stage?: string | null }[];
 }) {
   return {
     id: task.id,
@@ -204,7 +204,12 @@ export function toTaskRecord(task: {
     projectId: task.projectId,
     priorityLevelId: task.priorityLevelId,
     estimateMinutes: task.estimateMinutes,
-    subtasks: task.subtasks.map(({ id, title, done }) => ({ id, title, done })),
+    subtasks: task.subtasks.map(({ id, title, done, stage }) => ({
+      id,
+      title,
+      done,
+      stage: stage ?? null,
+    })),
   };
 }
 
