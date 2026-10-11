@@ -15,6 +15,7 @@ import {
   Lightbulb,
   LineChart,
   Moon,
+  MessageCircle,
   MoreHorizontal,
   Package,
   Radar,
@@ -49,6 +50,8 @@ export const navGroups: NavGroup[] = [
       { href: "/horas", label: "Controle de horas", icon: Clock },
       // O que foi começado e parou — a única tela do app que olha ausência.
       { href: "/radar", label: "Radar", icon: Radar },
+      // Quem está esperando resposta sua no WhatsApp, e há quanto tempo.
+      { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
     ],
   },
   {

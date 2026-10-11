@@ -966,6 +966,7 @@ model Client {
   businessLinks ClientBusiness[]
   projects      Project[]
 
+  whatsappChats   WhatsappChat[]
   contentPosts    ContentPost[]
   productionTasks ProductionTask[]
 }
@@ -2408,4 +2409,56 @@ model WorkTaskOrder {
   position Int
 
   @@unique([kind, taskId])
+}
+
+/// Conversa do WhatsApp lida pelo robô (só leitura: o robô nunca envia nada).
+/// `jid` é o identificador do WhatsApp (número@s.whatsapp.net ou id@g.us).
+/// `awaitingSince` é o instante da primeira mensagem recebida que ainda não foi
+/// respondida; fica nulo assim que ela responde. É guardado aqui, e não derivado
+/// das mensagens, para o quadro "Esperando você" não precisar varrer o histórico.
+model WhatsappChat {
+  id             String            @id @default(cuid())
+  jid            String            @unique
+  name           String
+  isGroup        Boolean           @default(false)
+  /// Conversa silenciada no robô: continua guardada, mas não entra no quadro.
+  ignored        Boolean           @default(false)
+  awaitingSince  DateTime?
+  lastMessageAt  DateTime?
+  lastIncomingAt DateTime?
+  lastOutgoingAt DateTime?
+  /// Vínculo opcional com um cliente/prospect já cadastrado.
+  clientId       String?
+  client         Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  messages       WhatsappMessage[]
+
+  @@index([ignored, awaitingSince])
+  @@index([lastMessageAt])
+  @@index([clientId])
+}
+
+/// Mensagem de texto de uma conversa. `text` é guardado cifrado (lib/crypto.ts,
+/// a mesma chave do cofre) porque contém conversa de terceiros. Mídia não é
+/// baixada: vira só a legenda, ou fica vazia.
+model WhatsappMessage {
+  id         String       @id @default(cuid())
+  /// Id da mensagem no WhatsApp; com o chat evita gravar a mesma duas vezes.
+  waId       String
+  chatId     String
+  chat       WhatsappChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  fromMe     Boolean
+  /// Quem mandou, dentro de grupo (nome de exibição). Nulo em conversa 1 a 1.
+  senderName String?
+  text       String
+  sentAt     DateTime
+  /// Marcada pelas regras do robô: cita o nome dela, um cliente, prazo, valor…
+  important  Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+
+  @@unique([chatId, waId])
+  @@index([chatId, sentAt])
+  @@index([sentAt])
+  @@index([important, sentAt])
 }
