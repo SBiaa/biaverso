@@ -4,9 +4,11 @@ import { addUtcDays, toDateInputValue, todayUtc } from "@/lib/utils";
 import {
   contentStatusLabels,
   postTypeLabels,
+  priorityLabels,
   productionStatusLabels,
   productionTypeLabels,
   projectStatusLabels,
+  socialNetworkLabels,
 } from "@/lib/labels";
 import { contentStatusColors, productionStatusColors } from "@/lib/ace-shared";
 import type { ProjectItem } from "@/components/modules/projetos/ProjectCalendar";
@@ -133,6 +135,8 @@ export async function getProjectsCalendarItems(
       select: {
         id: true, title: true, type: true, status: true,
         dueDate: true, completedAt: true, projectId: true,
+        description: true, priority: true, estimateMinutes: true, notes: true,
+        subtasks: { select: { done: true } },
       },
     }),
     prisma.contentPost.findMany({
@@ -140,6 +144,7 @@ export async function getProjectsCalendarItems(
       select: {
         id: true, title: true, type: true, status: true,
         publishDate: true, completedAt: true, projectId: true,
+        network: true, caption: true, notes: true,
       },
     }),
   ]);
@@ -169,6 +174,15 @@ export async function getProjectsCalendarItems(
       finishedOn: day(t.completedAt),
       done: doneTaskStatuses.includes(t.status),
       missed: t.status === "PRAZO_PERDIDO",
+      steps: t.subtasks.length
+        ? { done: t.subtasks.filter((s) => s.done).length, total: t.subtasks.length }
+        : undefined,
+      detail: {
+        priorityLabel: priorityLabels[t.priority] ?? t.priority,
+        description: t.description,
+        notes: t.notes,
+        estimateMinutes: t.estimateMinutes,
+      },
       context: contextOf(t.projectId),
     })),
     ...posts.map<ProjectItem>((p) => ({
@@ -183,6 +197,11 @@ export async function getProjectsCalendarItems(
       finishedOn: day(p.completedAt),
       done: donePostStatuses.includes(p.status),
       missed: p.status === "PRAZO_PERDIDO",
+      detail: {
+        networkLabel: socialNetworkLabels[p.network] ?? p.network,
+        description: p.caption,
+        notes: p.notes,
+      },
       context: contextOf(p.projectId),
     })),
     // Fim do projeto, só dos que ainda estão rolando.

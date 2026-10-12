@@ -36,6 +36,15 @@ export type ProjectItem = {
   missed?: boolean;
   /** Passos da tarefa (feitos/total); ausente em post e quando não há passos. */
   steps?: { done: number; total: number };
+  /** Dados extras para o resumo (modal) do calendário geral. */
+  detail?: {
+    priorityLabel?: string;
+    networkLabel?: string;
+    /** Descrição da tarefa ou legenda do post. */
+    description?: string | null;
+    notes?: string | null;
+    estimateMinutes?: number | null;
+  };
   /** Só no calendário geral: de qual projeto/negócio o item é. */
   context?: { projectName: string; businessName: string; color: string; href: string };
 };

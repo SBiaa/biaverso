@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, FileText, FolderKanban, LayoutGrid, ListTodo } from "lucide-react";
 import { cn, formatDateBR, todayInputValue } from "@/lib/utils";
 import { ProjectCalendar, type ProjectItem } from "./ProjectCalendar";
+import { ProjectItemSummaryModal } from "./ProjectItemSummaryModal";
 
 type View = "calendario" | "projetos";
 
@@ -25,6 +26,9 @@ export function ProjectsOverviewTabs({
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("calendario");
+  // Guarda só a chave: o item vem da lista atual, que o servidor renova após editar.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const openItem = openKey ? (items.find((i) => i.key === openKey) ?? null) : null;
   const today = todayInputValue();
 
   const { overdue, upcoming } = useMemo(() => {
@@ -43,7 +47,7 @@ export function ProjectsOverviewTabs({
   };
 
   function open(item: ProjectItem) {
-    if (item.context) router.push(item.context.href);
+    setOpenKey(item.key);
   }
 
   // Atrasados antigos engoliriam a lista: só os mais recentes entram, o resto vira o contador.
@@ -140,6 +144,10 @@ export function ProjectsOverviewTabs({
             )}
           </aside>
         </div>
+      )}
+
+      {openItem && (
+        <ProjectItemSummaryModal item={openItem} onClose={() => setOpenKey(null)} />
       )}
     </div>
   );
