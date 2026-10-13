@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { todayUtc } from "@/lib/utils";
 import { donePostStatuses, doneTaskStatuses } from "@/lib/ace-shared";
 import type { ModuleType } from "@/app/generated/prisma/client";
 
@@ -11,8 +12,11 @@ import type { ModuleType } from "@/app/generated/prisma/client";
  * foi marcado como feito (post publicado, tarefa concluída, pedido entregue,
  * transação lançada) dentro da janela.
  *
- * O que ainda está aberto e venceu dentro da janela também aparece — é o
+ * O que ainda está aberto e já venceu dentro da janela também aparece — é o
  * "ficou para trás" do período, que é o que ela quer enxergar numa avaliação.
+ * "Venceu" é prazo anterior a hoje: o que está marcado para mais adiante no
+ * mesmo mês ainda não é atraso, é só planejado. Passou do prazo é contabilidade
+ * (quantas fiz, quantas deixei passar), não pendência a cobrar.
  *
  * Cada negócio só ganha as contagens dos módulos que tem ligados: um negócio
  * sem loja não mostra "0 pedidos".
@@ -25,7 +29,7 @@ export type BusinessPeriodSummary = {
   modules: ModuleType[];
   /** Posts publicados no período (pela data de publicação de fato). */
   postsPublished: number | null;
-  /** Posts que deviam ter saído no período e ainda não saíram. */
+  /** Posts cuja data já passou (antes de hoje) no período e não saíram. */
   postsLate: number | null;
   tasksDone: number | null;
   tasksLate: number | null;
@@ -46,6 +50,9 @@ export async function getBusinessPeriodSummary(
   end: Date,
 ): Promise<BusinessPeriodSummary[]> {
   const window = { gte: start, lt: end };
+  // Atrasado = prazo antes de hoje. Num mês já encerrado, `end` é o limite.
+  const today = todayUtc();
+  const lateWindow = { gte: start, lt: end < today ? end : today };
 
   const [businesses, posts, latePosts, tasks, lateTasks, dayTasks, newOrders, deliveredOrders, money] =
     await Promise.all([
@@ -66,7 +73,7 @@ export async function getBusinessPeriodSummary(
       }),
       prisma.contentPost.groupBy({
         by: ["businessId"],
-        where: { status: { notIn: donePostStatuses }, publishDate: window },
+        where: { status: { notIn: donePostStatuses }, publishDate: lateWindow },
         _count: { _all: true },
       }),
       prisma.productionTask.groupBy({
@@ -76,7 +83,7 @@ export async function getBusinessPeriodSummary(
       }),
       prisma.productionTask.groupBy({
         by: ["businessId"],
-        where: { status: { notIn: doneTaskStatuses }, dueDate: window },
+        where: { status: { notIn: doneTaskStatuses }, dueDate: lateWindow },
         _count: { _all: true },
       }),
       prisma.task.groupBy({
