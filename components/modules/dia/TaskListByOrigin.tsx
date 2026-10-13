@@ -42,7 +42,8 @@ type TaskListByOriginProps = {
   focusIds: string[];
 };
 
-const originOptions = Object.keys(originLabels) as BadgeOrigin[];
+// Este cartão é da vida pessoal; tarefa de negócio vai para "Tarefas em andamento".
+const originOptions: BadgeOrigin[] = ["CASA", "PESSOAL"];
 
 function TaskRow({
   task,
@@ -144,7 +145,7 @@ export function TaskListByOrigin({
   const [tasks, setTasks] = useState(initialTasks);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
-  const [origin, setOrigin] = useState<BadgeOrigin>("PESSOAL");
+  const [origin, setOrigin] = useState<BadgeOrigin>("CASA");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

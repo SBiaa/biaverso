@@ -69,7 +69,7 @@ export const workTaskOrderSchema = z.object({
   items: z
     .array(
       z.object({
-        kind: z.enum(["production", "collection", "prospect", "lesson", "study"]),
+        kind: z.enum(["production", "collection", "prospect", "lesson", "study", "task"]),
         taskId: id,
       }),
     )

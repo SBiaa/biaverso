@@ -50,7 +50,7 @@ import {
 
 export type WorkTask = {
   /** `production`, `collection`, `prospect` ou `lesson`: decide para qual rota o PATCH vai. */
-  kind: "production" | "collection" | "prospect" | "lesson" | "study";
+  kind: "production" | "collection" | "prospect" | "lesson" | "study" | "task";
   id: string;
   title: string;
   done: boolean;
@@ -106,6 +106,7 @@ const GROUPS: { id: Group; label: string; color: string; icon: typeof Briefcase 
 type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null };
 
 function patchUrl(task: WorkTask) {
+  if (task.kind === "task") return `/api/tasks/${task.id}`;
   if (task.kind === "prospect") return `/api/prospect-tasks/${task.id}`;
   if (task.kind === "lesson") return `/api/study/lessons/${task.id}`;
   if (task.kind === "study") return `/api/spiritual-studies/${task.id}`;
@@ -289,7 +290,7 @@ function TaskRow({
                 {!plain && (
                   <FocusStar
                     dayId={dayId}
-                    kind={task.kind as "production" | "collection" | "prospect"}
+                    kind={task.kind as "task" | "production" | "collection" | "prospect"}
                     taskId={task.id}
                     focused={focused}
                     title={task.title}
@@ -311,7 +312,7 @@ function TaskRow({
           </div>
         </td>
         <td className="py-2 pr-3 align-top">
-          {task.kind === "study" ? (
+          {task.kind === "study" || task.kind === "task" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
             <PrioritySelect
@@ -322,7 +323,7 @@ function TaskRow({
           )}
         </td>
         <td className="py-2 pr-3 align-top">
-          {task.kind === "study" ? (
+          {task.kind === "study" || task.kind === "task" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
             <EstimateInput

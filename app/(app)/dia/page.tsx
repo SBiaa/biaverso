@@ -29,10 +29,16 @@ import { getUserSettings } from "@/lib/settings";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
 import { focusKey, type FocusKind } from "@/lib/day-focus";
 import { onlyNextSteps } from "@/lib/prospect-shared";
-import type { BadgeOrigin } from "@/components/ui";
+import { originLabels, type BadgeOrigin } from "@/components/ui";
 import type { MealType } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * O cartão "Tarefas de hoje" é da vida pessoal: casa e pessoal. Tarefa avulsa
+ * de Ace, Tarot ou Creative é trabalho e mora em "Tarefas em andamento".
+ */
+const HOME_ORIGINS: string[] = ["CASA", "PESSOAL"];
 
 const mealTypeLabels: Record<string, string> = {
   CAFE_DA_MANHA: "Café da manhã",
@@ -104,10 +110,13 @@ async function WorkSection({
   date,
   dayId,
   focusKeys,
+  dayTasks,
 }: {
   date: Date;
   dayId: string;
   focusKeys: string[];
+  /** Tarefas avulsas do dia com origem de negócio (Ace, Tarot, Creative). */
+  dayTasks: Awaited<ReturnType<typeof getDay>>["tasks"];
 }) {
   await syncMissedDeadlines();
 
@@ -398,7 +407,31 @@ async function WorkSection({
     subtasks: [],
   });
 
+  // Tarefa avulsa do dia. Não tem prioridade nem tempo estimado no banco, então
+  // essas colunas ficam em branco; o resto (foco, passos, prazo) funciona igual.
+  const fromDayTask = (t: (typeof dayTasks)[number]): WorkTask => ({
+    kind: "task",
+    id: t.id,
+    position: positionOf("task", t.id),
+    title: t.title,
+    done: t.done,
+    doneOnLoad: t.done,
+    originLabel: t.business?.name ?? originLabels[t.origin as BadgeOrigin] ?? t.origin,
+    originColor: t.business?.color ?? "#6B7280",
+    originHref: null,
+    detail: "Tarefa avulsa",
+    urgent: false,
+    priorityLevelId: null,
+    estimateMinutes: null,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
+    overdue: !t.done && isLate(t.dueDate),
+    collectionId: null,
+    subtasks: t.subtasks,
+  });
+
   const tasks: WorkTask[] = [
+    ...dayTasks.map(fromDayTask),
     ...studies.map((t) => fromStudy(t, false)),
     ...doneStudies.map((t) => fromStudy(t, true)),
     ...production.map((t) => fromProduction(t, false)),
@@ -613,7 +646,7 @@ export default async function DiaPage({
                 dayDate={toDateInputValue(day.date)}
                 dayInPast={day.date.getTime() < today.getTime()}
                 focusIds={focusItems.filter((f) => f.kind === "task").map((f) => f.taskId)}
-                initialTasks={day.tasks.map((t) => ({
+                initialTasks={day.tasks.filter((t) => HOME_ORIGINS.includes(t.origin)).map((t) => ({
                   id: t.id,
                   title: t.title,
                   done: t.done,
@@ -631,6 +664,7 @@ export default async function DiaPage({
                 date={date}
                 dayId={day.id}
                 focusKeys={focusItems.map((f) => f.id)}
+                dayTasks={day.tasks.filter((t) => !HOME_ORIGINS.includes(t.origin))}
               />
             </Suspense>
           </div>
