@@ -73,6 +73,7 @@ export function NewWorkTaskForm({
         position: null,
         title: title.trim(),
         done: false,
+        progress: "A_FAZER",
         doneOnLoad: false,
         originLabel: business.name,
         originColor: business.color,

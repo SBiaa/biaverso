@@ -101,29 +101,29 @@ model WaterLog {
 }
 
 model Task {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
-  done        Boolean   @default(false)
+  done        Boolean    @default(false)
   // Em que pé a tarefa está. `done` continua existindo porque o radar, as
   // avaliações e o resumo do dia contam por ele: os dois andam juntos
   // (`done` ⇔ status CONCLUIDA) e quem os mantém em sincronia é a rota PATCH.
   status      TaskStatus @default(A_FAZER)
-  type        TaskType  @default(AVULSA)
-  origin      Origin    @default(PESSOAL)
+  type        TaskType   @default(AVULSA)
+  origin      Origin     @default(PESSOAL)
   dueDate     DateTime?
-  order       Int       @default(0)
-  createdAt   DateTime  @default(now())
+  order       Int        @default(0)
+  createdAt   DateTime   @default(now())
   // Quando foi concluída — igual ProductionTask e CollectionTask, que já
   // tinham. Sem isto, marcar como feita não deixava rastro de quando, e um
   // projeto tocado ontem parecia parado para o radar. Nulo em tudo que foi
   // concluído antes deste campo existir: não dá para inventar a data.
   completedAt DateTime?
   dayId       String?
-  day         Day?      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  day         Day?       @relation(fields: [dayId], references: [id], onDelete: Cascade)
   businessId  String?
-  business    Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  business    Business?  @relation(fields: [businessId], references: [id], onDelete: SetNull)
   projectId   String?
-  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   // Cópia de rotina: aponta para o template que a gerou. Sem isso a cópia só
   // podia ser reconhecida pelo título, e renomear um template duplicava a
@@ -156,6 +156,19 @@ enum TaskStatus {
   TRAVADA
   COM_ANSIEDADE
   CONCLUIDA
+}
+
+// Em que pé está uma tarefa de negócio (produção, coleção, prospecção). É o
+// mesmo vocabulário de TaskStatus, sem CONCLUIDA: nessas tabelas "feita" já tem
+// dono (`done` ou ProductionStatus.CONCLUIDO). Coluna própria porque o status
+// de produção é reescrito sozinho (PRAZO_PERDIDO) e levaria o "pausei" junto.
+enum TaskProgress {
+  A_FAZER
+  INICIADA
+  PAUSADA
+  AGUARDANDO
+  TRAVADA
+  COM_ANSIEDADE
 }
 
 enum TaskType {
@@ -1007,6 +1020,7 @@ model ProspectTask {
   title            String
   key              String?
   done             Boolean        @default(false)
+  progress         TaskProgress   @default(A_FAZER)
   dueDate          DateTime?
   order            Int            @default(0)
   createdAt        DateTime       @default(now())
@@ -1153,6 +1167,7 @@ model ProductionTask {
   description String?
   priority    Priority         @default(NORMAL)
   status      ProductionStatus @default(A_FAZER)
+  progress    TaskProgress     @default(A_FAZER)
   dueDate     DateTime?
   completedAt DateTime?
   notes       String?
@@ -1300,13 +1315,14 @@ model Collection {
 
 // Tarefas da coleção: costurar, fotografar, montar o lookbook.
 model CollectionTask {
-  id          String    @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   description String?
-  done        Boolean   @default(false)
+  done        Boolean      @default(false)
+  progress    TaskProgress @default(A_FAZER)
   dueDate     DateTime?
-  order       Int       @default(0)
-  createdAt   DateTime  @default(now())
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
   completedAt DateTime?
 
   collectionId String

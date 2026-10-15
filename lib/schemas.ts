@@ -409,7 +409,7 @@ export const prospectTaskCreateSchema = z.object({
 export const prospectTaskPatchSchema = prospectTaskCreateSchema
   .omit({ clientBusinessId: true })
   .partial()
-  .extend({ done: z.boolean().optional() });
+  .extend({ done: z.boolean().optional(), progress: z.enum(E.TaskProgress).optional() });
 export const prospectTaskDefaultsSchema = z.object({ clientBusinessId: id });
 export const prospectNoteCreateSchema = z.object({ clientBusinessId: id, text });
 
@@ -489,6 +489,7 @@ export const collectionTaskPatchSchema = collectionTaskCreateSchema
   .partial()
   .extend({
     done: z.boolean().optional(),
+    progress: z.enum(E.TaskProgress).optional(),
     order: z.coerce.number().int().min(0).optional(),
   });
 
@@ -568,6 +569,7 @@ export const productionTaskPatchSchema = productionTaskCreateSchema
   // (até um que só muda o tempo estimado) devolvia a tarefa urgente para NORMAL.
   .extend({
     status: z.enum(E.ProductionStatus).optional(),
+    progress: z.enum(E.TaskProgress).optional(),
     priority: z.enum(E.Priority).optional(),
   });
 

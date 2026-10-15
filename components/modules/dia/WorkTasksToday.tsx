@@ -47,6 +47,8 @@ import {
   useSubtasks,
   type SubtaskItem,
 } from "@/components/modules/tarefas/Subtasks";
+import { TaskStatusPicker } from "@/components/modules/tarefas/TaskStatusPicker";
+import type { TaskProgress, TaskStatus } from "@/app/generated/prisma/enums";
 
 export type WorkTask = {
   /** `production`, `collection`, `prospect` ou `lesson`: decide para qual rota o PATCH vai. */
@@ -54,6 +56,8 @@ export type WorkTask = {
   id: string;
   title: string;
   done: boolean;
+  /** Em que pé está (iniciei, pausei, aguardando...); `null` = aula e estudo, que não têm. */
+  progress: TaskProgress | null;
   /** Já veio concluída do servidor (aba "Feitas"), e não marcada agora na tela. */
   doneOnLoad: boolean;
   /** Chip de origem: o negócio (produção) ou a coleção. */
@@ -104,6 +108,14 @@ const GROUPS: { id: Group; label: string; color: string; icon: typeof Briefcase 
 ];
 
 type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null };
+
+/** Corpo do PATCH que conclui ou reabre; cada tipo guarda "feita" de um jeito. */
+function doneBody(task: WorkTask, done: boolean): object {
+  // Produção guarda status; coleção e prospecção guardam um booleano.
+  if (task.kind === "production") return { status: done ? "CONCLUIDO" : "A_FAZER" };
+  if (task.kind === "study") return { status: done ? "FEITO" : "A_FAZER" };
+  return { done };
+}
 
 function patchUrl(task: WorkTask) {
   if (task.kind === "task") return `/api/tasks/${task.id}`;
@@ -203,6 +215,7 @@ function TaskRow({
   canDrag,
   onToggle,
   onPatch,
+  onStatus,
 }: {
   task: WorkTask;
   dayId: string;
@@ -214,6 +227,7 @@ function TaskRow({
   canDrag: boolean;
   onToggle: (task: WorkTask) => void;
   onPatch: (task: WorkTask, patch: Patch) => void;
+  onStatus: (task: WorkTask, status: TaskStatus) => void;
 }) {
   // Passo de prospecção não tem subtarefas: o próprio checklist já é a quebra.
   const subtasks = useSubtasks(
@@ -312,6 +326,17 @@ function TaskRow({
           </div>
         </td>
         <td className="py-2 pr-3 align-top">
+          {task.progress === null ? (
+            <span className="text-text-secondary/60">—</span>
+          ) : (
+            <TaskStatusPicker
+              status={task.done ? "CONCLUIDA" : task.progress}
+              title={task.title}
+              onChange={(status) => onStatus(task, status)}
+            />
+          )}
+        </td>
+        <td className="py-2 pr-3 align-top">
           {task.kind === "study" || task.kind === "task" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
@@ -376,7 +401,7 @@ function TaskRow({
       </tr>
       {open && task.kind !== "prospect" && !plain && (
         <tr>
-          <td colSpan={5} className="pb-3 pl-6">
+          <td colSpan={6} className="pb-3 pl-6">
             <SubtaskList {...subtasks} />
           </td>
         </tr>
@@ -522,14 +547,31 @@ export function WorkTasksToday({
 
   function toggle(task: WorkTask) {
     const done = !task.done;
-    // Produção guarda status; coleção e prospecção guardam um booleano.
-    const body =
-      task.kind === "production"
-        ? { status: done ? "CONCLUIDO" : "A_FAZER" }
-        : task.kind === "study"
-          ? { status: done ? "FEITO" : "A_FAZER" }
-          : { done };
-    return save(task, { done, completedAt: done ? new Date().toISOString() : null }, body);
+    return save(
+      task,
+      { done, completedAt: done ? new Date().toISOString() : null },
+      doneBody(task, done),
+    );
+  }
+
+  /**
+   * Trocar o andamento. "Concluí" é o mesmo gesto do círculo; qualquer outro
+   * valor grava o andamento e, se a tarefa estava feita, reabre junto.
+   */
+  function changeStatus(task: WorkTask, status: TaskStatus) {
+    if (status === "CONCLUIDA") return task.done ? undefined : toggle(task);
+    if (task.progress === null) return undefined;
+
+    // A avulsa guarda o andamento no próprio status; a rota acerta o `done`.
+    if (task.kind === "task") {
+      return save(task, { progress: status, done: false, completedAt: null }, { status });
+    }
+    if (!task.done) return save(task, { progress: status }, { progress: status });
+    return save(
+      task,
+      { progress: status, done: false, completedAt: null },
+      { ...doneBody(task, false), progress: status },
+    );
   }
 
   /**
@@ -734,11 +776,14 @@ export function WorkTasksToday({
                   collisionDetection={closestCenter}
                   onDragEnd={(event) => reorder(g.id, event)}
                 >
-                  <table className="w-full min-w-[38rem] border-collapse text-sm">
+                  <table className="w-full min-w-[46rem] border-collapse text-sm">
                     <thead>
                       <tr className="text-left text-xs font-medium text-text-secondary">
                         <th scope="col" className="py-2 pr-3 font-medium">
                           Tarefa
+                        </th>
+                        <th scope="col" className="py-2 pr-3 font-medium">
+                          Status
                         </th>
                         <th scope="col" className="py-2 pr-3 font-medium">
                           Prioridade
@@ -773,6 +818,7 @@ export function WorkTasksToday({
                           canDrag={canReorder && !task.done}
                           onToggle={toggle}
                           onPatch={patch}
+                          onStatus={changeStatus}
                         />
                       ))}
                     </SortableContext>
