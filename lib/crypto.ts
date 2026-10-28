@@ -8,7 +8,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
  * string parando onde não devia, alguém abrindo o console do Neon. Sem a chave,
  * o que está lá é ruído.
  *
- * O que isto NÃO protege: quem já entrou no app. Passou pelo Basic Auth, vê as
+ * O que isto NÃO protege: quem já entrou no app. Passou pelo login, vê as
  * senhas na tela — é para isso que o cofre existe. Quem controla o servidor tem
  * a chave junto, e nesse caso a criptografia não muda nada.
  *

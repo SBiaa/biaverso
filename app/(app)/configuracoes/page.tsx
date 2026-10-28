@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { Card, CardTitle } from "@/components/ui";
+import { LogOut } from "lucide-react";
+import { Button, Card, CardTitle } from "@/components/ui";
+import { logout } from "@/app/login/actions";
+import { SESSION_DAYS } from "@/lib/session";
 import { Topbar } from "@/components/layout/Topbar";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { AccentColorPicker } from "@/components/modules/configuracoes/AccentColorPicker";
@@ -94,6 +97,22 @@ export default async function ConfiguracoesPage({
           <PricingSettingsForm initial={settings} />
           <GoogleCalendarCard status={googleStatus} feedback={google} />
         </div>
+
+        <Card className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle>Sessão</CardTitle>
+            <p className="text-sm text-text-secondary">
+              O login vale por {SESSION_DAYS} dias neste aparelho. Saia se
+              estiver usando um computador que não é seu.
+            </p>
+          </div>
+          <form action={logout}>
+            <Button type="submit" variant="secondary">
+              <LogOut size={16} />
+              Sair
+            </Button>
+          </form>
+        </Card>
       </main>
     </>
   );

@@ -28,9 +28,14 @@ O app abre em [http://localhost:3000](http://localhost:3000).
 
 ## Senha de acesso
 
-O app inteiro — páginas e API — fica atrás de Basic Auth (`middleware.ts`).
-Defina `APP_PASSWORD` no `.env` para ligar; `APP_USER` é opcional e o padrão é
-`bia`. Sem a variável, o app roda em desenvolvimento mas **responde 503 em
+O app inteiro — páginas e API — só abre depois da tela de login (`/login`).
+Defina `APP_PASSWORD` no `.env` para ligar. Quem confere é o `proxy.ts`: sem
+cookie de sessão válido, páginas vão para `/login` e a API responde 401. A
+sessão dura 30 dias e é um cookie assinado com a própria senha
+(`lib/session.ts`), então **trocar `APP_PASSWORD` desloga todos os aparelhos**.
+O botão "Sair" fica em Configurações.
+
+Sem a variável, o app roda aberto em desenvolvimento mas **responde 503 em
 produção**, para não subir aberto por esquecimento.
 
 ## Criptografia
@@ -74,7 +79,7 @@ telas quebram.
 parando onde não devia, alguém abrindo o console do Neon. Sem a chave, o que
 está lá é ruído.
 
-**Não protege** contra quem já entrou no app — passou pelo Basic Auth, vê as
+**Não protege** contra quem já entrou no app — passou pelo login, vê as
 senhas na tela, que é justamente para o que o cofre existe. Quem controlar o
 servidor tem a chave junto. Para esse lado, quem defende é o `APP_PASSWORD`.
 

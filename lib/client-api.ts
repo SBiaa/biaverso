@@ -29,6 +29,12 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
   const body = await response.json().catch(() => null);
 
+  // Sessão venceu com a tela aberta: o proxy respondeu 401. Recarregar leva
+  // para o login, que traz de volta para esta mesma página depois.
+  if (response.status === 401) {
+    window.location.reload();
+  }
+
   if (!response.ok) {
     const message =
       (body as { error?: string } | null)?.error ?? "Não consegui salvar. Tente de novo.";
