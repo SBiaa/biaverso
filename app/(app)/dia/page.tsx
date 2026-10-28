@@ -386,6 +386,7 @@ async function WorkSection({
       priorityLevelId: t.priorityLevelId,
       estimateMinutes: t.estimateMinutes,
       dueDate: day ? day.toISOString() : null,
+      dueField: t.scheduledDate ? "scheduledDate" : "dueDate",
       completedAt: t.completedAt ? t.completedAt.toISOString() : null,
       overdue: !done && isLate(first),
       collectionId: null,

@@ -33,7 +33,15 @@ import {
 import { AttentionBadge, Button, Card, CardTitle, ErrorNote } from "@/components/ui";
 import { NewWorkTaskForm, type BusinessOption } from "@/components/modules/dia/NewWorkTaskForm";
 import { api, errorMessage } from "@/lib/client-api";
-import { cn, formatDateBR, hexToRgba } from "@/lib/utils";
+import {
+  cn,
+  formatDateBR,
+  hexToRgba,
+  parseDateOnly,
+  toDateInputValue,
+  todayUtc,
+} from "@/lib/utils";
+import { MISSED_DEADLINE_AFTER_DAYS } from "@/lib/ace-shared";
 import { focusKey } from "@/lib/day-focus";
 import { FocusStar } from "@/components/modules/dia/FocusStar";
 import {
@@ -72,6 +80,8 @@ export type WorkTask = {
   /** Posição que ela deu arrastando; `null` = ordem automática. */
   position: number | null;
   dueDate: string | null;
+  /** Aula com dia marcado mostra o dia da aula como prazo: editar mexe nele. */
+  dueField?: "dueDate" | "scheduledDate";
   /** Quando foi concluída; só existe para tarefa feita. */
   completedAt: string | null;
   overdue: boolean;
@@ -172,6 +182,43 @@ function EstimateInput({
   );
 }
 
+/** Prazo editável direto na linha: clicar abre o calendário do navegador. */
+function DueDateInput({
+  task,
+  late,
+  onCommit,
+}: {
+  task: WorkTask;
+  late: boolean;
+  onCommit: (value: string | null) => void;
+}) {
+  const current = task.dueDate ? toDateInputValue(task.dueDate) : "";
+
+  return (
+    <input
+      type="date"
+      // Remonta quando o valor muda por fora (gravou, ou voltou por erro).
+      key={current}
+      defaultValue={current}
+      onBlur={(e) => {
+        const value = e.currentTarget.value;
+        if (value !== current) onCommit(value || null);
+      }}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      aria-label={`Prazo de ${task.title}`}
+      title="Clique para mudar o prazo"
+      className={cn(
+        "w-[8.5rem] cursor-pointer rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm outline-none hover:border-border focus:border-border focus:ring-2 focus:ring-accent",
+        late
+          ? "font-medium text-red-600"
+          : current
+            ? "text-text-secondary"
+            : "text-text-secondary/60",
+      )}
+    />
+  );
+}
+
 function PrioritySelect({
   task,
   levels,
@@ -216,6 +263,7 @@ function TaskRow({
   onToggle,
   onPatch,
   onStatus,
+  onDueDate,
 }: {
   task: WorkTask;
   dayId: string;
@@ -228,6 +276,7 @@ function TaskRow({
   onToggle: (task: WorkTask) => void;
   onPatch: (task: WorkTask, patch: Patch) => void;
   onStatus: (task: WorkTask, status: TaskStatus) => void;
+  onDueDate: (task: WorkTask, dueDate: string | null) => void;
 }) {
   // Passo de prospecção não tem subtarefas: o próprio checklist já é a quebra.
   const subtasks = useSubtasks(
@@ -385,7 +434,9 @@ function TaskRow({
           )}
         </td>
         <td className="whitespace-nowrap py-2 align-top">
-          {(showCompleted ? task.completedAt : task.dueDate) ? (
+          {!showCompleted && !task.done ? (
+            <DueDateInput task={task} late={late} onCommit={(due) => onDueDate(task, due)} />
+          ) : (showCompleted ? task.completedAt : task.dueDate) ? (
             <span className={cn("text-text-secondary", late && "font-medium text-red-600")}>
               {formatDateBR(new Date((showCompleted ? task.completedAt : task.dueDate)!))}
             </span>
@@ -618,6 +669,28 @@ export function WorkTasksToday({
     return save(task, change, change);
   }
 
+  /**
+   * Muda o prazo ali mesmo. Atraso e "prazo perdido" são recalculados na hora,
+   * para a tarefa já pular para a aba certa (Hoje, Amanhã, Semana...).
+   */
+  function changeDueDate(task: WorkTask, value: string | null) {
+    const due = value ? parseDateOnly(value) : null;
+    if (value && !due) return undefined;
+    const today = todayUtc().getTime();
+    const missedLimit = today - MISSED_DEADLINE_AFTER_DAYS * 24 * 60 * 60 * 1000;
+    const time = due ? due.getTime() : null;
+
+    return save(
+      task,
+      {
+        dueDate: due ? due.toISOString() : null,
+        overdue: time !== null && time < today && !(task.kind === "production" && time < missedLimit),
+        missed: task.kind === "production" ? time !== null && time < missedLimit : task.missed,
+      },
+      { [task.dueField ?? "dueDate"]: value },
+    );
+  }
+
   const addButton = businesses.length > 0 && !adding && (
     <Button variant="secondary" onClick={() => setAdding(true)}>
       <Plus size={16} />
@@ -819,6 +892,7 @@ export function WorkTasksToday({
                           onToggle={toggle}
                           onPatch={patch}
                           onStatus={changeStatus}
+                          onDueDate={changeDueDate}
                         />
                       ))}
                     </SortableContext>
