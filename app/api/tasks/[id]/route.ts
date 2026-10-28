@@ -34,20 +34,30 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
     data.status = patch.done ? "CONCLUIDA" : "A_FAZER";
   }
 
-  if (patch.dueDate !== undefined) {
-    data.dueDate = patch.dueDate;
+  if (patch.dueDate !== undefined) data.dueDate = patch.dueDate;
+  if (patch.scheduledDate !== undefined) data.scheduledDate = patch.scheduledDate;
 
-    // Pendurar no Day é o que faz a tarefa aparecer no /dia — sem isso, o
-    // "trazer para hoje" do radar mudaria o prazo e nada apareceria na tela.
-    if (patch.dueDate) {
-      const day = await prisma.day.upsert({
-        where: { date: patch.dueDate },
-        update: {},
-        create: { date: patch.dueDate },
-        select: { id: true },
-      });
-      data.dayId = day.id;
-    }
+  // Pendurar no Day é o que faz a tarefa aparecer no /dia — sem isso, o
+  // "trazer para hoje" do radar mudaria o prazo e nada apareceria na tela.
+  // O dia que manda é o da realização; sem ela, o do prazo.
+  let anchor: Date | null | undefined = patch.scheduledDate ?? undefined;
+  if (anchor === undefined && patch.dueDate) {
+    const current = await prisma.task.findUniqueOrThrow({
+      where: { id },
+      select: { scheduledDate: true },
+    });
+    const scheduled =
+      patch.scheduledDate === null ? null : current.scheduledDate;
+    if (!scheduled) anchor = patch.dueDate;
+  }
+  if (anchor) {
+    const day = await prisma.day.upsert({
+      where: { date: anchor },
+      update: {},
+      create: { date: anchor },
+      select: { id: true },
+    });
+    data.dayId = day.id;
   }
 
   return NextResponse.json(await prisma.task.update({ where: { id }, data }));

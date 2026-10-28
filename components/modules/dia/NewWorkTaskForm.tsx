@@ -83,6 +83,7 @@ export function NewWorkTaskForm({
         priorityLevelId: priorityLevelId || null,
         estimateMinutes,
         dueDate: due ? due.toISOString() : null,
+        scheduledDate: null,
         completedAt: null,
         overdue: due !== null && (dayInPast ? due.getTime() <= todayStart : due.getTime() < todayStart),
         collectionId: null,

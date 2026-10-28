@@ -90,6 +90,7 @@ export const taskPatchSchema = z.object({
   done: z.boolean().optional(),
   status: z.enum(E.TaskStatus).optional(),
   dueDate: dateOnly.nullish(),
+  scheduledDate: dateOnly.nullish(),
 });
 
 // Uma subtarefa pende de UMA tarefa — do dia, de produção ou de coleção. O
@@ -403,6 +404,7 @@ export const prospectTaskCreateSchema = z.object({
   clientBusinessId: id,
   title: text,
   dueDate: dateOnly.nullish(),
+  scheduledDate: dateOnly.nullish(),
   priorityLevelId: optionalId,
   estimateMinutes,
 });
@@ -500,6 +502,7 @@ export const collectionTaskCreateSchema = z.object({
   title: text,
   description: optionalText,
   dueDate: dateOnly.nullish(),
+  scheduledDate: dateOnly.nullish(),
   priorityLevelId: optionalId,
   estimateMinutes,
 });
@@ -559,6 +562,7 @@ export const productionTaskCreateSchema = z.object({
   priority: z.enum(E.Priority).default("NORMAL"),
   status: z.enum(E.ProductionStatus).default("A_FAZER"),
   dueDate: dateOnly.nullish(),
+  scheduledDate: dateOnly.nullish(),
   completedAt: z.coerce.date().nullish(),
   businessId: id,
   // Sem cliente = tarefa interna do próprio negócio.
@@ -1317,6 +1321,7 @@ export const spiritualStudyCreateSchema = z.object({
   status: z.enum(E.StudyStatus).default("A_FAZER"),
   receivedAt: dateOnly.nullish(),
   dueDate: dateOnly.nullish(),
+  scheduledDate: dateOnly.nullish(),
   content: z.string().nullish(),
   notes: z.string().nullish(),
   link: optionalText,

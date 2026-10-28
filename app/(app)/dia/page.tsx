@@ -5,7 +5,7 @@ import {
   materializeHabits,
   materializeRoutineTasks,
 } from "@/lib/day";
-import { formatDateBR, parseDateOnly, toDateInputValue, todayUtc } from "@/lib/utils";
+import { parseDateOnly, toDateInputValue, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, CardTitle, Skeleton } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
@@ -77,7 +77,8 @@ async function getDay(date: Date) {
           origin: true,
           type: true,
           dueDate: true,
-    completedAt: true,
+          scheduledDate: true,
+          completedAt: true,
           business: { select: { name: true, color: true } },
           subtasks: {
             orderBy: { order: "asc" },
@@ -128,7 +129,9 @@ async function WorkSection({
   // Pela data de finalização (completedAt) ou pela de execução (o prazo do dia):
   // o seletor do card escolhe, então traz as duas e a tela filtra.
   const dayRange = { gte: date, lt: dayEnd };
-  const doneInDay = { OR: [{ completedAt: dayRange }, { dueDate: dayRange }] };
+  const doneInDay = {
+    OR: [{ completedAt: dayRange }, { scheduledDate: dayRange }, { dueDate: dayRange }],
+  };
 
   const productionSelect = {
     id: true,
@@ -138,6 +141,7 @@ async function WorkSection({
     progress: true,
     priority: true,
     dueDate: true,
+    scheduledDate: true,
     completedAt: true,
     priorityLevelId: true,
     estimateMinutes: true,
@@ -153,6 +157,7 @@ async function WorkSection({
     title: true,
     progress: true,
     dueDate: true,
+    scheduledDate: true,
     completedAt: true,
     priorityLevelId: true,
     estimateMinutes: true,
@@ -173,6 +178,7 @@ async function WorkSection({
     title: true,
     progress: true,
     dueDate: true,
+    scheduledDate: true,
     completedAt: true,
     priorityLevelId: true,
     estimateMinutes: true,
@@ -214,6 +220,7 @@ async function WorkSection({
     title: true,
     kind: true,
     dueDate: true,
+    scheduledDate: true,
     deliveredAt: true,
   } as const;
 
@@ -257,7 +264,7 @@ async function WorkSection({
     prisma.studyLesson.findMany({
       where: {
         done: true,
-        OR: [{ completedAt: dayRange }, { scheduledDate: dayRange }],
+        OR: [{ completedAt: dayRange }, { scheduledDate: dayRange }, { dueDate: dayRange }],
         ...activeCourse,
       },
       select: lessonSelect,
@@ -269,7 +276,7 @@ async function WorkSection({
     prisma.spiritualStudy.findMany({
       where: {
         status: { in: ["FEITO", "ENTREGUE"] },
-        OR: [{ deliveredAt: dayRange }, { dueDate: dayRange }],
+        OR: [{ deliveredAt: dayRange }, { scheduledDate: dayRange }, { dueDate: dayRange }],
       },
       select: studySelect,
     }),
@@ -288,7 +295,10 @@ async function WorkSection({
   // "Enviar a proposta" só aparece depois de "Criar a proposta" concluída.
   const prospect = onlyNextSteps(openProspectTasks);
 
-  const isLate = (due: Date | null) => due !== null && due.getTime() < today.getTime();
+  // Passar de qualquer uma das duas datas (realização ou prazo) já é atraso.
+  const isLate = (...dates: (Date | null)[]) =>
+    dates.some((d) => d !== null && d.getTime() < today.getTime());
+  const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
   const fromProduction = (t: (typeof production)[number], done: boolean): WorkTask => ({
     kind: "production",
@@ -305,9 +315,10 @@ async function WorkSection({
     urgent: !done && t.priority === "URGENTE",
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
-    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-    overdue: !done && t.status !== "PRAZO_PERDIDO" && isLate(t.dueDate),
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && t.status !== "PRAZO_PERDIDO" && isLate(t.scheduledDate, t.dueDate),
     missed: t.status === "PRAZO_PERDIDO",
     collectionId: null,
     subtasks: t.subtasks,
@@ -328,9 +339,10 @@ async function WorkSection({
     urgent: false,
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
-    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-    overdue: !done && isLate(t.dueDate),
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && isLate(t.scheduledDate, t.dueDate),
     collectionId: t.collectionId,
     subtasks: t.subtasks,
   });
@@ -350,49 +362,36 @@ async function WorkSection({
     urgent: false,
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
-    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-    overdue: !done && isLate(t.dueDate),
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && isLate(t.scheduledDate, t.dueDate),
     collectionId: null,
     subtasks: [],
   });
 
-  // O dia em que a aula cai é o de execução; sem ele, vale o prazo. O atraso
-  // olha o que vier primeiro, porque passar de qualquer um dos dois já é atraso.
-  const fromLesson = (t: (typeof lessons)[number], done: boolean): WorkTask => {
-    const day = t.scheduledDate ?? t.dueDate;
-    const first =
-      t.scheduledDate && t.dueDate
-        ? new Date(Math.min(t.scheduledDate.getTime(), t.dueDate.getTime()))
-        : day;
-    return {
-      kind: "lesson",
-      id: t.id,
-      position: positionOf("lesson", t.id),
-      title: t.title,
-      done,
-      progress: null,
-      doneOnLoad: done,
-      originLabel: t.course.subject.area.name,
-      originColor: "#6366F1",
-      originHref: `/conhecimento/curso/${t.course.id}`,
-      detail: [
-        `Aula · ${t.course.title}`,
-        t.scheduledDate && t.dueDate ? `prazo ${formatDateBR(t.dueDate)}` : null,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      urgent: false,
-      priorityLevelId: t.priorityLevelId,
-      estimateMinutes: t.estimateMinutes,
-      dueDate: day ? day.toISOString() : null,
-      dueField: t.scheduledDate ? "scheduledDate" : "dueDate",
-      completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-      overdue: !done && isLate(first),
-      collectionId: null,
-      subtasks: [],
-    };
-  };
+  const fromLesson = (t: (typeof lessons)[number], done: boolean): WorkTask => ({
+    kind: "lesson",
+    id: t.id,
+    position: positionOf("lesson", t.id),
+    title: t.title,
+    done,
+    progress: null,
+    doneOnLoad: done,
+    originLabel: t.course.subject.area.name,
+    originColor: "#6366F1",
+    originHref: `/conhecimento/curso/${t.course.id}`,
+    detail: `Aula · ${t.course.title}`,
+    urgent: false,
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && isLate(t.scheduledDate, t.dueDate),
+    collectionId: null,
+    subtasks: [],
+  });
 
   const fromStudy = (t: (typeof studies)[number], done: boolean): WorkTask => ({
     kind: "study",
@@ -409,9 +408,10 @@ async function WorkSection({
     urgent: false,
     priorityLevelId: null,
     estimateMinutes: null,
-    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-    completedAt: t.deliveredAt ? t.deliveredAt.toISOString() : null,
-    overdue: !done && isLate(t.dueDate),
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.deliveredAt),
+    overdue: !done && isLate(t.scheduledDate, t.dueDate),
     collectionId: null,
     subtasks: [],
   });
@@ -434,9 +434,10 @@ async function WorkSection({
     urgent: false,
     priorityLevelId: null,
     estimateMinutes: null,
-    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
-    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
-    overdue: !t.done && isLate(t.dueDate),
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !t.done && isLate(t.scheduledDate, t.dueDate),
     collectionId: null,
     subtasks: t.subtasks,
   });

@@ -79,9 +79,10 @@ export type WorkTask = {
   estimateMinutes: number | null;
   /** Posição que ela deu arrastando; `null` = ordem automática. */
   position: number | null;
+  /** Prazo máximo: a data-limite. */
   dueDate: string | null;
-  /** Aula com dia marcado mostra o dia da aula como prazo: editar mexe nele. */
-  dueField?: "dueDate" | "scheduledDate";
+  /** Data de realização: o dia em que ela vai fazer. Decide a aba (Hoje, Amanhã...). */
+  scheduledDate: string | null;
   /** Quando foi concluída; só existe para tarefa feita. */
   completedAt: string | null;
   overdue: boolean;
@@ -111,6 +112,9 @@ type Group = "work" | "study";
 const groupOf = (t: WorkTask): Group =>
   t.kind === "lesson" || t.kind === "study" ? "study" : "work";
 const taskKey = (t: WorkTask) => t.kind + t.id;
+/** O dia da tarefa: o da realização; sem ele, o do prazo. */
+const dayOf = (t: WorkTask) => t.scheduledDate ?? t.dueDate;
+type DateField = "scheduledDate" | "dueDate";
 
 const GROUPS: { id: Group; label: string; color: string; icon: typeof Briefcase }[] = [
   { id: "work", label: "Trabalho", color: "#0F766E", icon: Briefcase },
@@ -182,17 +186,19 @@ function EstimateInput({
   );
 }
 
-/** Prazo editável direto na linha: clicar abre o calendário do navegador. */
-function DueDateInput({
-  task,
+/** Data editável direto na linha: clicar abre o calendário do navegador. */
+function DateInput({
+  value,
+  label,
   late,
   onCommit,
 }: {
-  task: WorkTask;
+  value: string | null;
+  label: string;
   late: boolean;
   onCommit: (value: string | null) => void;
 }) {
-  const current = task.dueDate ? toDateInputValue(task.dueDate) : "";
+  const current = value ? toDateInputValue(value) : "";
 
   return (
     <input
@@ -205,8 +211,8 @@ function DueDateInput({
         if (value !== current) onCommit(value || null);
       }}
       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      aria-label={`Prazo de ${task.title}`}
-      title="Clique para mudar o prazo"
+      aria-label={label}
+      title="Clique para mudar a data"
       className={cn(
         "w-[8.5rem] cursor-pointer rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm outline-none hover:border-border focus:border-border focus:ring-2 focus:ring-accent",
         late
@@ -263,7 +269,7 @@ function TaskRow({
   onToggle,
   onPatch,
   onStatus,
-  onDueDate,
+  onDate,
 }: {
   task: WorkTask;
   dayId: string;
@@ -276,7 +282,7 @@ function TaskRow({
   onToggle: (task: WorkTask) => void;
   onPatch: (task: WorkTask, patch: Patch) => void;
   onStatus: (task: WorkTask, status: TaskStatus) => void;
-  onDueDate: (task: WorkTask, dueDate: string | null) => void;
+  onDate: (task: WorkTask, field: DateField, value: string | null) => void;
 }) {
   // Passo de prospecção não tem subtarefas: o próprio checklist já é a quebra.
   const subtasks = useSubtasks(
@@ -289,6 +295,8 @@ function TaskRow({
   // Tarefa já quebrada nasce aberta: o ponto dos passos é ver por onde começar.
   const [open, setOpen] = useState(task.subtasks.length > 0 && !task.done);
   const late = task.overdue && !task.done;
+  const today = todayUtc().getTime();
+  const passed = (d: string | null) => late && d !== null && new Date(d).getTime() < today;
   // Aula e estudo espiritual não têm foco, subtarefas, prioridade nem tempo.
   const plain = task.kind === "lesson" || task.kind === "study";
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -433,11 +441,34 @@ function TaskRow({
             </span>
           )}
         </td>
+        <td className="whitespace-nowrap py-2 pr-3 align-top">
+          {task.done ? (
+            task.scheduledDate ? (
+              <span className="text-text-secondary">
+                {formatDateBR(new Date(task.scheduledDate))}
+              </span>
+            ) : (
+              <span className="text-text-secondary/60">—</span>
+            )
+          ) : (
+            <DateInput
+              value={task.scheduledDate}
+              label={`Realização de ${task.title}`}
+              late={passed(task.scheduledDate)}
+              onCommit={(value) => onDate(task, "scheduledDate", value)}
+            />
+          )}
+        </td>
         <td className="whitespace-nowrap py-2 align-top">
           {!showCompleted && !task.done ? (
-            <DueDateInput task={task} late={late} onCommit={(due) => onDueDate(task, due)} />
+            <DateInput
+              value={task.dueDate}
+              label={`Prazo de ${task.title}`}
+              late={passed(task.dueDate)}
+              onCommit={(value) => onDate(task, "dueDate", value)}
+            />
           ) : (showCompleted ? task.completedAt : task.dueDate) ? (
-            <span className={cn("text-text-secondary", late && "font-medium text-red-600")}>
+            <span className="text-text-secondary">
               {formatDateBR(new Date((showCompleted ? task.completedAt : task.dueDate)!))}
             </span>
           ) : (
@@ -452,7 +483,7 @@ function TaskRow({
       </tr>
       {open && task.kind !== "prospect" && !plain && (
         <tr>
-          <td colSpan={6} className="pb-3 pl-6">
+          <td colSpan={7} className="pb-3 pl-6">
             <SubtaskList {...subtasks} />
           </td>
         </tr>
@@ -468,7 +499,10 @@ function TaskRow({
 function sortTasks(tasks: WorkTask[], levels: PriorityLevelDTO[]) {
   const rank = new Map(levels.map((l) => [l.id, l.order]));
   const none = Number.MAX_SAFE_INTEGER;
-  const time = (t: WorkTask) => (t.dueDate ? new Date(t.dueDate).getTime() : none);
+  const time = (t: WorkTask) => {
+    const day = dayOf(t);
+    return day ? new Date(day).getTime() : none;
+  };
 
   return [...tasks].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
@@ -535,7 +569,7 @@ export function WorkTasksToday({
     // chegou concluído, mas mantêm o que ela acabou de marcar (riscado, no fim).
     if (r === "done") {
       if (!t.done) return false;
-      const when = doneBy === "completed" ? t.completedAt : t.dueDate;
+      const when = doneBy === "completed" ? t.completedAt : dayOf(t);
       if (!when) return false;
       const time = new Date(when).getTime();
       return time >= limits.day - 24 * 60 * 60 * 1000 && time < limits.day;
@@ -545,8 +579,9 @@ export function WorkTasksToday({
     // Prazo perdido tem aba própria: não volta a poluir Hoje, Amanhã e Semana.
     if (r === "missed") return !!t.missed;
     if (t.missed) return false;
-    if (t.dueDate === null) return false;
-    const due = new Date(t.dueDate).getTime();
+    const day = dayOf(t);
+    if (day === null) return false;
+    const due = new Date(day).getTime();
     if (r === "tomorrow") return due >= limits.day && due < tomorrowEnd;
     return due < limits[r === "today" ? "day" : "week"];
   };
@@ -670,24 +705,28 @@ export function WorkTasksToday({
   }
 
   /**
-   * Muda o prazo ali mesmo. Atraso e "prazo perdido" são recalculados na hora,
-   * para a tarefa já pular para a aba certa (Hoje, Amanhã, Semana...).
+   * Muda a realização ou o prazo ali mesmo. Atraso e "prazo perdido" são
+   * recalculados na hora, para a tarefa já pular para a aba certa.
    */
-  function changeDueDate(task: WorkTask, value: string | null) {
-    const due = value ? parseDateOnly(value) : null;
-    if (value && !due) return undefined;
+  function changeDate(task: WorkTask, field: DateField, value: string | null) {
+    const date = value ? parseDateOnly(value) : null;
+    if (value && !date) return undefined;
+    const next = { ...task, [field]: date ? date.toISOString() : null };
     const today = todayUtc().getTime();
     const missedLimit = today - MISSED_DEADLINE_AFTER_DAYS * 24 * 60 * 60 * 1000;
-    const time = due ? due.getTime() : null;
+    const time = (d: string | null) => (d ? new Date(d).getTime() : null);
+    const due = time(next.dueDate);
+    // "Prazo perdido" (só produção) olha o prazo máximo, como o servidor.
+    const missed =
+      task.kind === "production" ? due !== null && due < missedLimit : task.missed;
+    const overdue =
+      !missed &&
+      [time(next.scheduledDate), due].some((t) => t !== null && t < today);
 
     return save(
       task,
-      {
-        dueDate: due ? due.toISOString() : null,
-        overdue: time !== null && time < today && !(task.kind === "production" && time < missedLimit),
-        missed: task.kind === "production" ? time !== null && time < missedLimit : task.missed,
-      },
-      { [task.dueField ?? "dueDate"]: value },
+      { [field]: next[field], overdue, missed },
+      { [field]: value },
     );
   }
 
@@ -849,7 +888,7 @@ export function WorkTasksToday({
                   collisionDetection={closestCenter}
                   onDragEnd={(event) => reorder(g.id, event)}
                 >
-                  <table className="w-full min-w-[46rem] border-collapse text-sm">
+                  <table className="w-full min-w-[54rem] border-collapse text-sm">
                     <thead>
                       <tr className="text-left text-xs font-medium text-text-secondary">
                         <th scope="col" className="py-2 pr-3 font-medium">
@@ -866,6 +905,9 @@ export function WorkTasksToday({
                         </th>
                         <th scope="col" className="py-2 pr-3 font-medium">
                           Origem
+                        </th>
+                        <th scope="col" className="py-2 pr-3 font-medium">
+                          Realização
                         </th>
                         <th scope="col" className="py-2 font-medium">
                           {range === "done" && doneBy === "completed" ? "Concluída em" : "Prazo"}
@@ -892,7 +934,7 @@ export function WorkTasksToday({
                           onToggle={toggle}
                           onPatch={patch}
                           onStatus={changeStatus}
-                          onDueDate={changeDueDate}
+                          onDate={changeDate}
                         />
                       ))}
                     </SortableContext>
