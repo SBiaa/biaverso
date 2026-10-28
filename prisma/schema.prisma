@@ -886,6 +886,7 @@ model Project {
   documents   ProjectDocument[]
   credentials ProjectCredential[]
   priceTable  ProjectPriceItem[]
+  devLog      ProjectLogEntry[]
 
   @@index([businessId])
   @@index([clientId])
@@ -914,6 +915,37 @@ enum DocumentType {
   BRIEFING
   CONTRATO
   OUTRO
+}
+
+// Diário de desenvolvimento: uma entrada por coisa que aconteceu no projeto
+// (funcionalidade nova, correção, lançamento, decisão). A `content` do projeto
+// continua sendo o "o que é" do sistema; aqui fica a história dele.
+model ProjectLogEntry {
+  id        String     @id @default(cuid())
+  date      DateTime   @default(now())
+  kind      DevLogKind @default(FUNCIONALIDADE)
+  title     String
+  body      String?
+  // Versão em que saiu, ex.: "1.4.0". Livre, sem formato obrigatório.
+  version   String?
+  // Link do commit, PR ou deploy.
+  url       String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, date])
+}
+
+enum DevLogKind {
+  FUNCIONALIDADE
+  MELHORIA
+  CORRECAO
+  LANCAMENTO
+  DECISAO
+  NOTA
 }
 
 // Ponte para o cofre de senhas: a senha continua morando só no PasswordEntry,

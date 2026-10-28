@@ -6,6 +6,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { BusinessBadge, Card, CardTitle } from "@/components/ui";
 import { ProjectDocumentation } from "@/components/modules/projetos/ProjectDocumentation";
 import { ProjectDocuments } from "@/components/modules/projetos/ProjectDocuments";
+import { ProjectDevLog } from "@/components/modules/projetos/ProjectDevLog";
 import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
 import { ProjectPriceTable } from "@/components/modules/projetos/ProjectPriceTable";
 import { ProjectItems } from "@/components/modules/projetos/ProjectItems";
@@ -49,6 +50,10 @@ export default async function ProjectDetailPage({
       documents: {
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         select: { id: true, title: true, url: true, type: true, notes: true },
+      },
+      devLog: {
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        select: { id: true, date: true, kind: true, title: true, body: true, version: true, url: true },
       },
       priceTable: {
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
@@ -203,6 +208,14 @@ export default async function ProjectDetailPage({
             tasks={project.productionTasks.map(toTaskRecord)}
             clients={clients}
             projectOptions={projectOptions}
+          />
+        </Card>
+
+        <Card>
+          <CardTitle className="mb-3">Diário de desenvolvimento</CardTitle>
+          <ProjectDevLog
+            projectId={project.id}
+            initialEntries={project.devLog.map((e) => ({ ...e, date: e.date.toISOString() }))}
           />
         </Card>
 

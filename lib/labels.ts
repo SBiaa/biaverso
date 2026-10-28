@@ -373,6 +373,24 @@ export const documentTypeColors: Record<string, string> = {
   OUTRO: "#6B7280",
 };
 
+export const devLogKindLabels: Record<string, string> = {
+  FUNCIONALIDADE: "Funcionalidade",
+  MELHORIA: "Melhoria",
+  CORRECAO: "Correção",
+  LANCAMENTO: "Lançamento",
+  DECISAO: "Decisão",
+  NOTA: "Nota",
+};
+
+export const devLogKindColors: Record<string, string> = {
+  FUNCIONALIDADE: "#6366F1",
+  MELHORIA: "#0891B2",
+  CORRECAO: "#DC2626",
+  LANCAMENTO: "#059669",
+  DECISAO: "#D97706",
+  NOTA: "#6B7280",
+};
+
 export const productCostKindLabels: Record<string, string> = {
   MATERIAL: "Material",
   IMPRESSAO: "Impressão",

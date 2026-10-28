@@ -459,6 +459,24 @@ export const projectDocumentCreateSchema = z.object({
 });
 export const projectDocumentPatchSchema = projectDocumentCreateSchema.partial();
 
+// ------------------------------------ diário de desenvolvimento do projeto
+export const projectLogCreateSchema = z.object({
+  date: dateOnly.optional(),
+  kind: z.enum(E.DevLogKind).default("FUNCIONALIDADE"),
+  title: text,
+  body: optionalText,
+  version: optionalText,
+  url: optionalText,
+});
+export const projectLogPatchSchema = z.object({
+  date: dateOnly.optional(),
+  kind: z.enum(E.DevLogKind).optional(),
+  title: text.optional(),
+  body: optionalTextPatch,
+  version: optionalTextPatch,
+  url: optionalTextPatch,
+});
+
 // -------------------------------- credenciais (projeto e negócio) do cofre
 export const credentialLinkSchema = z.object({
   passwordEntryId: id,
