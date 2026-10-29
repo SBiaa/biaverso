@@ -25,6 +25,7 @@ import {
   BookOpen,
   Briefcase,
   CheckCircle2,
+  ChevronsRight,
   Circle,
   Clock,
   GripVertical,
@@ -461,12 +462,32 @@ function TaskRow({
         </td>
         <td className="whitespace-nowrap py-2 align-top">
           {!showCompleted && !task.done ? (
-            <DateInput
-              value={task.dueDate}
-              label={`Prazo de ${task.title}`}
-              late={passed(task.dueDate)}
-              onCommit={(value) => onDate(task, "dueDate", value)}
-            />
+            <span className="inline-flex items-center">
+              {/* Atalho: prazo = dia da realização. Só aparece quando há o que copiar. */}
+              {task.scheduledDate &&
+              toDateInputValue(task.scheduledDate) !==
+                (task.dueDate ? toDateInputValue(task.dueDate) : "") ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onDate(task, "dueDate", toDateInputValue(task.scheduledDate!))
+                  }
+                  aria-label={`Usar a data de realização como prazo de ${task.title}`}
+                  title="Usar a data de realização como prazo"
+                  className="mr-0.5 shrink-0 rounded p-0.5 text-text-secondary hover:bg-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <ChevronsRight size={14} />
+                </button>
+              ) : (
+                <span className="mr-0.5 w-[18px] shrink-0" aria-hidden />
+              )}
+              <DateInput
+                value={task.dueDate}
+                label={`Prazo de ${task.title}`}
+                late={passed(task.dueDate)}
+                onCommit={(value) => onDate(task, "dueDate", value)}
+              />
+            </span>
           ) : (showCompleted ? task.completedAt : task.dueDate) ? (
             <span className="text-text-secondary">
               {formatDateBR(new Date((showCompleted ? task.completedAt : task.dueDate)!))}
