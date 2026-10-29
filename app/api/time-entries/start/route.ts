@@ -3,12 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { parseBody, route } from "@/lib/api";
 import { timeEntryStartSchema } from "@/lib/schemas";
 import { getOrCreateToday } from "@/lib/day";
+import { resolveEntryLinks, serializeTimeEntry } from "@/lib/time-tracking";
 
 // Aperta "iniciar": fecha o que estava rodando (se houver) e começa um novo,
 // sempre em hoje — o dia sendo visualizado na tela pode ser outro.
 export const POST = route(async (request: Request) => {
-  const { categoryId, title } = await parseBody(request, timeEntryStartSchema);
+  const { categoryId, title, description, projectId, taskId, pomodoro } = await parseBody(request, timeEntryStartSchema);
 
+  const links = await resolveEntryLinks(projectId, taskId);
   const day = await getOrCreateToday();
   const now = new Date();
 
@@ -18,8 +20,16 @@ export const POST = route(async (request: Request) => {
   });
 
   const entry = await prisma.timeEntry.create({
-    data: { dayId: day.id, categoryId, title, startedAt: now },
+    data: {
+      dayId: day.id,
+      categoryId,
+      title,
+      description,
+      ...links,
+      pomodoro,
+      startedAt: now,
+    },
   });
 
-  return NextResponse.json(entry);
+  return NextResponse.json(serializeTimeEntry(entry));
 });

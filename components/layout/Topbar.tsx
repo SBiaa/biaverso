@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TimeStatusBar } from "./TimeStatusBar";
 import { pageContainer, type PageWidth } from "./page-width";
 
 /** Um degrau do caminho. Sem `href` quando o nível não tem tela própria. */
@@ -76,7 +77,10 @@ export function Topbar({ title, trail = [], action, width = "wide" }: TopbarProp
             {title}
           </h1>
         </nav>
-        {action}
+        <div className="flex shrink-0 items-center gap-3">
+          {action}
+          <TimeStatusBar />
+        </div>
       </div>
     </header>
   );

@@ -21,9 +21,45 @@ export type TimeBlockDTO = {
 export type TimeEntryDTO = {
   id: string;
   title: string | null;
+  description: string | null;
   startedAt: string;
   endedAt: string | null;
   categoryId: string;
+  projectId: string | null;
+  taskId: string | null;
+  /** Ciclo de foco do pomodoro: encerra sozinho quando o tempo acaba. */
+  pomodoro: boolean;
+};
+
+/** Um projeto que dá para escolher no cronômetro ("Ace › Novo Milênio"). */
+export type ProjectOptionDTO = {
+  id: string;
+  name: string;
+  businessName: string;
+  businessColor: string;
+  clientName: string | null;
+};
+
+export type TaskOptionDTO = { id: string; title: string };
+
+export type PomodoroSettingsDTO = {
+  focusMinutes: number;
+  shortBreakMinutes: number;
+  longBreakMinutes: number;
+  cyclesBeforeLongBreak: number;
+  autoStartBreaks: boolean;
+  autoStartFocus: boolean;
+  sound: boolean;
+};
+
+export const DEFAULT_POMODORO_SETTINGS: PomodoroSettingsDTO = {
+  focusMinutes: 25,
+  shortBreakMinutes: 5,
+  longBreakMinutes: 15,
+  cyclesBeforeLongBreak: 4,
+  autoStartBreaks: true,
+  autoStartFocus: false,
+  sound: true,
 };
 
 const timeFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -63,6 +99,73 @@ export function totalMinutesByCategory(entries: TimeEntryDTO[]): Map<string, num
     totals.set(entry.categoryId, (totals.get(entry.categoryId) ?? 0) + minutes);
   }
   return totals;
+}
+
+/** Janela do dia em que "sem registro" conta: antes/depois disso não é cobrança. */
+export const WORKDAY_START = "08:00";
+export const WORKDAY_END = "22:00";
+
+export type TimeStatusDTO = {
+  categories: ActivityCategoryDTO[];
+  /** Registros de hoje, o em andamento incluso (`endedAt: null`). */
+  entries: TimeEntryDTO[];
+  running: TimeEntryDTO | null;
+  settings: PomodoroSettingsDTO;
+  projects: ProjectOptionDTO[];
+  /** Título das tarefas que os registros de hoje citam. */
+  taskTitles: Record<string, string>;
+  /** Ciclos de foco já encerrados hoje — decide quando a pausa é a longa. */
+  pomodorosToday: number;
+  windowStart: string;
+  windowEnd: string;
+};
+
+/**
+ * Horas de hoje a partir dos registros: `trackedMinutes` é tudo que foi
+ * registrado; `untrackedMinutes` é o buraco entre o início da janela do dia e
+ * agora que nenhum registro cobre (registros sobrepostos não contam em dobro).
+ */
+export function summarizeDay(
+  entries: TimeEntryDTO[],
+  windowStart: string,
+  windowEnd: string,
+  nowMs: number,
+) {
+  const trackedMinutes = entries.reduce(
+    (sum, e) =>
+      sum +
+      Math.max(
+        0,
+        ((e.endedAt ? new Date(e.endedAt).getTime() : nowMs) -
+          new Date(e.startedAt).getTime()) /
+          60_000,
+      ),
+    0,
+  );
+
+  const from = new Date(windowStart).getTime();
+  const to = Math.min(nowMs, new Date(windowEnd).getTime());
+  if (to <= from) return { trackedMinutes, untrackedMinutes: 0 };
+
+  const intervals = entries
+    .map((e) => [
+      Math.max(from, new Date(e.startedAt).getTime()),
+      Math.min(to, e.endedAt ? new Date(e.endedAt).getTime() : nowMs),
+    ])
+    .filter(([start, end]) => end > start)
+    .sort((a, b) => a[0] - b[0]);
+
+  let covered = 0;
+  let cursor = from;
+  for (const [start, end] of intervals) {
+    const s = Math.max(start, cursor);
+    if (end > s) {
+      covered += end - s;
+      cursor = end;
+    }
+  }
+
+  return { trackedMinutes, untrackedMinutes: (to - from - covered) / 60_000 };
 }
 
 // Zoom do calendário de blocos planejados. Fica aqui (e não no componente

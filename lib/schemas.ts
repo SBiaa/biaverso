@@ -1143,6 +1143,9 @@ export const timeBlockCreateSchema = z.object({
   dayId: id,
   categoryId: id,
   title: optionalText,
+  description: optionalText,
+  projectId: optionalId.transform((v) => v ?? null),
+  taskId: optionalId.transform((v) => v ?? null),
   startTime: requiredTimeOfDay,
   endTime: requiredTimeOfDay,
 });
@@ -1158,6 +1161,25 @@ export const timeBlockPatchSchema = z.object({
 export const timeEntryStartSchema = z.object({
   categoryId: id,
   title: optionalText,
+  description: optionalText,
+  projectId: optionalId.transform((v) => v ?? null),
+  taskId: optionalId.transform((v) => v ?? null),
+  pomodoro: z.boolean().optional().default(false),
+});
+
+/** Encerrar: `endedAt` é o fim real quando o ciclo acabou com a aba fechada. */
+export const timeEntryStopSchema = z.object({
+  endedAt: z.coerce.date().optional(),
+});
+
+export const pomodoroSettingsSchema = z.object({
+  focusMinutes: z.number().int().min(1).max(240),
+  shortBreakMinutes: z.number().int().min(1).max(120),
+  longBreakMinutes: z.number().int().min(1).max(240),
+  cyclesBeforeLongBreak: z.number().int().min(1).max(12),
+  autoStartBreaks: z.boolean(),
+  autoStartFocus: z.boolean(),
+  sound: z.boolean(),
 });
 
 /** Registro manual de tempo já concluído (esqueceu de apertar iniciar). */
@@ -1165,6 +1187,9 @@ export const timeEntryCreateSchema = z.object({
   dayId: id,
   categoryId: id,
   title: optionalText,
+  description: optionalText,
+  projectId: optionalId.transform((v) => v ?? null),
+  taskId: optionalId.transform((v) => v ?? null),
   startTime: requiredTimeOfDay,
   endTime: requiredTimeOfDay,
 });
@@ -1172,6 +1197,9 @@ export const timeEntryCreateSchema = z.object({
 export const timeEntryPatchSchema = z.object({
   categoryId: id.optional(),
   title: patchText,
+  description: patchText,
+  projectId: optionalId,
+  taskId: optionalId,
   startTime: requiredTimeOfDay.optional(),
   endTime: requiredTimeOfDay.optional(),
 });

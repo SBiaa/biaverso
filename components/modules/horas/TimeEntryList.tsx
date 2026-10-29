@@ -2,14 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
-import { Button, confirmAction, ErrorNote, IconButton, notify } from "@/components/ui";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Button, confirmAction, ErrorNote, IconButton, Modal, notify } from "@/components/ui";
+import { EntryDetailsPanel } from "@/components/layout/time/EntryDetailsPanel";
+import { TIME_STATUS_REFRESH_EVENT } from "@/components/layout/TimeStatusBar";
+import type { EntryDetails } from "@/lib/pomodoro";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatDurationMinutes } from "@/lib/utils";
 import {
   formatInstantTime,
   minutesBetween,
+  DEFAULT_POMODORO_SETTINGS,
   type ActivityCategoryDTO,
+  type ProjectOptionDTO,
   type TimeEntryDTO,
 } from "@/lib/time-tracking-shared";
 
@@ -19,10 +24,14 @@ const inputClass =
 export function TimeEntryList({
   dayId,
   categories,
+  projects,
+  taskTitles,
   entries,
 }: {
   dayId: string;
   categories: ActivityCategoryDTO[];
+  projects: ProjectOptionDTO[];
+  taskTitles: Record<string, string>;
   entries: TimeEntryDTO[];
 }) {
   const router = useRouter();
@@ -33,9 +42,11 @@ export function TimeEntryList({
   const [endTime, setEndTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<TimeEntryDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const projectById = new Map(projects.map((p) => [p.id, p]));
   // O registro em andamento aparece no cronômetro, não duplicado aqui.
   const finished = entries.filter((e) => e.endedAt);
 
@@ -104,15 +115,29 @@ export function TimeEntryList({
                 />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-text-primary">
-                    {category?.name ?? "Categoria removida"}
+                    {entry.title || category?.name || "Categoria removida"}
                   </span>
-                  {entry.title && (
-                    <span className="truncate text-xs text-text-secondary">{entry.title}</span>
+                  <span className="truncate text-xs text-text-secondary">
+                    {[
+                      entry.title ? category?.name : null,
+                      entry.projectId ? projectById.get(entry.projectId)?.name : null,
+                      entry.taskId ? taskTitles[entry.taskId] : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" › ")}
+                  </span>
+                  {entry.description && (
+                    <span className="whitespace-pre-line text-xs text-text-secondary">
+                      {entry.description}
+                    </span>
                   )}
                 </div>
                 <span className="shrink-0 text-xs font-medium text-text-secondary">
                   {formatDurationMinutes(minutesBetween(entry.startedAt, entry.endedAt))}
                 </span>
+                <IconButton onClick={() => setEditing(entry)} aria-label="Editar registro">
+                  <Pencil size={15} />
+                </IconButton>
                 <IconButton
                   onClick={() => handleDelete(entry)}
                   disabled={deletingId === entry.id}
@@ -176,6 +201,105 @@ export function TimeEntryList({
         ))}
 
       <ErrorNote message={error} />
+
+      {editing && (
+        <EditEntryModal
+          entry={editing}
+          categories={categories}
+          projects={projects}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+            window.dispatchEvent(new Event(TIME_STATUS_REFRESH_EVENT));
+            notify("Salvo.");
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function EditEntryModal({
+  entry,
+  categories,
+  projects,
+  onClose,
+  onSaved,
+}: {
+  entry: TimeEntryDTO;
+  categories: ActivityCategoryDTO[];
+  projects: ProjectOptionDTO[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [startTime, setStartTime] = useState(formatInstantTime(entry.startedAt));
+  const [endTime, setEndTime] = useState(formatInstantTime(entry.endedAt!));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(details: EntryDetails) {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.patch(`/api/time-entries/${entry.id}`, {
+        categoryId: details.categoryId,
+        title: details.title.trim() || null,
+        description: details.description.trim() || null,
+        projectId: details.projectId,
+        taskId: details.taskId,
+        startTime,
+        endTime,
+      });
+      onSaved();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="Editar registro" onClose={onClose}>
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-text-secondary">
+            Início
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-text-secondary">
+            Fim
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+        </div>
+        <EntryDetailsPanel
+          categories={categories}
+          projects={projects}
+          settings={DEFAULT_POMODORO_SETTINGS}
+          initial={{
+            categoryId: entry.categoryId,
+            title: entry.title ?? "",
+            description: entry.description ?? "",
+            projectId: entry.projectId,
+            taskId: entry.taskId,
+          }}
+          running
+          busy={saving || !startTime || !endTime}
+          onStart={() => undefined}
+          onSave={save}
+        />
+        <ErrorNote message={error} />
+      </div>
+    </Modal>
   );
 }

@@ -133,7 +133,8 @@ model Task {
   template   Task?   @relation("RoutineTemplate", fields: [templateId], references: [id], onDelete: SetNull)
   instances  Task[]  @relation("RoutineTemplate")
 
-  subtasks Subtask[]
+  subtasks    Subtask[]
+  timeEntries TimeEntry[]
 
   // Uma cópia de cada rotina por dia. Sem isto, dois carregamentos simultâneos
   // do /dia materializavam o mesmo template duas vezes e a lista aparecia
@@ -339,9 +340,36 @@ model TimeEntry {
   categoryId String
   category   ActivityCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
+  // Estilo Toggl: `title` é a linha do que foi feito; `description` é o detalhe.
+  // Projeto e tarefa dizem "o que da Ace" — são opcionais e, se o projeto ou a
+  // tarefa sumirem, o registro fica (só perde o vínculo).
+  description String?
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  taskId      String?
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  /// Nasceu de um ciclo de foco do pomodoro: encerra sozinho quando o tempo acaba.
+  pomodoro    Boolean  @default(false)
+
   @@index([dayId])
   @@index([categoryId])
   @@index([endedAt])
+  @@index([projectId])
+  @@index([taskId])
+}
+
+// Configuração do pomodoro. Uma linha só (id "default"): o app tem uma usuária,
+// e guardar no banco faz a configuração acompanhar o celular e o computador.
+model PomodoroSettings {
+  id                    String  @id @default("default")
+  focusMinutes          Int     @default(25)
+  shortBreakMinutes     Int     @default(5)
+  longBreakMinutes      Int     @default(15)
+  cyclesBeforeLongBreak Int     @default(4)
+  autoStartBreaks       Boolean @default(true)
+  autoStartFocus        Boolean @default(false)
+  sound                 Boolean @default(true)
+  updatedAt             DateTime @updatedAt
 }
 
 // CARDÁPIO E RECEITAS
@@ -888,6 +916,7 @@ model Project {
   credentials ProjectCredential[]
   priceTable  ProjectPriceItem[]
   devLog      ProjectLogEntry[]
+  timeEntries TimeEntry[]
 
   @@index([businessId])
   @@index([clientId])

@@ -3,10 +3,13 @@ import { getOrCreateDay } from "@/lib/day";
 import { BUSINESS_COLORS } from "@/lib/business-visuals";
 import { addUtcDays, toDateInputValue } from "@/lib/utils";
 import type { ActivityCategory, TimeBlock, TimeEntry } from "@/app/generated/prisma/client";
-import type {
-  ActivityCategoryDTO,
-  TimeBlockDTO,
-  TimeEntryDTO,
+import {
+  DEFAULT_POMODORO_SETTINGS,
+  type ActivityCategoryDTO,
+  type PomodoroSettingsDTO,
+  type ProjectOptionDTO,
+  type TimeBlockDTO,
+  type TimeEntryDTO,
 } from "@/lib/time-tracking-shared";
 
 // Consultas do controle de horas — código de servidor. Tipos e helpers puros
@@ -53,9 +56,13 @@ export function serializeTimeEntry(entry: TimeEntry): TimeEntryDTO {
   return {
     id: entry.id,
     title: entry.title,
+    description: entry.description,
     startedAt: entry.startedAt.toISOString(),
     endedAt: entry.endedAt ? entry.endedAt.toISOString() : null,
     categoryId: entry.categoryId,
+    projectId: entry.projectId,
+    taskId: entry.taskId,
+    pomodoro: entry.pomodoro,
   };
 }
 
@@ -111,4 +118,55 @@ export async function getPlannedBlocksForRange(
     date: toDateInputValue(day.date),
     blocks: blocks.filter((b) => b.dayId === day.id).map(serializeTimeBlock),
   }));
+}
+
+/** Configuração do pomodoro; sem linha ainda, valem os padrões (25/5/15). */
+export async function getPomodoroSettings(): Promise<PomodoroSettingsDTO> {
+  const row = await prisma.pomodoroSettings.findUnique({ where: { id: "default" } });
+  if (!row) return DEFAULT_POMODORO_SETTINGS;
+  return {
+    focusMinutes: row.focusMinutes,
+    shortBreakMinutes: row.shortBreakMinutes,
+    longBreakMinutes: row.longBreakMinutes,
+    cyclesBeforeLongBreak: row.cyclesBeforeLongBreak,
+    autoStartBreaks: row.autoStartBreaks,
+    autoStartFocus: row.autoStartFocus,
+    sound: row.sound,
+  };
+}
+
+/** Projetos em andamento, com o negócio e o cliente — o "o que da Ace". */
+export async function getProjectOptions(): Promise<ProjectOptionDTO[]> {
+  const projects = await prisma.project.findMany({
+    where: { status: "EM_ANDAMENTO", business: { active: true } },
+    orderBy: [{ business: { name: "asc" } }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      business: { select: { name: true, color: true } },
+      client: { select: { name: true } },
+    },
+  });
+  return projects.map((p) => ({
+    id: p.id,
+    name: p.name,
+    businessName: p.business.name,
+    businessColor: p.business.color,
+    clientName: p.client?.name ?? null,
+  }));
+}
+
+/**
+ * Escolher uma tarefa já diz de que projeto é: devolve o projeto da tarefa
+ * quando só ela veio, para o registro não ficar com tarefa solta.
+ */
+export async function resolveEntryLinks(projectId: string | null, taskId: string | null) {
+  if (taskId && !projectId) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { projectId: true },
+    });
+    return { projectId: task?.projectId ?? null, taskId };
+  }
+  return { projectId, taskId };
 }

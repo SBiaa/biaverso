@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { ApiError, parseBody, route } from "@/lib/api";
 import { timeEntryCreateSchema } from "@/lib/schemas";
 import { combineDateAndTime } from "@/lib/utils";
+import { resolveEntryLinks } from "@/lib/time-tracking";
 
 // Registro manual de tempo já concluído — para quando esqueceu de apertar
 // "iniciar". O cronômetro em si fica em /api/time-entries/start.
 export const POST = route(async (request: Request) => {
-  const { dayId, categoryId, title, startTime, endTime } = await parseBody(
+  const { dayId, categoryId, title, description, projectId, taskId, startTime, endTime } =
+    await parseBody(
     request,
     timeEntryCreateSchema,
   );
@@ -22,7 +24,15 @@ export const POST = route(async (request: Request) => {
   }
 
   const entry = await prisma.timeEntry.create({
-    data: { dayId, categoryId, title, startedAt, endedAt },
+    data: {
+      dayId,
+      categoryId,
+      title,
+      description,
+      ...(await resolveEntryLinks(projectId, taskId)),
+      startedAt,
+      endedAt,
+    },
   });
 
   return NextResponse.json(entry);

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { getOrCreateDay } from "@/lib/day";
-import { getAllCategories, getDayTimeTracking, getRunningEntry } from "@/lib/time-tracking";
+import { prisma } from "@/lib/prisma";
+import { getAllCategories, getDayTimeTracking, getProjectOptions } from "@/lib/time-tracking";
 import { instantToMinutes } from "@/lib/time-tracking-shared";
 import { parseDateOnly, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, CardTitle } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
-import { TimerWidget } from "@/components/modules/horas/TimerWidget";
 import { DayTimeline } from "@/components/modules/horas/DayTimeline";
 import { TimeBlockPlanner } from "@/components/modules/horas/TimeBlockPlanner";
 import { TimeEntryList } from "@/components/modules/horas/TimeEntryList";
@@ -28,11 +28,17 @@ export default async function HorasPage({
   const isToday = date.getTime() === today.getTime();
 
   const day = await getOrCreateDay(date);
-  const [categories, { blocks, entries }, runningEntry] = await Promise.all([
+  const [categories, { blocks, entries }, projects] = await Promise.all([
     getAllCategories(),
     getDayTimeTracking(day.id),
-    getRunningEntry(),
+    getProjectOptions(),
   ]);
+
+  const taskIds = [...new Set(entries.flatMap((e) => (e.taskId ? [e.taskId] : [])))];
+  const tasks = taskIds.length
+    ? await prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, title: true } })
+    : [];
+  const taskTitles = Object.fromEntries(tasks.map((t) => [t.id, t.title]));
 
   const activeCategories = categories.filter((c) => c.active);
   const nowMinutes = isToday ? instantToMinutes(new Date().toISOString()) : null;
@@ -52,8 +58,10 @@ export default async function HorasPage({
         </div>
 
         <Card>
-          <CardTitle className="mb-3">Cronômetro</CardTitle>
-          <TimerWidget categories={activeCategories} initialRunning={runningEntry} />
+          <CardTitle className="mb-1">Cronômetro e pomodoro</CardTitle>
+          <p className="text-sm text-text-secondary">
+            Inicie, pare e configure o pomodoro pelo botão no topo da tela, em qualquer página.
+          </p>
         </Card>
 
         <Card>
@@ -83,7 +91,13 @@ export default async function HorasPage({
 
         <Card>
           <CardTitle className="mb-3">Registros do dia</CardTitle>
-          <TimeEntryList dayId={day.id} categories={activeCategories} entries={entries} />
+          <TimeEntryList
+            dayId={day.id}
+            categories={activeCategories}
+            projects={projects}
+            taskTitles={taskTitles}
+            entries={entries}
+          />
         </Card>
 
         <Card>
