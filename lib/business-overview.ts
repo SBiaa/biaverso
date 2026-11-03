@@ -44,7 +44,79 @@ export type BusinessOverview = {
     date: string;
     category: string;
   }[];
+  /** Tarefas de produção feitas × em aberto (prazo perdido conta como aberta). */
+  taskTotals: { done: number; open: number } | null;
+  vision: BusinessVision;
 };
+
+/** O negócio dentro da Central de Visão: pilar → objetivos → metas. */
+export type BusinessVision = {
+  pillar: {
+    id: string;
+    name: string;
+    color: string;
+    conceptualGoals: { id: string; title: string }[];
+  } | null;
+  measuredGoals: {
+    id: string;
+    title: string;
+    conceptualGoal: string;
+    targetValue: number | null;
+    currentValue: number;
+    progress: number;
+    unit: string | null;
+    target: string | null;
+    deadline: string | null;
+    status: string;
+  }[];
+};
+
+async function getBusinessVision(businessId: string): Promise<BusinessVision> {
+  const [business, measuredGoals] = await Promise.all([
+    prisma.business.findUnique({
+      where: { id: businessId },
+      select: {
+        pillar: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            conceptualGoals: {
+              where: { status: { notIn: ["CANCELADO", "CONCLUIDO"] } },
+              select: { id: true, title: true },
+              orderBy: { createdAt: "asc" },
+            },
+          },
+        },
+      },
+    }),
+    prisma.measuredGoal.findMany({
+      where: { businessId, status: { not: "CANCELADO" } },
+      orderBy: [{ deadline: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        title: true,
+        targetValue: true,
+        currentValue: true,
+        progress: true,
+        unit: true,
+        target: true,
+        deadline: true,
+        status: true,
+        conceptualGoal: { select: { title: true } },
+      },
+    }),
+  ]);
+
+  return {
+    pillar: business?.pillar ?? null,
+    measuredGoals: measuredGoals.map((g) => ({
+      ...g,
+      conceptualGoal: g.conceptualGoal.title,
+      deadline: g.deadline ? g.deadline.toISOString() : null,
+    })),
+  };
+}
 
 export async function getBusinessOverview(
   businessId: string,
@@ -65,6 +137,8 @@ export async function getBusinessOverview(
     entradas,
     saidas,
     recentTransactions,
+    doneTasks,
+    vision,
   ] = await Promise.all([
     has("PROJETOS")
       ? prisma.project.count({ where: { businessId, status: "EM_ANDAMENTO" } })
@@ -137,6 +211,10 @@ export async function getBusinessOverview(
           },
         })
       : null,
+    has("PRODUCAO")
+      ? prisma.productionTask.count({ where: { businessId, status: "CONCLUIDO" } })
+      : null,
+    getBusinessVision(businessId),
   ]);
 
   const deadlines: DeadlineItem[] = [];
@@ -221,6 +299,9 @@ export async function getBusinessOverview(
       date: t.date.toISOString(),
       category: t.category,
     })),
+    taskTotals:
+      tasks !== null && doneTasks !== null ? { done: doneTasks, open: tasks.length } : null,
+    vision,
   };
 }
 
