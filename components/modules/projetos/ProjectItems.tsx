@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, FileText, ListTodo, Plus, Table2 } from "lucide-react";
+import { CalendarDays, ChevronRight, FileText, ListTodo, Plus, Table2 } from "lucide-react";
 import { AttentionBadge, Button } from "@/components/ui";
 import { cn, formatDateBR, toDateInputValue, todayInputValue } from "@/lib/utils";
 import {
@@ -39,7 +39,10 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "post", label: "Posts" },
 ];
 
-const dayOf = (iso: string | null) => (iso ? toDateInputValue(iso) : null);
+/** A partir de quantos dias de atraso o item vai para o bloco recolhido. */
+const OLD_LATE_DAYS = 30;
+
+const dayOf =(iso: string | null) => (iso ? toDateInputValue(iso) : null);
 
 /** Mês que a tela abre: o de hoje se o projeto está rolando, senão o do começo dele. */
 function pickInitialMonth(
@@ -136,21 +139,45 @@ export function ProjectItems({
     [],
   );
 
-  const rows = useMemo(
-    () =>
-      items
-        .filter((i) => filter === "tudo" || i.kind === filter)
-        // Pendentes primeiro, por data; sem data no fim.
+  const [showOldLate, setShowOldLate] = useState(false);
+  const [showDone, setShowDone] = useState(false);
+
+  // A tabela em blocos: o que atrasou há pouco vem primeiro (o mais recente no
+  // topo), depois o que vence, e o que atrasou há mais de 30 dias e o que já
+  // foi feito ficam recolhidos — senão meses de atraso enterram o que importa.
+  const sections = useMemo(() => {
+    const cutoff = new Date(`${today}T00:00:00Z`);
+    cutoff.setUTCDate(cutoff.getUTCDate() - OLD_LATE_DAYS);
+    const cutoffDay = cutoff.toISOString().slice(0, 10);
+
+    const byTitle = (a: ProjectItem, b: ProjectItem) => a.title.localeCompare(b.title, "pt-BR");
+    const asc = (a: ProjectItem, b: ProjectItem) =>
+      a.date === b.date ? byTitle(a, b) : (a.date ?? "") < (b.date ?? "") ? -1 : 1;
+    const desc = (a: ProjectItem, b: ProjectItem) => (a.date === b.date ? byTitle(a, b) : -asc(a, b));
+
+    const visible = items.filter((i) => filter === "tudo" || i.kind === filter);
+    const pending = visible.filter((i) => !i.done);
+
+    return {
+      recentLate: pending.filter((i) => i.date && i.date < today && i.date >= cutoffDay).sort(desc),
+      upcoming: pending.filter((i) => i.date && i.date >= today).sort(asc),
+      noDate: pending.filter((i) => !i.date).sort(byTitle),
+      oldLate: pending.filter((i) => i.date && i.date < cutoffDay).sort(desc),
+      done: visible
+        .filter((i) => i.done)
         .sort((a, b) => {
-          if (a.done !== b.done) return a.done ? 1 : -1;
-          if (a.date !== b.date) return (a.date ?? "9999") < (b.date ?? "9999") ? -1 : 1;
-          return a.title.localeCompare(b.title, "pt-BR");
+          const da = a.finishedOn ?? a.date ?? "";
+          const db = b.finishedOn ?? b.date ?? "";
+          return da === db ? byTitle(a, b) : da < db ? 1 : -1;
         }),
-    [items, filter],
-  );
+    };
+  }, [items, filter, today]);
+
+  const rowCount = Object.values(sections).reduce((n, s) => n + s.length, 0);
 
   const count = (f: Filter) => items.filter((i) => f === "tudo" || i.kind === f).length;
   const openCount = items.filter((i) => !i.done).length;
+  const doneCount = items.length - openCount;
   const lateCount = items.filter((i) => !i.done && !i.missed && i.date && i.date < today).length;
   const missedCount = items.filter((i) => !i.done && i.missed).length;
 
@@ -160,6 +187,79 @@ export function ProjectItems({
     } else {
       setEditingTask(tasks.find((t) => t.id === item.id) ?? null);
     }
+  }
+
+  function renderRow(item: ProjectItem) {
+    const late = !item.done && !item.missed && item.date !== null && item.date < today;
+    const Icon = item.kind === "post" ? FileText : ListTodo;
+    return (
+      <tr
+        key={item.key}
+        onClick={() => open(item)}
+        className="cursor-pointer hover:bg-hover"
+      >
+        <td className="py-2 pr-3 align-top">
+          <span className="flex items-start gap-2">
+            <Icon size={14} className="mt-0.5 shrink-0 text-text-secondary" />
+            <span
+              className={cn(
+                "text-text-primary",
+                item.done && "text-text-secondary line-through",
+              )}
+            >
+              {item.title}
+            </span>
+            {item.steps && (
+              <span
+                title="Passos feitos"
+                className={cn(
+                  "mt-px shrink-0 text-xs tabular-nums text-text-secondary",
+                  item.steps.done === item.steps.total && "text-accent",
+                )}
+              >
+                {item.steps.done}/{item.steps.total}
+              </span>
+            )}
+          </span>
+        </td>
+        <td className="whitespace-nowrap py-2 pr-3 align-top text-text-secondary">
+          {item.typeLabel}
+        </td>
+        <td className="py-2 pr-3 align-top">
+          <span
+            className={cn(
+              "inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium",
+              item.statusColor,
+            )}
+          >
+            {item.statusLabel}
+          </span>
+        </td>
+        <td className="whitespace-nowrap py-2 pr-3 align-top">
+          {item.date ? (
+            <span
+              className={cn("text-text-secondary", late && "font-medium text-red-600")}
+            >
+              {formatDateBR(new Date(item.date))}
+            </span>
+          ) : (
+            <span className="text-text-secondary/60">Sem data</span>
+          )}
+          {late && (
+            <AttentionBadge level="atrasado" className="ml-1.5">
+              Atrasado
+            </AttentionBadge>
+          )}
+        </td>
+        <td className="whitespace-nowrap py-2 align-top text-text-secondary">
+          {item.finishedOn ? (
+            formatDateBR(new Date(item.finishedOn))
+          ) : (
+            <span className="text-text-secondary/60">—</span>
+          )}
+        </td>
+      </tr>
+    );
   }
 
   return (
@@ -186,7 +286,8 @@ export function ProjectItems({
           </div>
           <p className="flex items-center gap-x-3 text-xs text-text-secondary">
             <span>
-              {openCount} {openCount === 1 ? "aberto" : "abertos"}
+              {doneCount} {doneCount === 1 ? "concluído" : "concluídos"} · {openCount}{" "}
+              {openCount === 1 ? "aberto" : "abertos"}
             </span>
             {lateCount > 0 && (
               <span className="font-medium text-red-600">
@@ -244,7 +345,7 @@ export function ProjectItems({
       </div>
 
       {view === "tabela" ? (
-        rows.length === 0 ? (
+        rowCount === 0 ? (
           <p className="py-2 text-sm text-text-secondary">
             {items.length === 0
               ? projectId
@@ -276,80 +377,28 @@ export function ProjectItems({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {rows.map((item) => {
-                  const late = !item.done && !item.missed && item.date !== null && item.date < today;
-                  const Icon = item.kind === "post" ? FileText : ListTodo;
-                  return (
-                    <tr
-                      key={item.key}
-                      onClick={() => open(item)}
-                      className="cursor-pointer hover:bg-hover"
-                    >
-                      <td className="py-2 pr-3 align-top">
-                        <span className="flex items-start gap-2">
-                          <Icon size={14} className="mt-0.5 shrink-0 text-text-secondary" />
-                          <span
-                            className={cn(
-                              "text-text-primary",
-                              item.done && "text-text-secondary line-through",
-                            )}
-                          >
-                            {item.title}
-                          </span>
-                          {item.steps && (
-                            <span
-                              title="Passos feitos"
-                              className={cn(
-                                "mt-px shrink-0 text-xs tabular-nums text-text-secondary",
-                                item.steps.done === item.steps.total && "text-accent",
-                              )}
-                            >
-                              {item.steps.done}/{item.steps.total}
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-3 align-top text-text-secondary">
-                        {item.typeLabel}
-                      </td>
-                      <td className="py-2 pr-3 align-top">
-                        <span
-                          className={cn(
-                            "inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium",
-                            item.statusColor,
-                          )}
-                        >
-                          {item.statusLabel}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-3 align-top">
-                        {item.date ? (
-                          <span
-                            className={cn("text-text-secondary", late && "font-medium text-red-600")}
-                          >
-                            {formatDateBR(new Date(item.date))}
-                          </span>
-                        ) : (
-                          <span className="text-text-secondary/60">Sem data</span>
-                        )}
-                        {late && (
-                          <AttentionBadge level="atrasado" className="ml-1.5">
-                            Atrasado
-                          </AttentionBadge>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap py-2 align-top text-text-secondary">
-                        {item.finishedOn ? (
-                          formatDateBR(new Date(item.finishedOn))
-                        ) : (
-                          <span className="text-text-secondary/60">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+              <ItemSection
+                label={`Atrasados · últimos ${OLD_LATE_DAYS} dias`}
+                tone="late"
+                items={sections.recentLate}
+                renderRow={renderRow}
+              />
+              <ItemSection label="Próximos" items={sections.upcoming} renderRow={renderRow} />
+              <ItemSection label="Sem data" items={sections.noDate} renderRow={renderRow} />
+              <ItemSection
+                label={`Atrasados há mais de ${OLD_LATE_DAYS} dias`}
+                items={sections.oldLate}
+                renderRow={renderRow}
+                collapsed={!showOldLate}
+                onToggle={() => setShowOldLate((v) => !v)}
+              />
+              <ItemSection
+                label="Concluídos"
+                items={sections.done}
+                renderRow={renderRow}
+                collapsed={!showDone}
+                onToggle={() => setShowDone((v) => !v)}
+              />
             </table>
           </div>
         )
@@ -404,5 +453,66 @@ export function ProjectItems({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Um bloco da tabela (atrasados, próximos...). Com `onToggle`, o bloco começa
+ * recolhido e mostra só a linha com o total, que abre e fecha.
+ */
+function ItemSection({
+  label,
+  items,
+  renderRow,
+  tone,
+  collapsed = false,
+  onToggle,
+}: {
+  label: string;
+  items: ProjectItem[];
+  renderRow: (item: ProjectItem) => React.ReactNode;
+  tone?: "late";
+  collapsed?: boolean;
+  onToggle?: () => void;
+}) {
+  if (items.length === 0) return null;
+
+  const title = (
+    <>
+      {label} · {items.length}
+    </>
+  );
+
+  return (
+    <tbody className="divide-y divide-border">
+      <tr>
+        <th
+          scope="colgroup"
+          colSpan={5}
+          className={cn(
+            "pb-1.5 pt-4 text-left text-xs font-semibold",
+            tone === "late" ? "text-red-600" : "text-text-secondary",
+          )}
+        >
+          {onToggle ? (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-expanded={!collapsed}
+              className="-my-1 flex items-center gap-1 rounded py-1 hover:text-text-primary"
+            >
+              <ChevronRight
+                size={14}
+                className={cn("transition-transform", !collapsed && "rotate-90")}
+              />
+              {title}
+            </button>
+          ) : (
+            title
+          )}
+        </th>
+      </tr>
+      {!collapsed && items.map(renderRow)}
+    </tbody>
   );
 }

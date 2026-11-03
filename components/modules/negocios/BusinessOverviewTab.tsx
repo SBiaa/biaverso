@@ -11,7 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Card, CardTitle, StatCard } from "@/components/ui";
-import { ProjectGrid } from "@/components/modules/projetos/ProjectGrid";
+import { BusinessGoalsCard } from "./BusinessGoalsCard";
 import { cn, formatCurrencyBRL, formatDateBR } from "@/lib/utils";
 import { transactionCategoryLabels } from "@/lib/labels";
 import type { BusinessOverview } from "@/lib/business-overview";
@@ -104,7 +104,8 @@ export function BusinessOverviewTab({
   /** Abas ligadas, para os atalhos do rodapé. */
   tabs: { key: string; label: string; href: string; ownPage: boolean }[];
 }) {
-  const { stats, deadlines, overdueCount, missed, recentTransactions } = overview;
+  const { stats, deadlines, overdueCount, missed, recentTransactions, vision, taskTotals } =
+    overview;
 
   const cards = [
     stats.activeProjects !== null && {
@@ -157,6 +158,13 @@ export function BusinessOverviewTab({
           </span>
         </div>
       )}
+
+      <BusinessGoalsCard
+        businessId={businessId}
+        vision={vision}
+        projects={projects}
+        taskTotals={taskTotals}
+      />
 
       {schedule}
 
@@ -218,21 +226,6 @@ export function BusinessOverviewTab({
           </ul>
         )}
       </Card>
-
-      {projects.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <CardTitle>Projetos</CardTitle>
-            <Link
-              href={`/negocios/${businessId}?tab=interno`}
-              className="-my-2 py-2 text-xs font-medium text-accent hover:underline"
-            >
-              Ver todos
-            </Link>
-          </div>
-          <ProjectGrid projects={projects} sort="prazo" showBusinessGroups={false} />
-        </div>
-      )}
 
       {recentTransactions.length > 0 && (
         <Card className="flex flex-col gap-3">
