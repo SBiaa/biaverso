@@ -68,6 +68,7 @@ export default async function HorasPage({
           <CardTitle className="mb-3">Linha do tempo</CardTitle>
           <DayTimeline
             categories={categories}
+            projects={projects}
             blocks={blocks}
             entries={entries}
             nowMinutes={nowMinutes}

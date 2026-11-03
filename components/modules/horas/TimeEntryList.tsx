@@ -105,7 +105,11 @@ export function TimeEntryList({
           {finished.map((entry) => {
             const category = categoryById.get(entry.categoryId);
             return (
-              <li key={entry.id} className="flex items-center gap-3 py-2 text-sm">
+              <li
+                key={entry.id}
+                onClick={() => setEditing(entry)}
+                className="-mx-2 flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-hover"
+              >
                 <span className="w-24 shrink-0 text-text-secondary">
                   {formatInstantTime(entry.startedAt)}–{formatInstantTime(entry.endedAt!)}
                 </span>
@@ -140,7 +144,10 @@ export function TimeEntryList({
                   <Pencil size={15} />
                 </IconButton>
                 <IconButton
-                  onClick={() => handleDelete(entry)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(entry);
+                  }}
                   disabled={deletingId === entry.id}
                   aria-label={`Excluir registro ${category?.name ?? ""}`}
                   tone="danger"
@@ -221,7 +228,7 @@ export function TimeEntryList({
   );
 }
 
-function EditEntryModal({
+export function EditEntryModal({
   entry,
   categories,
   projects,

@@ -1,8 +1,15 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { notify } from "@/components/ui";
+import { TIME_STATUS_REFRESH_EVENT } from "@/components/layout/TimeStatusBar";
+import { EditEntryModal } from "@/components/modules/horas/TimeEntryList";
 import {
   instantToMinutes,
   timeToMinutes,
   type ActivityCategoryDTO,
+  type ProjectOptionDTO,
   type TimeBlockDTO,
   type TimeEntryDTO,
 } from "@/lib/time-tracking-shared";
@@ -42,16 +49,20 @@ function Lane({
 
 export function DayTimeline({
   categories,
+  projects,
   blocks,
   entries,
   nowMinutes,
 }: {
   categories: ActivityCategoryDTO[];
+  projects: ProjectOptionDTO[];
   blocks: TimeBlockDTO[];
   entries: TimeEntryDTO[];
   /** Minutos desde a meia-noite, se o dia mostrado for hoje — desenha a linha "agora". */
   nowMinutes?: number | null;
 }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState<TimeEntryDTO | null>(null);
   const categoryById = new Map(categories.map((c) => [c.id, c]));
 
   return (
@@ -109,7 +120,22 @@ export function DayTimeline({
                 <div
                   key={entry.id}
                   title={category?.name ?? ""}
-                  className="absolute left-0.5 right-0.5 overflow-hidden rounded px-1 text-[10px] text-white"
+                  role={entry.endedAt ? "button" : undefined}
+                  tabIndex={entry.endedAt ? 0 : undefined}
+                  onClick={entry.endedAt ? () => setEditing(entry) : undefined}
+                  onKeyDown={
+                    entry.endedAt
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setEditing(entry);
+                          }
+                        }
+                      : undefined
+                  }
+                  className={`absolute left-0.5 right-0.5 overflow-hidden rounded px-1 text-[10px] text-white ${
+                    entry.endedAt ? "cursor-pointer hover:brightness-110" : ""
+                  }`}
                   style={{
                     top: topFor(start),
                     height: heightFor(start, end),
@@ -130,6 +156,21 @@ export function DayTimeline({
           </Lane>
         </div>
       </div>
+
+      {editing && (
+        <EditEntryModal
+          entry={editing}
+          categories={categories}
+          projects={projects}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+            window.dispatchEvent(new Event(TIME_STATUS_REFRESH_EVENT));
+            notify("Salvo.");
+          }}
+        />
+      )}
     </div>
   );
 }
