@@ -176,6 +176,7 @@ function TaskRow({
   onStatus,
   onDate,
   projects,
+  covers,
   onEdit,
 }: {
   task: WorkTask;
@@ -184,6 +185,7 @@ function TaskRow({
   levels: PriorityLevelDTO[];
   projects: ProjectOption[];
   onEdit: (task: WorkTask, edit: TaskEdit) => Promise<unknown>;
+  covers: Record<string, number>;
   /** Mostra a data de conclusão no lugar do prazo. */
   showCompleted: boolean;
   /** Pode ser arrastada: só tarefa aberta, e só nas abas que mostram a ordem de execução. */
@@ -319,6 +321,7 @@ function TaskRow({
               task={task}
               levels={levels}
               projects={projects}
+              coverVersion={task.businessId ? (covers[task.businessId] ?? null) : null}
               subtasks={subtasks}
               onClose={() => setPeek(false)}
               onToggle={onToggle}
@@ -506,9 +509,12 @@ export function WorkTasksToday({
   dayInPast,
   businesses,
   projects,
+  covers,
 }: {
   /** Projetos em andamento, para ligar uma tarefa de produção a um deles. */
   projects: ProjectOption[];
+  /** Quando a capa de cada negócio mudou (ms); negócio sem capa fica de fora. */
+  covers: Record<string, number>;
   dayId: string;
   /** `kind:id` das tarefas que estão no foco do dia. */
   focusKeys: string[];
@@ -931,6 +937,7 @@ export function WorkTasksToday({
                           onStatus={changeStatus}
                           onDate={changeDate}
                           projects={projects}
+                          covers={covers}
                           onEdit={edit}
                         />
                       ))}

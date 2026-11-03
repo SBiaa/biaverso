@@ -26,6 +26,7 @@ import type {
   WorkTask,
 } from "@/components/modules/dia/WorkTasksToday";
 import type { TaskStatus } from "@/app/generated/prisma/enums";
+import { BusinessCover } from "@/components/modules/negocios/BusinessCover";
 
 /** Para onde leva o botão de origem, conforme o tipo da tarefa. */
 const originLinkLabel: Record<WorkTask["kind"], string> = {
@@ -100,6 +101,7 @@ export function TaskPeek({
   task,
   levels,
   projects,
+  coverVersion,
   subtasks,
   onClose,
   onToggle,
@@ -111,6 +113,8 @@ export function TaskPeek({
   task: WorkTask;
   levels: PriorityLevelDTO[];
   projects: ProjectOption[];
+  /** Quando a capa do negócio mudou (ms); `null` = sem capa, vai a cor. */
+  coverVersion: number | null;
   subtasks: ReturnType<typeof useSubtasks>;
   onClose: () => void;
   onToggle: (task: WorkTask) => void;
@@ -185,6 +189,14 @@ export function TaskPeek({
         tabIndex={-1}
         className="peek-in flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-border bg-surface shadow-2xl outline-none"
       >
+        {/* Capa do negócio: bate o olho e já sabe de onde a tarefa é. */}
+        <BusinessCover
+          businessId={task.businessId ?? ""}
+          color={task.originColor}
+          version={task.businessId ? coverVersion : null}
+          className="h-28 shrink-0"
+        />
+
         {/* Barra do topo: de onde a tarefa é, e o X. */}
         <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-surface px-4 py-2">
           <nav aria-label="Origem" className="flex min-w-0 flex-1 items-center gap-1 text-xs">
@@ -260,6 +272,21 @@ export function TaskPeek({
 
           {/* Propriedades, como a tabela de propriedades de uma página do Notion. */}
           <div className="flex flex-col">
+            <Property label={task.kind === "collection" ? "Coleção" : task.kind === "prospect" ? "Cliente" : "Origem"}>
+              {task.originHref ? (
+                <Link
+                  href={task.originHref}
+                  className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium hover:underline"
+                  style={chipStyle}
+                >
+                  {task.originLabel}
+                </Link>
+              ) : (
+                <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium" style={chipStyle}>
+                  {task.originLabel}
+                </span>
+              )}
+            </Property>
             <Property label="Projeto">
               {canPickProject ? (
                 <div className="flex items-center gap-1.5">
@@ -267,9 +294,16 @@ export function TaskPeek({
                     value={task.project?.id ?? ""}
                     onChange={(e) => changeProject(e.target.value || null)}
                     aria-label="Projeto"
-                    className="min-w-0 max-w-full flex-1 cursor-pointer truncate rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-text-primary outline-none hover:border-border focus:border-border focus:ring-2 focus:ring-accent"
+                    className={cn(
+                      "min-w-0 max-w-full flex-1 cursor-pointer truncate rounded-md border bg-transparent px-1.5 py-1 text-sm outline-none hover:border-border focus:border-border focus:ring-2 focus:ring-accent",
+                      // Sem projeto é justamente o que deixa a tarefa sem contexto:
+                      // fica marcado para ela escolher.
+                      task.project
+                        ? "border-transparent font-medium text-text-primary"
+                        : "border-dashed border-amber-400 text-amber-700",
+                    )}
                   >
-                    <option value="">Sem projeto</option>
+                    <option value="">Sem projeto — escolher</option>
                     {projectOptions.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}

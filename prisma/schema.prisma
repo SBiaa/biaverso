@@ -841,7 +841,18 @@ model Business {
   pillar        Pillar?        @relation(fields: [pillarId], references: [id], onDelete: SetNull)
   measuredGoals MeasuredGoal[]
 
+  cover BusinessCover?
+
   @@index([pillarId])
+}
+
+/// Capa do negócio (a imagem do topo, como no Notion), em data URL JPEG.
+/// Tabela à parte para a imagem não vir junto em toda consulta de negócio.
+model BusinessCover {
+  businessId String   @id
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  image      String
+  updatedAt  DateTime @updatedAt
 }
 
 // Mesma ponte do ProjectCredential, um nível acima: senhas do negócio inteiro

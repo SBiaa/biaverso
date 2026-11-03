@@ -1409,3 +1409,13 @@ export const cycleLogUpsertSchema = z.object({
   mood: z.enum(E.CycleMood).nullish(),
   notes: optionalText,
 });
+
+// ------------------------------------------------- capa do negócio
+// JPEG já reduzido no navegador (lib/client-photo): ~1600x400 fica abaixo de
+// 300 KB. O teto protege a coluna de uma foto enviada sem passar pela redução.
+export const businessCoverSchema = z.object({
+  image: z
+    .string()
+    .startsWith("data:image/", "Imagem inválida.")
+    .max(1_500_000, "Imagem grande demais."),
+});

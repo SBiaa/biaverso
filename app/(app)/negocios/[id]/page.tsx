@@ -1,3 +1,5 @@
+import { BusinessCover } from "@/components/modules/negocios/BusinessCover";
+import { getCoverVersions } from "@/lib/business-cover";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Info } from "lucide-react";
@@ -96,6 +98,7 @@ export default async function BusinessDetailPage({
   await syncMissedDeadlines();
 
   const tabs = buildBusinessTabs(id, business.modules);
+  const coverVersion = (await getCoverVersions([id]))[id] ?? null;
   const tab = resolveTab(tabs, sp.tab);
 
   const [allClients, projects] = await Promise.all([
@@ -543,6 +546,13 @@ export default async function BusinessDetailPage({
         trail={[{ label: "Negócios", href: "/negocios" }]}
       />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
+        <BusinessCover
+          businessId={id}
+          color={business.color}
+          version={coverVersion}
+          editable
+          className="h-28 rounded-xl md:h-40"
+        />
         <BusinessTabs businessId={id} tabs={tabs} active={tab} />
         {content ?? (
           <p className="text-sm text-text-secondary">

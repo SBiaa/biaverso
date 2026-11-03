@@ -20,6 +20,7 @@ import { MealChecklist } from "@/components/modules/dia/MealChecklist";
 import { NotesField } from "@/components/modules/dia/NotesField";
 import { WorkTasksToday, type WorkTask } from "@/components/modules/dia/WorkTasksToday";
 import { projectHref } from "@/lib/projects-shared";
+import { getCoverVersions } from "@/lib/business-cover";
 import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
 import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
@@ -192,7 +193,7 @@ async function WorkSection({
     clientBusiness: {
       select: {
         client: { select: { id: true, name: true } },
-        business: { select: { name: true, color: true } },
+        business: { select: { id: true, name: true, color: true } },
       },
     },
   } as const;
@@ -231,7 +232,7 @@ async function WorkSection({
     deliveredAt: true,
   } as const;
 
-  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, orders, businesses, projects] = await Promise.all([
+  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, orders, businesses, projects, covers] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
@@ -299,6 +300,7 @@ async function WorkSection({
       orderBy: { name: "asc" },
       select: { id: true, name: true, businessId: true },
     }),
+    getCoverVersions(),
   ]);
 
   // Ordem que ela montou arrastando; quem não tem posição fica na ordem automática.
@@ -382,7 +384,7 @@ async function WorkSection({
     originHref: `/clientes/${t.clientBusiness.client.id}`,
     detail: `Prospecção · ${t.clientBusiness.business.name}`,
     project: null,
-    businessId: null,
+    businessId: t.clientBusiness.business.id,
     urgent: false,
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
@@ -500,6 +502,7 @@ async function WorkSection({
       dayInPast={date.getTime() < today.getTime()}
       businesses={businesses}
       projects={projects}
+      covers={covers}
     />
   );
 }
