@@ -5,7 +5,8 @@ import { Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productionTypeLabels } from "@/lib/labels";
 import { parseMinutes, type PriorityLevelDTO } from "@/lib/task-plan";
-import type { WorkTask } from "@/components/modules/dia/WorkTasksToday";
+import type { ProjectOption, WorkTask } from "@/components/modules/dia/WorkTasksToday";
+import { projectHref } from "@/lib/projects-shared";
 
 export type BusinessOption = { id: string; name: string; color: string };
 
@@ -18,6 +19,7 @@ const fieldClass =
  */
 export function NewWorkTaskForm({
   businesses,
+  projects,
   levels,
   dayDate,
   dayInPast,
@@ -25,6 +27,8 @@ export function NewWorkTaskForm({
   onCancel,
 }: {
   businesses: BusinessOption[];
+  /** Projetos em andamento; a lista mostra só os do negócio escolhido. */
+  projects: ProjectOption[];
   levels: PriorityLevelDTO[];
   /** Data do dia aberto (YYYY-MM-DD). */
   dayDate: string;
@@ -35,6 +39,8 @@ export function NewWorkTaskForm({
   const [title, setTitle] = useState("");
   const [businessId, setBusinessId] = useState(businesses[0]?.id ?? "");
   const [type, setType] = useState("OUTRO");
+  const [projectId, setProjectId] = useState("");
+  const businessProjects = projects.filter((p) => p.businessId === businessId);
   const [priorityLevelId, setPriorityLevelId] = useState("");
   const [time, setTime] = useState("");
   const [dueDate, setDueDate] = useState(dayDate);
@@ -59,11 +65,13 @@ export function NewWorkTaskForm({
         title: title.trim(),
         type,
         businessId,
+        projectId: projectId || undefined,
         priorityLevelId: priorityLevelId || undefined,
         estimateMinutes,
         dueDate: dueDate || null,
       });
       const business = businesses.find((b) => b.id === businessId)!;
+      const project = businessProjects.find((p) => p.id === projectId);
       const due = dueDate ? new Date(`${dueDate}T00:00:00.000Z`) : null;
       const todayStart = new Date(`${dayDate}T00:00:00.000Z`).getTime();
 
@@ -77,8 +85,14 @@ export function NewWorkTaskForm({
         doneOnLoad: false,
         originLabel: business.name,
         originColor: business.color,
-        originHref: null,
+        originHref: `/negocios/${businessId}`,
         detail: [productionTypeLabels[type], "Interno"].join(" · "),
+        project: project
+          ? { id: project.id, name: project.name, href: projectHref(businessId, project.id) }
+          : null,
+        businessId,
+        description: null,
+        notes: null,
         urgent: false,
         priorityLevelId: priorityLevelId || null,
         estimateMinutes,
@@ -112,13 +126,30 @@ export function NewWorkTaskForm({
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <select
           value={businessId}
-          onChange={(e) => setBusinessId(e.target.value)}
+          onChange={(e) => {
+            setBusinessId(e.target.value);
+            // Projeto é de um negócio só: trocar o negócio solta a escolha.
+            setProjectId("");
+          }}
           aria-label="Negócio"
           className={fieldClass}
         >
           {businesses.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          aria-label="Projeto"
+          className={fieldClass}
+        >
+          <option value="">Sem projeto</option>
+          {businessProjects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
             </option>
           ))}
         </select>

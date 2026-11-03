@@ -19,6 +19,7 @@ import { TaskListByOrigin } from "@/components/modules/dia/TaskListByOrigin";
 import { MealChecklist } from "@/components/modules/dia/MealChecklist";
 import { NotesField } from "@/components/modules/dia/NotesField";
 import { WorkTasksToday, type WorkTask } from "@/components/modules/dia/WorkTasksToday";
+import { projectHref } from "@/lib/projects-shared";
 import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
 import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
@@ -80,6 +81,7 @@ async function getDay(date: Date) {
           scheduledDate: true,
           completedAt: true,
           business: { select: { name: true, color: true } },
+          project: { select: { id: true, name: true, businessId: true } },
           subtasks: {
             orderBy: { order: "asc" },
             select: { id: true, title: true, done: true },
@@ -145,8 +147,12 @@ async function WorkSection({
     completedAt: true,
     priorityLevelId: true,
     estimateMinutes: true,
+    description: true,
+    notes: true,
+    businessId: true,
     business: { select: { name: true, color: true } },
     client: { select: { name: true } },
+    project: { select: { id: true, name: true } },
     subtasks: {
       orderBy: { order: "asc" },
       select: { id: true, title: true, done: true },
@@ -162,6 +168,7 @@ async function WorkSection({
     priorityLevelId: true,
     estimateMinutes: true,
     collectionId: true,
+    description: true,
     collection: {
       select: { name: true, businessId: true, business: { select: { color: true } } },
     },
@@ -224,7 +231,7 @@ async function WorkSection({
     deliveredAt: true,
   } as const;
 
-  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, orders, businesses] = await Promise.all([
+  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, orders, businesses, projects] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
@@ -286,6 +293,12 @@ async function WorkSection({
       orderBy: { name: "asc" },
       select: { id: true, name: true, color: true },
     }),
+    // Para o painel da tarefa: ligar uma tarefa de produção a um projeto.
+    prisma.project.findMany({
+      where: { status: "EM_ANDAMENTO" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, businessId: true },
+    }),
   ]);
 
   // Ordem que ela montou arrastando; quem não tem posição fica na ordem automática.
@@ -310,8 +323,14 @@ async function WorkSection({
     doneOnLoad: done,
     originLabel: t.business.name,
     originColor: t.business.color,
-    originHref: null,
+    originHref: `/negocios/${t.businessId}`,
     detail: [productionTypeLabels[t.type], t.client?.name ?? "Interno"].join(" · "),
+    project: t.project
+      ? { id: t.project.id, name: t.project.name, href: projectHref(t.businessId, t.project.id) }
+      : null,
+    businessId: t.businessId,
+    description: t.description,
+    notes: t.notes,
     urgent: !done && t.priority === "URGENTE",
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
@@ -336,6 +355,9 @@ async function WorkSection({
     originColor: t.collection.business.color,
     originHref: `/negocios/${t.collection.businessId}/colecoes/${t.collectionId}`,
     detail: "Coleção",
+    project: null,
+    businessId: t.collection.businessId,
+    description: t.description,
     urgent: false,
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
@@ -359,6 +381,8 @@ async function WorkSection({
     originColor: t.clientBusiness.business.color,
     originHref: `/clientes/${t.clientBusiness.client.id}`,
     detail: `Prospecção · ${t.clientBusiness.business.name}`,
+    project: null,
+    businessId: null,
     urgent: false,
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
@@ -382,6 +406,8 @@ async function WorkSection({
     originColor: "#6366F1",
     originHref: `/conhecimento/curso/${t.course.id}`,
     detail: `Aula · ${t.course.title}`,
+    project: null,
+    businessId: null,
     urgent: false,
     priorityLevelId: t.priorityLevelId,
     estimateMinutes: t.estimateMinutes,
@@ -405,6 +431,8 @@ async function WorkSection({
     originColor: "#8B5CF6",
     originHref: "/espiritual/estudos",
     detail: studyKindLabels[t.kind] ?? t.kind,
+    project: null,
+    businessId: null,
     urgent: false,
     priorityLevelId: null,
     estimateMinutes: null,
@@ -431,6 +459,10 @@ async function WorkSection({
     originColor: t.business?.color ?? "#6B7280",
     originHref: null,
     detail: "Tarefa avulsa",
+    project: t.project
+      ? { id: t.project.id, name: t.project.name, href: projectHref(t.project.businessId, t.project.id) }
+      : null,
+    businessId: null,
     urgent: false,
     priorityLevelId: null,
     estimateMinutes: null,
@@ -467,6 +499,7 @@ async function WorkSection({
       dayDate={toDateInputValue(date)}
       dayInPast={date.getTime() < today.getTime()}
       businesses={businesses}
+      projects={projects}
     />
   );
 }

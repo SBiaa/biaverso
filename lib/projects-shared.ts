@@ -74,3 +74,7 @@ export function sortProjectCards(cards: ProjectCard[], sort: ProjectSort) {
     return a.nextDeadline.localeCompare(b.nextDeadline);
   });
 }
+
+/** Endereço da página de um projeto (ela mora dentro do negócio). */
+export const projectHref = (businessId: string, projectId: string) =>
+  `/negocios/${businessId}/projetos/${projectId}`;

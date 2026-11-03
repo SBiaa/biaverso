@@ -28,9 +28,12 @@ import {
   ChevronsRight,
   Circle,
   Clock,
+  FolderOpen,
   GripVertical,
   Plus,
 } from "lucide-react";
+import { TaskPeek } from "@/components/modules/dia/TaskPeek";
+import { DateInput, EstimateInput, PrioritySelect } from "@/components/modules/dia/WorkTaskFields";
 import { AttentionBadge, Button, Card, CardTitle, ErrorNote } from "@/components/ui";
 import { NewWorkTaskForm, type BusinessOption } from "@/components/modules/dia/NewWorkTaskForm";
 import { api, errorMessage } from "@/lib/client-api";
@@ -43,13 +46,10 @@ import {
   todayUtc,
 } from "@/lib/utils";
 import { MISSED_DEADLINE_AFTER_DAYS } from "@/lib/ace-shared";
+import { projectHref } from "@/lib/projects-shared";
 import { focusKey } from "@/lib/day-focus";
 import { FocusStar } from "@/components/modules/dia/FocusStar";
-import {
-  formatMinutes,
-  parseMinutes,
-  type PriorityLevelDTO,
-} from "@/lib/task-plan";
+import { formatMinutes, type PriorityLevelDTO } from "@/lib/task-plan";
 import {
   SubtaskList,
   SubtaskToggle,
@@ -92,6 +92,27 @@ export type WorkTask = {
   /** Só tarefa de coleção precisa do id da coleção na rota. */
   collectionId: string | null;
   subtasks: SubtaskItem[];
+  /** Projeto a que a tarefa pertence (produção e avulsa podem ter). */
+  project: TaskProject | null;
+  /** Negócio dono da tarefa de produção: filtra os projetos que dá para escolher. */
+  businessId: string | null;
+  /** Texto livre da tarefa; só produção e coleção têm. `undefined` = o tipo não tem o campo. */
+  description?: string | null;
+  /** Anotações; só produção tem. */
+  notes?: string | null;
+};
+
+export type TaskProject = { id: string; name: string; href: string };
+
+/** Projeto em andamento que dá para ligar a uma tarefa de produção. */
+export type ProjectOption = { id: string; name: string; businessId: string };
+
+/** O que o painel da tarefa grava além das colunas da tabela. */
+export type TaskEdit = {
+  title?: string;
+  description?: string | null;
+  notes?: string | null;
+  projectId?: string | null;
 };
 
 /** Em "Feitas": por quando foi concluída, ou pelo dia em que estava marcada. */
@@ -115,14 +136,14 @@ const groupOf = (t: WorkTask): Group =>
 const taskKey = (t: WorkTask) => t.kind + t.id;
 /** O dia da tarefa: o da realização; sem ele, o do prazo. */
 const dayOf = (t: WorkTask) => t.scheduledDate ?? t.dueDate;
-type DateField = "scheduledDate" | "dueDate";
+export type DateField = "scheduledDate" | "dueDate";
 
 const GROUPS: { id: Group; label: string; color: string; icon: typeof Briefcase }[] = [
   { id: "work", label: "Trabalho", color: "#0F766E", icon: Briefcase },
   { id: "study", label: "Estudos", color: "#6366F1", icon: BookOpen },
 ];
 
-type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null };
+export type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null };
 
 /** Corpo do PATCH que conclui ou reabre; cada tipo guarda "feita" de um jeito. */
 function doneBody(task: WorkTask, done: boolean): object {
@@ -142,123 +163,6 @@ function patchUrl(task: WorkTask) {
     : `/api/collections/${task.collectionId}/tasks/${task.id}`;
 }
 
-function EstimateInput({
-  minutes,
-  disabled,
-  onCommit,
-}: {
-  minutes: number | null;
-  disabled: boolean;
-  onCommit: (value: number | null) => void;
-}) {
-  const [text, setText] = useState(minutes === null ? "" : formatMinutes(minutes));
-  const [invalid, setInvalid] = useState(false);
-
-  function commit() {
-    const parsed = parseMinutes(text);
-    if (parsed === undefined) {
-      setInvalid(true);
-      return;
-    }
-    setInvalid(false);
-    setText(parsed === null ? "" : formatMinutes(parsed));
-    if (parsed !== minutes) onCommit(parsed);
-  }
-
-  return (
-    <input
-      value={text}
-      onChange={(e) => {
-        setText(e.target.value);
-        setInvalid(false);
-      }}
-      onBlur={commit}
-      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      disabled={disabled}
-      placeholder="—"
-      aria-label="Tempo estimado"
-      aria-invalid={invalid}
-      title='Ex.: 45, 1h30, 2h'
-      className={cn(
-        "w-16 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-text-primary outline-none placeholder:text-text-secondary/60 hover:border-border focus:border-border focus:ring-2 focus:ring-accent disabled:opacity-50",
-        invalid && "border-red-500",
-      )}
-    />
-  );
-}
-
-/** Data editável direto na linha: clicar abre o calendário do navegador. */
-function DateInput({
-  value,
-  label,
-  late,
-  onCommit,
-}: {
-  value: string | null;
-  label: string;
-  late: boolean;
-  onCommit: (value: string | null) => void;
-}) {
-  const current = value ? toDateInputValue(value) : "";
-
-  return (
-    <input
-      type="date"
-      // Remonta quando o valor muda por fora (gravou, ou voltou por erro).
-      key={current}
-      defaultValue={current}
-      onBlur={(e) => {
-        const value = e.currentTarget.value;
-        if (value !== current) onCommit(value || null);
-      }}
-      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      aria-label={label}
-      title="Clique para mudar a data"
-      className={cn(
-        "w-[8.5rem] cursor-pointer rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm outline-none hover:border-border focus:border-border focus:ring-2 focus:ring-accent",
-        late
-          ? "font-medium text-red-600"
-          : current
-            ? "text-text-secondary"
-            : "text-text-secondary/60",
-      )}
-    />
-  );
-}
-
-function PrioritySelect({
-  task,
-  levels,
-  onChange,
-}: {
-  task: WorkTask;
-  levels: PriorityLevelDTO[];
-  onChange: (id: string | null) => void;
-}) {
-  const level = levels.find((l) => l.id === task.priorityLevelId);
-
-  return (
-    <select
-      value={task.priorityLevelId ?? ""}
-      onChange={(e) => onChange(e.target.value || null)}
-      disabled={task.done}
-      aria-label="Prioridade"
-      className="max-w-[7rem] cursor-pointer rounded-full border border-transparent py-0.5 pl-2 pr-1 text-xs font-medium outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
-      style={
-        level
-          ? { backgroundColor: hexToRgba(level.color, 0.14), color: level.color }
-          : undefined
-      }
-    >
-      <option value="">Sem prioridade</option>
-      {levels.map((l) => (
-        <option key={l.id} value={l.id}>
-          {l.name}
-        </option>
-      ))}
-    </select>
-  );
-}
 
 function TaskRow({
   task,
@@ -271,11 +175,15 @@ function TaskRow({
   onPatch,
   onStatus,
   onDate,
+  projects,
+  onEdit,
 }: {
   task: WorkTask;
   dayId: string;
   focused: boolean;
   levels: PriorityLevelDTO[];
+  projects: ProjectOption[];
+  onEdit: (task: WorkTask, edit: TaskEdit) => Promise<unknown>;
   /** Mostra a data de conclusão no lugar do prazo. */
   showCompleted: boolean;
   /** Pode ser arrastada: só tarefa aberta, e só nas abas que mostram a ordem de execução. */
@@ -295,6 +203,10 @@ function TaskRow({
   );
   // Tarefa já quebrada nasce aberta: o ponto dos passos é ver por onde começar.
   const [open, setOpen] = useState(task.subtasks.length > 0 && !task.done);
+  // Painel lateral da tarefa, como o "peek" do Notion. Fica aqui na linha para
+  // dividir os passos (useSubtasks) com ela: marcar um passo no painel já
+  // atualiza o 1/3 da tabela.
+  const [peek, setPeek] = useState(false);
   const late = task.overdue && !task.done;
   const today = todayUtc().getTime();
   const passed = (d: string | null) => late && d !== null && new Date(d).getTime() < today;
@@ -350,15 +262,19 @@ function TaskRow({
                 {task.urgent && !task.done && (
                   <AlertTriangle size={14} className="shrink-0 text-red-600" />
                 )}
-                <span
+                {/* O título abre o painel com tudo da tarefa. */}
+                <button
+                  type="button"
+                  onClick={() => setPeek(true)}
+                  title="Abrir detalhes"
                   className={cn(
-                    "text-text-primary",
+                    "rounded text-left text-text-primary decoration-text-secondary/50 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-accent",
                     task.done && "text-text-secondary line-through",
                   )}
                 >
                   {task.title}
                   {task.urgent && <span className="sr-only"> (urgente)</span>}
-                </span>
+                </button>
                 {!plain && (
                   <FocusStar
                     dayId={dayId}
@@ -377,11 +293,41 @@ function TaskRow({
                   />
                 )}
               </div>
-              {task.detail && (
-                <p className="text-xs text-text-secondary">{task.detail}</p>
+              {/* De onde é a tarefa: o projeto vem primeiro e leva até ele. */}
+              {(task.project || task.detail) && (
+                <p className="flex flex-wrap items-center gap-x-1 text-xs text-text-secondary">
+                  {task.project && (
+                    <>
+                      <Link
+                        href={task.project.href}
+                        title="Ir para o projeto"
+                        className="inline-flex items-center gap-1 font-medium text-text-primary/80 hover:text-accent hover:underline"
+                      >
+                        <FolderOpen size={12} className="shrink-0" aria-hidden />
+                        {task.project.name}
+                      </Link>
+                      {task.detail && <span aria-hidden>·</span>}
+                    </>
+                  )}
+                  {task.detail && <span>{task.detail}</span>}
+                </p>
               )}
             </div>
           </div>
+          {peek && (
+            <TaskPeek
+              task={task}
+              levels={levels}
+              projects={projects}
+              subtasks={subtasks}
+              onClose={() => setPeek(false)}
+              onToggle={onToggle}
+              onPatch={onPatch}
+              onStatus={onStatus}
+              onDate={onDate}
+              onEdit={onEdit}
+            />
+          )}
         </td>
         <td className="py-2 pr-3 align-top">
           {task.progress === null ? (
@@ -559,7 +505,10 @@ export function WorkTasksToday({
   dayDate,
   dayInPast,
   businesses,
+  projects,
 }: {
+  /** Projetos em andamento, para ligar uma tarefa de produção a um deles. */
+  projects: ProjectOption[];
   dayId: string;
   /** `kind:id` das tarefas que estão no foco do dia. */
   focusKeys: string[];
@@ -726,6 +675,26 @@ export function WorkTasksToday({
   }
 
   /**
+   * Edição feita no painel da tarefa (título, descrição, projeto). Diferente do
+   * `save`, o erro sobe: quem chamou é um campo, que fica aberto com o texto
+   * digitado em vez de perder o que foi escrito.
+   */
+  async function edit(task: WorkTask, change: TaskEdit) {
+    const { projectId, ...fields } = change;
+    const local: Partial<WorkTask> = { ...fields };
+    if (projectId !== undefined) {
+      const option = projects.find((p) => p.id === projectId);
+      local.project = option
+        ? { id: option.id, name: option.name, href: projectHref(option.businessId, option.id) }
+        : null;
+    }
+
+    await api.patch(patchUrl(task), change);
+    update(taskKey(task), local);
+    router.refresh();
+  }
+
+  /**
    * Muda a realização ou o prazo ali mesmo. Atraso e "prazo perdido" são
    * recalculados na hora, para a tarefa já pular para a aba certa.
    */
@@ -760,6 +729,7 @@ export function WorkTasksToday({
   const addForm = adding && (
     <NewWorkTaskForm
       businesses={businesses}
+      projects={projects}
       levels={levels}
       dayDate={dayDate}
       dayInPast={dayInPast}
@@ -956,6 +926,8 @@ export function WorkTasksToday({
                           onPatch={patch}
                           onStatus={changeStatus}
                           onDate={changeDate}
+                          projects={projects}
+                          onEdit={edit}
                         />
                       ))}
                     </SortableContext>

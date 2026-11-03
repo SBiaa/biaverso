@@ -177,6 +177,28 @@ body {
   }
 }
 
+/* O painel lateral da tarefa entra deslizando da direita, como o do Notion. */
+@keyframes peek-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.peek-in {
+  animation: peek-in 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .peek-in {
+    animation: none;
+  }
+}
+
 /* A sidebar tem scroll próprio (`overflow-y-auto`), e a barra padrão do
    Windows é larga e cinza-escura o bastante para virar o elemento mais pesado
    da tela. Fina e discreta, só aparece quando a lista de negócios cresce. */
