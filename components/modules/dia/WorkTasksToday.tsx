@@ -875,6 +875,10 @@ export function WorkTasksToday({
                   por linha. */}
               <div className="overflow-x-auto px-3 pb-1">
                 <DndContext
+                  // Id fixo: sem ele o dnd-kit numera as tabelas por ordem de
+                  // montagem, e o servidor e o navegador chegavam a números
+                  // diferentes (aviso de hydration no console).
+                  id={`work-tasks-${g.id}`}
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={(event) => reorder(g.id, event)}
