@@ -118,23 +118,27 @@ export type TaskEdit = {
 /** Em "Feitas": por quando foi concluída, ou pelo dia em que estava marcada. */
 type DoneBy = "completed" | "due";
 
-type Range = "today" | "tomorrow" | "week" | "all" | "missed" | "done";
+type Range = "today" | "tomorrow" | "week" | "all" | "paused" | "missed" | "done";
 
 const RANGES: { id: Range; label: string }[] = [
   { id: "today", label: "Hoje" },
   { id: "tomorrow", label: "Amanhã" },
   { id: "week", label: "Semana" },
   { id: "all", label: "Tudo" },
+  { id: "paused", label: "Pausadas" },
   { id: "missed", label: "Prazo perdido" },
   { id: "done", label: "Feitas" },
 ];
 
+/** Pausada e ainda aberta: sai das abas do dia e fica na aba "Pausadas". */
+const isPaused = (t: WorkTask) => !t.done && t.progress === "PAUSADA";
+
 /**
- * Tarefa de prazo perdido que ela retomou: tem andamento (iniciei, pausei,
- * aguardando...) ou realização marcada a partir do dia aberto (`dayStart`).
+ * Tarefa de prazo perdido que ela retomou: está em andamento (iniciei,
+ * aguardando...) ou tem realização marcada a partir do dia aberto (`dayStart`).
  */
 const isResumed = (t: WorkTask, dayStart: number) =>
-  (t.progress !== null && t.progress !== "A_FAZER") ||
+  (t.progress !== null && t.progress !== "A_FAZER" && t.progress !== "PAUSADA") ||
   (t.scheduledDate !== null && new Date(t.scheduledDate).getTime() >= dayStart);
 
 /** Estudo e trabalho ficam em blocos separados: aula e estudo espiritual não são tarefa de trabalho. */
@@ -568,10 +572,13 @@ export function WorkTasksToday({
     if (t.done && t.doneOnLoad) return false;
     if (r === "all") return true;
     // Prazo perdido tem aba própria: não volta a poluir Hoje, Amanhã e Semana.
-    // A exceção é a que ela retomou — mexeu no andamento (iniciei, pausei...) ou
-    // remarcou a realização para hoje em diante. Essa é trabalho de agora; antes
-    // uma tarefa pausada com prazo antigo sumia das abas do dia.
+    // A exceção é a que ela retomou — iniciou, está aguardando algo... ou
+    // remarcou a realização para hoje em diante. Essa é trabalho de agora.
     if (r === "missed") return !!t.missed;
+    // Pausada não é tarefa de agora: some de Hoje, Amanhã e Semana e fica
+    // reunida na aba própria (e em "Tudo").
+    if (r === "paused") return isPaused(t);
+    if (isPaused(t)) return false;
     if (t.missed && !isResumed(t, limits.day - 24 * 60 * 60 * 1000)) return false;
     const day = dayOf(t);
     if (day === null) return false;
@@ -857,7 +864,9 @@ export function WorkTasksToday({
         <p className="py-2 text-sm text-text-secondary">
           {range === "done"
             ? "Nada concluído neste dia."
-            : range === "tomorrow"
+            : range === "paused"
+              ? "Nenhuma tarefa pausada."
+              : range === "tomorrow"
               ? "Nada com prazo para amanhã."
               : `Nada com prazo ${range === "today" ? "até hoje" : "até o fim da semana"}.`}
         </p>
