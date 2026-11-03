@@ -28,61 +28,66 @@ export async function syncMissedDeadlines() {
   const limit = new Date(todayUtc());
   limit.setUTCDate(limit.getUTCDate() - MISSED_DEADLINE_AFTER_DAYS);
 
-  await prisma.productionTask.updateMany({
-    where: {
-      status: { in: ["A_FAZER", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] },
-      dueDate: { lt: limit },
-    },
-    data: { status: "PRAZO_PERDIDO" },
-  });
-  await prisma.productionTask.updateMany({
-    where: {
-      status: "PRAZO_PERDIDO",
-      OR: [{ dueDate: null }, { dueDate: { gte: limit } }],
-    },
-    data: { status: "A_FAZER" },
-  });
-
-  await prisma.contentPost.updateMany({
-    where: {
-      status: { in: ["PLANEJADO", "EM_CRIACAO", "APROVADO"] },
-      publishDate: { lt: limit },
-    },
-    data: { status: "PRAZO_PERDIDO" },
-  });
-  await prisma.contentPost.updateMany({
-    where: {
-      status: "PRAZO_PERDIDO",
-      OR: [{ publishDate: null }, { publishDate: { gte: limit } }],
-    },
-    data: { status: "PLANEJADO" },
-  });
+  // As quatro atualizações mexem em linhas diferentes (uma marca, a outra
+  // desmarca), então a ordem não importa e elas vão juntas: uma ida ao banco
+  // em vez de quatro em fila, a cada tela que abre.
+  await Promise.all([
+    prisma.productionTask.updateMany({
+      where: {
+        status: { in: ["A_FAZER", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] },
+        dueDate: { lt: limit },
+      },
+      data: { status: "PRAZO_PERDIDO" },
+    }),
+    prisma.productionTask.updateMany({
+      where: {
+        status: "PRAZO_PERDIDO",
+        OR: [{ dueDate: null }, { dueDate: { gte: limit } }],
+      },
+      data: { status: "A_FAZER" },
+    }),
+    prisma.contentPost.updateMany({
+      where: {
+        status: { in: ["PLANEJADO", "EM_CRIACAO", "APROVADO"] },
+        publishDate: { lt: limit },
+      },
+      data: { status: "PRAZO_PERDIDO" },
+    }),
+    prisma.contentPost.updateMany({
+      where: {
+        status: "PRAZO_PERDIDO",
+        OR: [{ publishDate: null }, { publishDate: { gte: limit } }],
+      },
+      data: { status: "PLANEJADO" },
+    }),
+  ]);
 }
 
 export async function getClientsOverview(
   businessId: string,
   statusFilter?: string,
 ): Promise<ClientOverview[]> {
-  const clients = await prisma.client.findMany({
-    where: {
-      businessLinks: {
-        some: {
-          businessId,
-          // Prospect tem quadro próprio (getProspectsOverview); sem filtro
-          // explícito, a lista de clientes não mistura os dois.
-          status: statusFilter
-            ? (statusFilter as Prisma.ClientBusinessWhereInput["status"])
-            : { not: "PROSPECT" },
+  // As três consultas não dependem uma da outra: vão juntas.
+  const [clients, posts, tasks] = await Promise.all([
+    prisma.client.findMany({
+      where: {
+        businessLinks: {
+          some: {
+            businessId,
+            // Prospect tem quadro próprio (getProspectsOverview); sem filtro
+            // explícito, a lista de clientes não mistura os dois.
+            status: statusFilter
+              ? (statusFilter as Prisma.ClientBusinessWhereInput["status"])
+              : { not: "PROSPECT" },
+          },
         },
       },
-    },
-    include: {
-      projects: { where: { businessId } },
-    },
-    orderBy: { name: "asc" },
-  });
-
-  const [posts, tasks] = await Promise.all([
+      include: {
+        projects: { where: { businessId } },
+      },
+      orderBy: { name: "asc" },
+    }),
+    // Só o que monta a "próxima entrega" do card.
     prisma.contentPost.findMany({
       where: {
         businessId,
@@ -90,6 +95,7 @@ export async function getClientsOverview(
         publishDate: { not: null },
       },
       orderBy: { publishDate: "asc" },
+      select: { clientId: true, publishDate: true, title: true },
     }),
     prisma.productionTask.findMany({
       where: {
@@ -98,6 +104,7 @@ export async function getClientsOverview(
         dueDate: { not: null },
       },
       orderBy: { dueDate: "asc" },
+      select: { clientId: true, dueDate: true, title: true },
     }),
   ]);
 

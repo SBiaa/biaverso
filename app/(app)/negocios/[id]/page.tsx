@@ -1,6 +1,7 @@
 import { BusinessCover } from "@/components/modules/negocios/BusinessCover";
 import { getCoverVersions } from "@/lib/business-cover";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Info } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -22,7 +23,7 @@ import {
   ProjectsSection,
   type ProjectWithItems,
 } from "@/components/modules/ace/ProjectsSection";
-import { Card, CardTitle, MonthPicker, StatCard } from "@/components/ui";
+import { Card, CardTitle, MonthPicker, Skeleton, StatCard } from "@/components/ui";
 import {
   getClientsOverview,
   getProspectsOverview,
@@ -40,7 +41,13 @@ import {
   postWithClientSelect,
   taskWithClientSelect,
 } from "@/lib/ace";
-import { buildBusinessTabs, resolveTab, OVERVIEW_TAB } from "@/lib/business-modules";
+import {
+  buildBusinessTabs,
+  resolveTab,
+  OVERVIEW_TAB,
+  type BusinessTab,
+} from "@/lib/business-modules";
+import type { ModuleType } from "@/app/generated/prisma/client";
 import { BusinessOverviewTab } from "@/components/modules/negocios/BusinessOverviewTab";
 import { getBusinessOverview } from "@/lib/business-overview";
 import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
@@ -89,19 +96,68 @@ export default async function BusinessDetailPage({
   const { id } = await params;
   const sp = await searchParams;
 
-  const business = await prisma.business.findUnique({
+  // Tudo o que não depende da aba sai junto, numa ida só ao banco. Antes era
+  // uma fila (negócio → prazos → capa → clientes → aba), e com o servidor
+  // longe do banco cada passo da fila custa caro.
+  const businessPromise = prisma.business.findUnique({
     where: { id },
     include: { modules: { orderBy: { order: "asc" } } },
   });
-  if (!business) notFound();
+  const coverPromise = getCoverVersions([id]);
+  const shared = loadSharedData(id);
 
-  await syncMissedDeadlines();
+  const [business, covers] = await Promise.all([businessPromise, coverPromise]);
+  if (!business) {
+    // O resto já saiu; sem isto uma falha dele viraria "unhandled rejection".
+    shared.catch(() => {});
+    notFound();
+  }
 
   const tabs = buildBusinessTabs(id, business.modules);
-  const coverVersion = (await getCoverVersions([id]))[id] ?? null;
   const tab = resolveTab(tabs, sp.tab);
 
-  const [allClients, projects] = await Promise.all([
+  return (
+    <>
+      <Topbar
+        title={business.name}
+        trail={[{ label: "Negócios", href: "/negocios" }]}
+      />
+      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
+        <BusinessCover
+          businessId={id}
+          color={business.color}
+          version={covers[id] ?? null}
+          editable
+          className="h-28 rounded-xl md:h-40"
+        />
+        <BusinessTabs businessId={id} tabs={tabs} active={tab} />
+        {/* Capa e abas pintam na hora; só o miolo espera o banco. A `key` faz
+            a troca de aba mostrar o esqueleto em vez de congelar a aba antiga
+            — já trocar filtro ou mês dentro da mesma aba mantém o conteúdo
+            na tela até o novo chegar. */}
+        <Suspense key={tab ?? "nenhuma"} fallback={<TabSkeleton />}>
+          <BusinessTabContent
+            id={id}
+            sp={sp}
+            tab={tab}
+            tabs={tabs}
+            activeModules={business.modules.filter((m) => m.active).map((m) => m.module)}
+            shared={shared}
+          />
+        </Suspense>
+      </main>
+    </>
+  );
+}
+
+/**
+ * Prazos perdidos, clientes e projetos: toda aba usa. Disparado antes de saber
+ * se o negócio existe, para correr junto com a consulta dele.
+ */
+async function loadSharedData(id: string) {
+  const [, allClients, projects] = await Promise.all([
+    // As abas mostram status, então a marcação de prazo perdido vem antes delas.
+    syncMissedDeadlines(),
     // Todos os clientes, não só os deste negócio: a mesma pessoa costuma ser
     // cliente de mais de um. O select separa em dois grupos com a flag abaixo,
     // e escolher alguém sem vínculo faz a API criar o vínculo.
@@ -120,47 +176,79 @@ export default async function BusinessDetailPage({
     }),
   ]);
 
-  const clients = allClients.map((c) => ({
-    id: c.id,
-    name: c.name,
-    linked: c.businessLinks.length > 0,
-  }));
+  return {
+    clients: allClients.map((c) => ({
+      id: c.id,
+      name: c.name,
+      linked: c.businessLinks.length > 0,
+    })),
+    projectOptions: projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      clientId: p.clientId,
+      createdAt: p.createdAt.toISOString(),
+    })),
+  };
+}
 
-  const projectOptions = projects.map((p) => ({
-    id: p.id,
-    name: p.name,
-    clientId: p.clientId,
-    createdAt: p.createdAt.toISOString(),
-  }));
+function TabSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Carregando">
+      {Array.from({ length: 3 }, (_, i) => (
+        <Card key={i} className="space-y-3">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-4/5" />
+          <Skeleton className="h-3 w-2/3" />
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+async function BusinessTabContent({
+  id,
+  sp,
+  tab,
+  tabs,
+  activeModules,
+  shared,
+}: {
+  id: string;
+  sp: Awaited<SearchParams>;
+  tab: string | null;
+  tabs: BusinessTab[];
+  activeModules: ModuleType[];
+  shared: ReturnType<typeof loadSharedData>;
+}) {
+  const { clients, projectOptions } = await shared;
 
   let content = null;
 
   if (tab === OVERVIEW_TAB) {
-    const activeModules = business.modules
-      .filter((m) => m.active)
-      .map((m) => m.module);
+    // Só negócios com posts ou tarefas ligados ganham o card de cronograma —
+    // o mesmo critério que faz o overview contar tarefas (PRODUCAO) e posts
+    // (CRONOGRAMA). Decidido pelos módulos, as quatro consultas vão juntas.
+    const showItems = activeModules.includes("PRODUCAO") || activeModules.includes("CRONOGRAMA");
 
-    const [overview, { projects: projectCards }] = await Promise.all([
+    const [overview, { projects: projectCards }, allPosts, allTasks] = await Promise.all([
       getBusinessOverview(id, activeModules),
       getProjectsOverview(id),
-    ]);
-
-    // Só negócios com posts ou tarefas ligados ganham o card de cronograma.
-    const showItems = overview.stats.openTasks !== null || overview.stats.plannedPosts !== null;
-    const [allPosts, allTasks] = showItems
-      ? await Promise.all([
-          prisma.contentPost.findMany({
+      showItems
+        ? prisma.contentPost.findMany({
             where: { businessId: id },
             orderBy: { publishDate: "asc" },
             select: postRecordSelect,
-          }),
-          prisma.productionTask.findMany({
+          })
+        : [],
+      showItems
+        ? prisma.productionTask.findMany({
             where: { businessId: id },
             orderBy: { dueDate: "asc" },
             select: taskRecordSelect,
-          }),
-        ])
-      : [[], []];
+          })
+        : [],
+    ]);
 
     content = (
       <BusinessOverviewTab
@@ -192,7 +280,7 @@ export default async function BusinessDetailPage({
     ]);
     content = <ClientesTab businessId={id} clients={overview} prospects={prospects} />;
   } else if (tab === "interno") {
-    const [internalProjects, loosePosts, looseTasks] = await Promise.all([
+    const [internalProjects, loosePosts, looseTasks, { projects: projectCards }] = await Promise.all([
       prisma.project.findMany({
         where: { businessId: id, isInternal: true },
         select: {
@@ -223,6 +311,9 @@ export default async function BusinessDetailPage({
         orderBy: { dueDate: "asc" },
         select: taskRecordSelect,
       }),
+      // Mesmo grid da página /projetos, já filtrado neste negócio — inclui os
+      // projetos de cliente, que a seção abaixo (só internos) não mostra.
+      getProjectsOverview(id),
     ]);
 
     const projectsWithItems: ProjectWithItems[] = internalProjects.map((p) => ({
@@ -236,9 +327,6 @@ export default async function BusinessDetailPage({
       tasks: p.productionTasks.map(toTaskRecord),
     }));
 
-    // Mesmo grid da página /projetos, já filtrado neste negócio — inclui os
-    // projetos de cliente, que a seção abaixo (só internos) não mostra.
-    const { projects: projectCards } = await getProjectsOverview(id);
     const sort: ProjectSort = projectSortOptions.includes(sp.sort as ProjectSort)
       ? (sp.sort as ProjectSort)
       : "prazo";
@@ -540,30 +628,14 @@ export default async function BusinessDetailPage({
   }
 
   return (
-    <>
-      <Topbar
-        title={business.name}
-        trail={[{ label: "Negócios", href: "/negocios" }]}
-      />
-      <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
-        <BusinessCover
-          businessId={id}
-          color={business.color}
-          version={coverVersion}
-          editable
-          className="h-28 rounded-xl md:h-40"
-        />
-        <BusinessTabs businessId={id} tabs={tabs} active={tab} />
-        {content ?? (
-          <p className="text-sm text-text-secondary">
-            Nenhum módulo ligado neste negócio.{" "}
-            <Link href={`/negocios/${id}/configuracoes`} className="font-medium text-accent">
-              Escolher os módulos
-            </Link>
-            .
-          </p>
-        )}
-      </main>
-    </>
+    content ?? (
+      <p className="text-sm text-text-secondary">
+        Nenhum módulo ligado neste negócio.{" "}
+        <Link href={`/negocios/${id}/configuracoes`} className="font-medium text-accent">
+          Escolher os módulos
+        </Link>
+        .
+      </p>
+    )
   );
 }
