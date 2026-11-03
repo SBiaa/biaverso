@@ -129,6 +129,14 @@ const RANGES: { id: Range; label: string }[] = [
   { id: "done", label: "Feitas" },
 ];
 
+/**
+ * Tarefa de prazo perdido que ela retomou: tem andamento (iniciei, pausei,
+ * aguardando...) ou realização marcada a partir do dia aberto (`dayStart`).
+ */
+const isResumed = (t: WorkTask, dayStart: number) =>
+  (t.progress !== null && t.progress !== "A_FAZER") ||
+  (t.scheduledDate !== null && new Date(t.scheduledDate).getTime() >= dayStart);
+
 /** Estudo e trabalho ficam em blocos separados: aula e estudo espiritual não são tarefa de trabalho. */
 type Group = "work" | "study";
 const groupOf = (t: WorkTask): Group =>
@@ -449,6 +457,13 @@ function TaskRow({
               Atrasado
             </AttentionBadge>
           )}
+          {/* Retomada mas com o prazo vencido há mais de uma semana: o selo
+              lembra disso nas abas do dia (na aba própria ele é redundante). */}
+          {task.missed && !task.done && (
+            <AttentionBadge level="atrasado" className="ml-1.5">
+              Prazo perdido
+            </AttentionBadge>
+          )}
         </td>
       </tr>
       {open && task.kind !== "prospect" && !plain && (
@@ -553,8 +568,11 @@ export function WorkTasksToday({
     if (t.done && t.doneOnLoad) return false;
     if (r === "all") return true;
     // Prazo perdido tem aba própria: não volta a poluir Hoje, Amanhã e Semana.
+    // A exceção é a que ela retomou — mexeu no andamento (iniciei, pausei...) ou
+    // remarcou a realização para hoje em diante. Essa é trabalho de agora; antes
+    // uma tarefa pausada com prazo antigo sumia das abas do dia.
     if (r === "missed") return !!t.missed;
-    if (t.missed) return false;
+    if (t.missed && !isResumed(t, limits.day - 24 * 60 * 60 * 1000)) return false;
     const day = dayOf(t);
     if (day === null) return false;
     const due = new Date(day).getTime();
