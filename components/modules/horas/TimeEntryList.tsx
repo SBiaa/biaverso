@@ -122,6 +122,7 @@ export function TimeEntryList({
                       entry.title ? category?.name : null,
                       entry.projectId ? projectById.get(entry.projectId)?.name : null,
                       entry.taskId ? taskTitles[entry.taskId] : null,
+                      entry.productionTaskId ? taskTitles[entry.productionTaskId] : null,
                     ]
                       .filter(Boolean)
                       .join(" › ")}
@@ -248,6 +249,7 @@ function EditEntryModal({
         description: details.description.trim() || null,
         projectId: details.projectId,
         taskId: details.taskId,
+        productionTaskId: details.productionTaskId,
         startTime,
         endTime,
       });
@@ -292,6 +294,7 @@ function EditEntryModal({
             description: entry.description ?? "",
             projectId: entry.projectId,
             taskId: entry.taskId,
+            productionTaskId: entry.productionTaskId,
           }}
           running
           busy={saving || !startTime || !endTime}

@@ -21,18 +21,30 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
   if (body.categoryId !== undefined) data.categoryId = body.categoryId;
   if (body.title !== undefined) data.title = body.title;
   if (body.description !== undefined) data.description = body.description;
-  if (body.projectId !== undefined || body.taskId !== undefined) {
-    // Trocar de projeto sem dizer a tarefa solta a tarefa antiga.
+  if (
+    body.projectId !== undefined ||
+    body.taskId !== undefined ||
+    body.productionTaskId !== undefined
+  ) {
+    // Trocar de projeto (ou de tarefa) sem dizer a outra solta a antiga.
     const nextProjectId = body.projectId === undefined ? entry.projectId : body.projectId;
+    const touched = body.projectId !== undefined;
     const nextTaskId =
       body.taskId !== undefined
         ? body.taskId
-        : body.projectId !== undefined
+        : touched || body.productionTaskId !== undefined
           ? null
           : entry.taskId;
-    const links = await resolveEntryLinks(nextProjectId, nextTaskId);
+    const nextProductionTaskId =
+      body.productionTaskId !== undefined
+        ? body.productionTaskId
+        : touched || body.taskId !== undefined
+          ? null
+          : entry.productionTaskId;
+    const links = await resolveEntryLinks(nextProjectId, nextTaskId, nextProductionTaskId);
     data.projectId = links.projectId;
     data.taskId = links.taskId;
+    data.productionTaskId = links.productionTaskId;
   }
 
   if (body.startTime !== undefined || body.endTime !== undefined) {

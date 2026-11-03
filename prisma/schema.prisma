@@ -348,6 +348,10 @@ model TimeEntry {
   project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   taskId      String?
   task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  // As tarefas da página do projeto ("Tarefas e posts") moram em ProductionTask,
+  // não em Task. Um registro aponta para uma ou para a outra, nunca as duas.
+  productionTaskId String?
+  productionTask   ProductionTask? @relation(fields: [productionTaskId], references: [id], onDelete: SetNull)
   /// Nasceu de um ciclo de foco do pomodoro: encerra sozinho quando o tempo acaba.
   pomodoro    Boolean  @default(false)
 
@@ -356,6 +360,7 @@ model TimeEntry {
   @@index([endedAt])
   @@index([projectId])
   @@index([taskId])
+  @@index([productionTaskId])
 }
 
 // Configuração do pomodoro. Uma linha só (id "default"): o app tem uma usuária,
@@ -1262,7 +1267,8 @@ model ProductionTask {
   priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
   estimateMinutes Int?
 
-  subtasks Subtask[]
+  subtasks    Subtask[]
+  timeEntries TimeEntry[]
 
   @@index([businessId, status])
   @@index([businessId, dueDate])

@@ -62,6 +62,7 @@ export function serializeTimeEntry(entry: TimeEntry): TimeEntryDTO {
     categoryId: entry.categoryId,
     projectId: entry.projectId,
     taskId: entry.taskId,
+    productionTaskId: entry.productionTaskId,
     pomodoro: entry.pomodoro,
   };
 }
@@ -158,15 +159,50 @@ export async function getProjectOptions(): Promise<ProjectOptionDTO[]> {
 
 /**
  * Escolher uma tarefa já diz de que projeto é: devolve o projeto da tarefa
- * quando só ela veio, para o registro não ficar com tarefa solta.
+ * quando só ela veio, para o registro não ficar com tarefa solta. Tarefa do Dia
+ * a dia e tarefa de produção são exclusivas: a de produção ganha.
  */
-export async function resolveEntryLinks(projectId: string | null, taskId: string | null) {
+export async function resolveEntryLinks(
+  projectId: string | null,
+  taskId: string | null,
+  productionTaskId: string | null = null,
+) {
+  if (productionTaskId) {
+    if (projectId) return { projectId, taskId: null, productionTaskId };
+    const task = await prisma.productionTask.findUnique({
+      where: { id: productionTaskId },
+      select: { projectId: true },
+    });
+    return { projectId: task?.projectId ?? null, taskId: null, productionTaskId };
+  }
   if (taskId && !projectId) {
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       select: { projectId: true },
     });
-    return { projectId: task?.projectId ?? null, taskId };
+    return { projectId: task?.projectId ?? null, taskId, productionTaskId: null };
   }
-  return { projectId, taskId };
+  return { projectId, taskId, productionTaskId: null };
+}
+
+/** Título das tarefas ligadas aos registros, das duas tabelas, por id. */
+export async function getEntryTaskTitles(
+  entries: { taskId: string | null; productionTaskId: string | null }[],
+): Promise<Record<string, string>> {
+  const taskIds = [...new Set(entries.flatMap((e) => (e.taskId ? [e.taskId] : [])))];
+  const productionIds = [
+    ...new Set(entries.flatMap((e) => (e.productionTaskId ? [e.productionTaskId] : []))),
+  ];
+  const [tasks, productionTasks] = await Promise.all([
+    taskIds.length
+      ? prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, title: true } })
+      : [],
+    productionIds.length
+      ? prisma.productionTask.findMany({
+          where: { id: { in: productionIds } },
+          select: { id: true, title: true },
+        })
+      : [],
+  ]);
+  return Object.fromEntries([...tasks, ...productionTasks].map((t) => [t.id, t.title]));
 }

@@ -12,6 +12,8 @@ export type EntryDetails = {
   description: string;
   projectId: string | null;
   taskId: string | null;
+  /** Tarefa da página do projeto (produção). Exclusiva com `taskId`. */
+  productionTaskId: string | null;
 };
 
 const BREAK_KEY = "biaverso:pomodoro-break";

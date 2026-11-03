@@ -27,6 +27,7 @@ export type TimeEntryDTO = {
   categoryId: string;
   projectId: string | null;
   taskId: string | null;
+  productionTaskId: string | null;
   /** Ciclo de foco do pomodoro: encerra sozinho quando o tempo acaba. */
   pomodoro: boolean;
 };
@@ -40,7 +41,11 @@ export type ProjectOptionDTO = {
   clientName: string | null;
 };
 
-export type TaskOptionDTO = { id: string; title: string };
+/**
+ * Uma tarefa que dá para escolher no cronômetro. `kind` diz de que tabela ela
+ * vem: "task" é a do Dia a dia, "production" é a da página do projeto.
+ */
+export type TaskOptionDTO = { id: string; title: string; kind: "task" | "production" };
 
 export type PomodoroSettingsDTO = {
   focusMinutes: number;

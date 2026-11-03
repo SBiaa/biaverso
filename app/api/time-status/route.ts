@@ -4,6 +4,7 @@ import { route } from "@/lib/api";
 import { getOrCreateToday } from "@/lib/day";
 import {
   getAllCategories,
+  getEntryTaskTitles,
   getPomodoroSettings,
   getProjectOptions,
   serializeTimeEntry,
@@ -25,10 +26,7 @@ export const GET = route(async () => {
     getProjectOptions(),
   ]);
 
-  const taskIds = [...new Set([...entries, ...(running ? [running] : [])].flatMap((e) => (e.taskId ? [e.taskId] : [])))];
-  const tasks = taskIds.length
-    ? await prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, title: true } })
-    : [];
+  const taskTitles = await getEntryTaskTitles([...entries, ...(running ? [running] : [])]);
 
   const status: TimeStatusDTO = {
     categories: categories.filter((c) => c.active),
@@ -36,7 +34,7 @@ export const GET = route(async () => {
     running: running ? serializeTimeEntry(running) : null,
     settings,
     projects,
-    taskTitles: Object.fromEntries(tasks.map((t) => [t.id, t.title])),
+    taskTitles,
     pomodorosToday: entries.filter((e) => e.pomodoro && e.endedAt).length,
     windowStart: combineDateAndTime(day.date, WORKDAY_START).toISOString(),
     windowEnd: combineDateAndTime(day.date, WORKDAY_END).toISOString(),

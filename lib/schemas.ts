@@ -1164,6 +1164,7 @@ export const timeEntryStartSchema = z.object({
   description: optionalText,
   projectId: optionalId.transform((v) => v ?? null),
   taskId: optionalId.transform((v) => v ?? null),
+  productionTaskId: optionalId.transform((v) => v ?? null),
   pomodoro: z.boolean().optional().default(false),
 });
 
@@ -1190,6 +1191,7 @@ export const timeEntryCreateSchema = z.object({
   description: optionalText,
   projectId: optionalId.transform((v) => v ?? null),
   taskId: optionalId.transform((v) => v ?? null),
+  productionTaskId: optionalId.transform((v) => v ?? null),
   startTime: requiredTimeOfDay,
   endTime: requiredTimeOfDay,
 });
@@ -1200,6 +1202,7 @@ export const timeEntryPatchSchema = z.object({
   description: patchText,
   projectId: optionalId,
   taskId: optionalId,
+  productionTaskId: optionalId,
   startTime: requiredTimeOfDay.optional(),
   endTime: requiredTimeOfDay.optional(),
 });

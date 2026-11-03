@@ -8,7 +8,7 @@ import { resolveEntryLinks } from "@/lib/time-tracking";
 // Registro manual de tempo já concluído — para quando esqueceu de apertar
 // "iniciar". O cronômetro em si fica em /api/time-entries/start.
 export const POST = route(async (request: Request) => {
-  const { dayId, categoryId, title, description, projectId, taskId, startTime, endTime } =
+  const { dayId, categoryId, title, description, projectId, taskId, productionTaskId, startTime, endTime } =
     await parseBody(
     request,
     timeEntryCreateSchema,
@@ -29,7 +29,7 @@ export const POST = route(async (request: Request) => {
       categoryId,
       title,
       description,
-      ...(await resolveEntryLinks(projectId, taskId)),
+      ...(await resolveEntryLinks(projectId, taskId, productionTaskId)),
       startedAt,
       endedAt,
     },

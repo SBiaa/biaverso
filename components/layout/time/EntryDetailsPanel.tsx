@@ -64,6 +64,23 @@ export function EntryDetailsPanel({
   }, [projectId]);
 
   const tasks = loaded && loaded.projectId === projectId ? loaded.tasks : [];
+  const productionTasks = tasks.filter((t) => t.kind === "production");
+  const dailyTasks = tasks.filter((t) => t.kind === "task");
+
+  // As duas tabelas dividem um seletor: o valor diz de qual a tarefa é.
+  const selectedTask = details.productionTaskId
+    ? `production:${details.productionTaskId}`
+    : details.taskId
+      ? `task:${details.taskId}`
+      : "";
+  const pickTask = (value: string) => {
+    const [kind, id] = value.split(":");
+    setDetails((d) => ({
+      ...d,
+      taskId: kind === "task" ? id : null,
+      productionTaskId: kind === "production" ? id : null,
+    }));
+  };
 
   // Projetos agrupados pelo negócio: "Ace › Novo Milênio".
   const byBusiness = new Map<string, ProjectOptionDTO[]>();
@@ -124,7 +141,12 @@ export function EntryDetailsPanel({
           <select
             value={details.projectId ?? ""}
             onChange={(e) =>
-              setDetails((d) => ({ ...d, projectId: e.target.value || null, taskId: null }))
+              setDetails((d) => ({
+                ...d,
+                projectId: e.target.value || null,
+                taskId: null,
+                productionTaskId: null,
+              }))
             }
             className={`${fieldClass} normal-case tracking-normal`}
           >
@@ -147,16 +169,29 @@ export function EntryDetailsPanel({
         <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-text-secondary">
           Tarefa
           <select
-            value={details.taskId ?? ""}
-            onChange={(e) => set("taskId", e.target.value || null)}
+            value={selectedTask}
+            onChange={(e) => pickTask(e.target.value)}
             className={`${fieldClass} normal-case tracking-normal`}
           >
             <option value="">Sem tarefa específica</option>
-            {tasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
-              </option>
-            ))}
+            {productionTasks.length > 0 && (
+              <optgroup label="Tarefas e posts do projeto">
+                {productionTasks.map((t) => (
+                  <option key={t.id} value={`production:${t.id}`}>
+                    {t.title}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {dailyTasks.length > 0 && (
+              <optgroup label="Dia a dia">
+                {dailyTasks.map((t) => (
+                  <option key={t.id} value={`task:${t.id}`}>
+                    {t.title}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
       )}

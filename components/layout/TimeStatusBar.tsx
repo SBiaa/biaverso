@@ -46,6 +46,7 @@ const detailsOf = (entry: TimeEntryDTO): EntryDetails => ({
   description: entry.description ?? "",
   projectId: entry.projectId,
   taskId: entry.taskId,
+  productionTaskId: entry.productionTaskId,
 });
 
 export function TimeStatusBar() {
@@ -141,6 +142,7 @@ export function TimeStatusBar() {
           description: details.description.trim() || null,
           projectId: details.projectId,
           taskId: details.taskId,
+          productionTaskId: details.productionTaskId,
           pomodoro,
         });
         saveDetails(details);
@@ -167,6 +169,7 @@ export function TimeStatusBar() {
         description: details.description.trim() || null,
         projectId: details.projectId,
         taskId: details.taskId,
+        productionTaskId: details.productionTaskId,
       });
       saveDetails(details);
       setPanelOpen(false);
@@ -287,6 +290,7 @@ export function TimeStatusBar() {
   const label =
     running?.title ||
     (running?.taskId ? status.taskTitles[running.taskId] : null) ||
+    (running?.productionTaskId ? status.taskTitles[running.productionTaskId] : null) ||
     project?.name ||
     category?.name;
 
@@ -305,6 +309,7 @@ export function TimeStatusBar() {
       ? (remembered?.projectId ?? null)
       : null,
     taskId: null,
+    productionTaskId: null,
   };
 
   const focusRemaining = running?.pomodoro

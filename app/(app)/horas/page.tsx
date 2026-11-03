@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { getOrCreateDay } from "@/lib/day";
-import { prisma } from "@/lib/prisma";
-import { getAllCategories, getDayTimeTracking, getProjectOptions } from "@/lib/time-tracking";
+import {
+  getAllCategories,
+  getDayTimeTracking,
+  getEntryTaskTitles,
+  getProjectOptions,
+} from "@/lib/time-tracking";
 import { instantToMinutes } from "@/lib/time-tracking-shared";
 import { parseDateOnly, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
@@ -34,11 +38,7 @@ export default async function HorasPage({
     getProjectOptions(),
   ]);
 
-  const taskIds = [...new Set(entries.flatMap((e) => (e.taskId ? [e.taskId] : [])))];
-  const tasks = taskIds.length
-    ? await prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, title: true } })
-    : [];
-  const taskTitles = Object.fromEntries(tasks.map((t) => [t.id, t.title]));
+  const taskTitles = await getEntryTaskTitles(entries);
 
   const activeCategories = categories.filter((c) => c.active);
   const nowMinutes = isToday ? instantToMinutes(new Date().toISOString()) : null;
