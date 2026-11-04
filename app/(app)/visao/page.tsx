@@ -89,7 +89,7 @@ export default async function VisaoPage({
     prisma.business.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, color: true },
+      select: { id: true, name: true, color: true, pillarId: true },
     }),
   ]);
 
@@ -163,7 +163,11 @@ export default async function VisaoPage({
 
         <Card>
           {tab === "pilares" && (
-            <PillarsTable key={keyOf(pillarRows)} initialRows={pillarRows} />
+            <PillarsTable
+              key={keyOf(pillarRows)}
+              initialRows={pillarRows}
+              businesses={businesses}
+            />
           )}
           {tab === "conceituais" && (
             <ConceptualGoalsTable

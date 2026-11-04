@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { Button, ErrorNote, IconButton, InlineEdit } from "@/components/ui";
-import { cn } from "@/lib/utils";
+import { api, errorMessage } from "@/lib/client-api";
 import { pillarKindLabels, pillarStatusLabels } from "@/lib/labels";
 import { PILLAR_COLORS, VISION_TONES, getPillarIcon } from "@/lib/vision-visuals";
 import { hexToRgba } from "@/lib/utils";
@@ -23,7 +23,7 @@ export type PillarRow = {
   kind: string;
   /** Objetivos metrificados em andamento sob este pilar. */
   inProgressCount: number;
-  /** Negócios ligados ao pilar (a ligação se edita no formulário do negócio). */
+  /** Negócios ligados ao pilar (a ligação mora no negócio: Business.pillarId). */
   businesses: { id: string; name: string; color: string }[];
 };
 
@@ -39,11 +39,83 @@ const kindOptions = toOptions(pillarKindLabels);
 
 const th = "pb-2 pr-3 font-medium";
 
-export function PillarsTable({ initialRows }: { initialRows: PillarRow[] }) {
+/** Negócio ativo, com o pilar em que está hoje (para avisar quando vai mudar). */
+export type PillarBusinessOption = {
+  id: string;
+  name: string;
+  color: string;
+  pillarId: string | null;
+};
+
+/**
+ * "+ negócio" da coluna Negócios. Lista os negócios que ainda não estão neste
+ * pilar; os que já têm outro pilar mostram qual, porque escolher aqui muda o
+ * pilar deles (cada negócio fica em um pilar só).
+ */
+function AddBusinessSelect({
+  pillarId,
+  businesses,
+  pillarNames,
+  disabled,
+  onPick,
+}: {
+  pillarId: string;
+  businesses: PillarBusinessOption[];
+  pillarNames: Record<string, string>;
+  disabled: boolean;
+  onPick: (businessId: string) => void;
+}) {
+  const options = businesses.filter((b) => b.pillarId !== pillarId);
+  if (options.length === 0) return null;
+
+  return (
+    <select
+      value=""
+      disabled={disabled}
+      onChange={(e) => e.target.value && onPick(e.target.value)}
+      aria-label="Ligar um negócio a este pilar"
+      className="max-w-[9rem] cursor-pointer rounded-full border border-dashed border-border bg-transparent px-2 py-0.5 text-[11px] text-text-secondary outline-none hover:text-text-primary focus:ring-2 focus:ring-accent disabled:opacity-50"
+    >
+      <option value="">+ negócio</option>
+      {options.map((b) => (
+        <option key={b.id} value={b.id}>
+          {b.name}
+          {b.pillarId && pillarNames[b.pillarId] ? ` (sai de ${pillarNames[b.pillarId]})` : ""}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function PillarsTable({
+  initialRows,
+  businesses,
+}: {
+  initialRows: PillarRow[];
+  businesses: PillarBusinessOption[];
+}) {
   const router = useRouter();
   const { rows, error, patch, add } = useRows(initialRows, "/api/vision/pillars");
   const [newName, setNewName] = useState("");
   const [editing, setEditing] = useState<PillarRow | null>(null);
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const pillarNames = Object.fromEntries(rows.map((r) => [r.id, r.name]));
+
+  // A ligação mora no negócio (Business.pillarId); depois de gravar, o refresh
+  // traz a tabela e a lista de negócios de novo do servidor.
+  async function setBusinessPillar(businessId: string, pillarId: string | null) {
+    setLinking(true);
+    setLinkError(null);
+    try {
+      await api.patch(`/api/businesses/${businessId}`, { pillarId });
+      router.refresh();
+    } catch (e) {
+      setLinkError(errorMessage(e));
+    } finally {
+      setLinking(false);
+    }
+  }
 
   async function create() {
     const name = newName.trim();
@@ -121,24 +193,36 @@ export function PillarsTable({ initialRows }: { initialRows: PillarRow[] }) {
                   </td>
                   <td className="py-2 pr-3 text-text-secondary">{row.inProgressCount}</td>
                   <td className="py-2">
-                    {row.businesses.length === 0 ? (
-                      <span className="text-text-secondary/60">—</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {row.businesses.map((b) => (
-                          <Link
-                            key={b.id}
-                            href={`/negocios/${b.id}`}
-                            className={cn(
-                              "whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium hover:underline",
-                            )}
-                            style={{ backgroundColor: hexToRgba(b.color, 0.12), color: b.color }}
-                          >
+                    <div className="flex flex-wrap items-center gap-1">
+                      {row.businesses.map((b) => (
+                        <span
+                          key={b.id}
+                          className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full py-0.5 pl-2 pr-1 text-[11px] font-medium"
+                          style={{ backgroundColor: hexToRgba(b.color, 0.12), color: b.color }}
+                        >
+                          <Link href={`/negocios/${b.id}`} className="hover:underline">
                             {b.name}
                           </Link>
-                        ))}
-                      </div>
-                    )}
+                          <button
+                            type="button"
+                            onClick={() => setBusinessPillar(b.id, null)}
+                            disabled={linking}
+                            aria-label={`Tirar ${b.name} deste pilar`}
+                            title="Tirar deste pilar"
+                            className="rounded-full p-0.5 opacity-60 hover:opacity-100 disabled:opacity-30"
+                          >
+                            <X size={11} />
+                          </button>
+                        </span>
+                      ))}
+                      <AddBusinessSelect
+                        pillarId={row.id}
+                        businesses={businesses}
+                        pillarNames={pillarNames}
+                        disabled={linking}
+                        onPick={(businessId) => setBusinessPillar(businessId, row.id)}
+                      />
+                    </div>
                   </td>
                 </tr>
               );
@@ -166,7 +250,7 @@ export function PillarsTable({ initialRows }: { initialRows: PillarRow[] }) {
         </Button>
       </div>
 
-      <ErrorNote message={error} />
+      <ErrorNote message={error ?? linkError} />
 
       {editing && (
         <PillarFormModal
