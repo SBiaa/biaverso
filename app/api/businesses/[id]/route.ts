@@ -7,7 +7,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { modules, ...data } = await parseBody(request, businessPatchSchema);
+  const { modules, pillarIds, ...data } = await parseBody(request, businessPatchSchema);
 
   // Módulo ausente do payload é desligado, não apagado: os dados dele ficam no
   // banco e voltam a aparecer se o módulo for religado.
@@ -27,7 +27,16 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
     ]);
   }
 
-  return NextResponse.json(await prisma.business.update({ where: { id }, data }));
+  return NextResponse.json(
+    await prisma.business.update({
+      where: { id },
+      data: {
+        ...data,
+        // Lista inteira: o que não vier é desligado deste negócio.
+        ...(pillarIds && { pillars: { set: pillarIds.map((pillarId) => ({ id: pillarId })) } }),
+      },
+    }),
+  );
 });
 
 export const DELETE = route(async (_request: Request, { params }: Params) => {

@@ -24,7 +24,7 @@ type BusinessFormModalProps = {
     description: string | null;
     color: string;
     icon: string | null;
-    pillarId: string | null;
+    pillarIds: string[];
     modules: ModuleType[];
   };
   onClose: () => void;
@@ -41,12 +41,12 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
     description: initial?.description ?? "",
     color: initial?.color ?? BUSINESS_COLORS[0],
     icon: initial?.icon ?? "briefcase",
-    pillarId: initial?.pillarId ?? "",
   });
+  const [pillarIds, setPillarIds] = useState<string[]>(initial?.pillarIds ?? []);
   const [pillars, setPillars] = useState<{ id: string; name: string }[]>([]);
 
   // Os pilares vêm do servidor aqui mesmo, em vez de cada tela que abre este
-  // modal repassá-los. Se falhar, o select fica só com "Nenhum".
+  // modal repassá-los. Se falhar, a lista de pilares fica vazia.
   useEffect(() => {
     let cancelled = false;
     api
@@ -72,11 +72,11 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
 
     try {
       if (mode === "create") {
-        await api.post("/api/businesses", { ...form, pillarId: form.pillarId || null, modules });
+        await api.post("/api/businesses", { ...form, pillarIds, modules });
       } else if (initial) {
         await api.patch(`/api/businesses/${initial.id}`, {
           ...form,
-          pillarId: form.pillarId || null,
+          pillarIds,
           modules,
         });
       }
@@ -113,20 +113,33 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
 
       <div>
         <p className="mb-1.5 text-xs font-medium text-text-secondary">
-          Pilar da Central de Visão
+          Pilares da Central de Visão
         </p>
-        <select
-          value={form.pillarId}
-          onChange={(e) => setForm((prev) => ({ ...prev, pillarId: e.target.value }))}
-          className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          <option value="">Nenhum</option>
+        <div className="flex flex-wrap gap-1.5">
           {pillars.map((p) => (
-            <option key={p.id} value={p.id}>
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={pillarIds.includes(p.id)}
+              onClick={() =>
+                setPillarIds((prev) =>
+                  prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id],
+                )
+              }
+              className={cn(
+                "rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors",
+                pillarIds.includes(p.id)
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "text-text-secondary hover:bg-hover",
+              )}
+            >
               {p.name}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
+        <p className="mt-1.5 text-[11px] text-text-secondary">
+          Pode marcar mais de um.
+        </p>
       </div>
 
       <div>

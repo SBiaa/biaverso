@@ -10,6 +10,7 @@ export default async function NegociosPage() {
     include: {
       clients: { where: { status: "ATIVO" } },
       modules: { where: { active: true }, orderBy: { order: "asc" } },
+      pillars: { select: { id: true } },
     },
   });
 
@@ -19,7 +20,7 @@ export default async function NegociosPage() {
     description: b.description,
     color: b.color,
     icon: b.icon,
-    pillarId: b.pillarId,
+    pillarIds: b.pillars.map((p) => p.id),
     active: b.active,
     showInNav: b.showInNav,
     activeClientCount: b.clients.length,

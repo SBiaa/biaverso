@@ -23,7 +23,7 @@ export type PillarRow = {
   kind: string;
   /** Objetivos metrificados em andamento sob este pilar. */
   inProgressCount: number;
-  /** Negócios ligados ao pilar (a ligação mora no negócio: Business.pillarId). */
+  /** Negócios ligados ao pilar (muitos-para-muitos: um negócio pode ter vários). */
   businesses: { id: string; name: string; color: string }[];
 };
 
@@ -39,33 +39,26 @@ const kindOptions = toOptions(pillarKindLabels);
 
 const th = "pb-2 pr-3 font-medium";
 
-/** Negócio ativo, com o pilar em que está hoje (para avisar quando vai mudar). */
-export type PillarBusinessOption = {
-  id: string;
-  name: string;
-  color: string;
-  pillarId: string | null;
-};
+/** Negócio ativo que pode ser ligado a um pilar. */
+export type PillarBusinessOption = { id: string; name: string; color: string };
 
 /**
  * "+ negócio" da coluna Negócios. Lista os negócios que ainda não estão neste
- * pilar; os que já têm outro pilar mostram qual, porque escolher aqui muda o
- * pilar deles (cada negócio fica em um pilar só).
+ * pilar. Ligar aqui não tira o negócio dos outros pilares: um negócio pode
+ * estar em vários (ex.: tarô é pessoal e financeiro).
  */
 function AddBusinessSelect({
-  pillarId,
+  linkedIds,
   businesses,
-  pillarNames,
   disabled,
   onPick,
 }: {
-  pillarId: string;
+  linkedIds: string[];
   businesses: PillarBusinessOption[];
-  pillarNames: Record<string, string>;
   disabled: boolean;
   onPick: (businessId: string) => void;
 }) {
-  const options = businesses.filter((b) => b.pillarId !== pillarId);
+  const options = businesses.filter((b) => !linkedIds.includes(b.id));
   if (options.length === 0) return null;
 
   return (
@@ -80,7 +73,6 @@ function AddBusinessSelect({
       {options.map((b) => (
         <option key={b.id} value={b.id}>
           {b.name}
-          {b.pillarId && pillarNames[b.pillarId] ? ` (sai de ${pillarNames[b.pillarId]})` : ""}
         </option>
       ))}
     </select>
@@ -100,15 +92,14 @@ export function PillarsTable({
   const [editing, setEditing] = useState<PillarRow | null>(null);
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
-  const pillarNames = Object.fromEntries(rows.map((r) => [r.id, r.name]));
 
-  // A ligação mora no negócio (Business.pillarId); depois de gravar, o refresh
-  // traz a tabela e a lista de negócios de novo do servidor.
-  async function setBusinessPillar(businessId: string, pillarId: string | null) {
+  // Grava a lista inteira de negócios do pilar; o refresh traz a tabela de novo
+  // do servidor.
+  async function setPillarBusinesses(pillarId: string, businessIds: string[]) {
     setLinking(true);
     setLinkError(null);
     try {
-      await api.patch(`/api/businesses/${businessId}`, { pillarId });
+      await api.patch(`/api/vision/pillars/${pillarId}`, { businessIds });
       router.refresh();
     } catch (e) {
       setLinkError(errorMessage(e));
@@ -205,7 +196,12 @@ export function PillarsTable({
                           </Link>
                           <button
                             type="button"
-                            onClick={() => setBusinessPillar(b.id, null)}
+                            onClick={() =>
+                              setPillarBusinesses(
+                                row.id,
+                                row.businesses.filter((x) => x.id !== b.id).map((x) => x.id),
+                              )
+                            }
                             disabled={linking}
                             aria-label={`Tirar ${b.name} deste pilar`}
                             title="Tirar deste pilar"
@@ -216,11 +212,15 @@ export function PillarsTable({
                         </span>
                       ))}
                       <AddBusinessSelect
-                        pillarId={row.id}
+                        linkedIds={row.businesses.map((x) => x.id)}
                         businesses={businesses}
-                        pillarNames={pillarNames}
                         disabled={linking}
-                        onPick={(businessId) => setBusinessPillar(businessId, row.id)}
+                        onPick={(businessId) =>
+                          setPillarBusinesses(row.id, [
+                            ...row.businesses.map((x) => x.id),
+                            businessId,
+                          ])
+                        }
                       />
                     </div>
                   </td>

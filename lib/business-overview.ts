@@ -49,14 +49,14 @@ export type BusinessOverview = {
   vision: BusinessVision;
 };
 
-/** O negócio dentro da Central de Visão: pilar → objetivos → metas. */
+/** O negócio dentro da Central de Visão: pilares → objetivos → metas. */
 export type BusinessVision = {
-  pillar: {
+  pillars: {
     id: string;
     name: string;
     color: string;
     conceptualGoals: { id: string; title: string }[];
-  } | null;
+  }[];
   measuredGoals: {
     id: string;
     title: string;
@@ -76,7 +76,8 @@ async function getBusinessVision(businessId: string): Promise<BusinessVision> {
     prisma.business.findUnique({
       where: { id: businessId },
       select: {
-        pillar: {
+        pillars: {
+          orderBy: { order: "asc" },
           select: {
             id: true,
             name: true,
@@ -109,7 +110,7 @@ async function getBusinessVision(businessId: string): Promise<BusinessVision> {
   ]);
 
   return {
-    pillar: business?.pillar ?? null,
+    pillars: business?.pillars ?? [],
     measuredGoals: measuredGoals.map((g) => ({
       ...g,
       conceptualGoal: g.conceptualGoal.title,

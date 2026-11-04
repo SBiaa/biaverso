@@ -346,8 +346,9 @@ export const businessCreateSchema = z.object({
   icon: optionalText,
   // Ausente = deixa como está (no create, cai nos módulos padrão).
   modules: z.array(z.enum(E.ModuleType)).optional(),
-  // Pilar da Central de Visão que este negócio alimenta; `null` desliga.
-  pillarId: optionalId,
+  // Pilares da Central de Visão que este negócio alimenta. Lista inteira:
+  // ausente = não mexe; `[]` = tira de todos.
+  pillarIds: z.array(id).optional(),
 });
 export const businessPatchSchema = businessCreateSchema.partial().extend({
   active: z.boolean().optional(),
@@ -978,6 +979,8 @@ export const pillarPatchSchema = z.object({
   order: z.coerce.number().int().min(0).optional(),
   status: z.enum(E.PillarStatus).optional(),
   kind: z.enum(E.PillarKind).optional(),
+  // Lista inteira dos negócios ligados ao pilar; ausente = não mexe.
+  businessIds: z.array(id).optional(),
 });
 
 export const principleSchema = z.object({

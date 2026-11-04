@@ -842,13 +842,12 @@ model Business {
   credentials         BusinessCredential[]
   products            Product[]
 
-  pillarId      String?
-  pillar        Pillar?        @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  // Pilares da Central de Visão que este negócio alimenta. Um negócio pode
+  // mexer com mais de uma área da vida (ex.: tarô é pessoal e financeiro).
+  pillars       Pillar[]
   measuredGoals MeasuredGoal[]
 
   cover BusinessCover?
-
-  @@index([pillarId])
 }
 
 /// Capa do negócio (a imagem do topo, como no Notion), em data URL JPEG.
@@ -1927,6 +1926,7 @@ model Pillar {
 
   conceptualGoals ConceptualGoal[]
   // Negócios que alimentam este pilar (ex.: Empreendedorismo → Ace, Creative).
+  // Muitos-para-muitos: o mesmo negócio pode estar em vários pilares.
   businesses      Business[]
   moodboardItems  MoodboardItem[]
   desires         Desire[]

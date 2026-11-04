@@ -23,7 +23,7 @@ type BusinessItem = {
   description: string | null;
   color: string;
   icon: string | null;
-  pillarId: string | null;
+  pillarIds: string[];
   active: boolean;
   /** Ocupa uma linha na barra lateral. */
   showInNav: boolean;

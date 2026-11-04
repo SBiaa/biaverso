@@ -5,7 +5,7 @@ import { businessCreateSchema } from "@/lib/schemas";
 import { DEFAULT_MODULES } from "@/lib/business-modules";
 
 export const POST = route(async (request: Request) => {
-  const { modules, ...data } = await parseBody(request, businessCreateSchema);
+  const { modules, pillarIds, ...data } = await parseBody(request, businessCreateSchema);
 
   // Sem módulo nenhum a página do negócio abriria sem abas, então quem não
   // escolhe nada começa com o mínimo.
@@ -15,6 +15,7 @@ export const POST = route(async (request: Request) => {
     await prisma.business.create({
       data: {
         ...data,
+        pillars: pillarIds?.length ? { connect: pillarIds.map((id) => ({ id })) } : undefined,
         modules: {
           create: chosen.map((module, order) => ({ module, order })),
         },

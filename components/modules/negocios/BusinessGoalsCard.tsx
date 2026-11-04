@@ -36,9 +36,11 @@ export function BusinessGoalsCard({
   projects: ProjectCard[];
   taskTotals: { done: number; open: number } | null;
 }) {
-  const { pillar, measuredGoals } = vision;
+  const { pillars, measuredGoals } = vision;
+  const mainPillar = pillars[0] ?? null;
   const missing = [
-    !pillar && "O negócio ainda não tem um pilar escolhido (escolha no campo “Pilar” acima).",
+    pillars.length === 0 &&
+      "O negócio ainda não tem um pilar escolhido (escolha no campo “Pilares” acima).",
     measuredGoals.length === 0 &&
       "Nenhuma meta metrificada está ligada a este negócio (na meta, campo “Negócio”).",
   ].filter(Boolean) as string[];
@@ -58,47 +60,51 @@ export function BusinessGoalsCard({
         )}
       </div>
 
-      {!pillar && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium text-text-secondary">Pilar</p>
-          <BusinessPillarPicker businessId={businessId} pillarId={null} />
-        </div>
-      )}
-
-      {pillar && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium text-text-secondary">Pilar</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={`/visao/${pillar.id}`}
-              className="flex w-fit items-center gap-2 text-sm font-medium text-text-primary hover:underline"
-            >
-              <span className="size-2.5 rounded-full" style={{ backgroundColor: pillar.color }} />
-              {pillar.name}
-            </Link>
-            <details className="text-xs">
-              <summary className="cursor-pointer text-text-secondary hover:text-text-primary">
-                Trocar
-              </summary>
-              <div className="mt-1.5">
-                <BusinessPillarPicker businessId={businessId} pillarId={pillar.id} />
-              </div>
-            </details>
-          </div>
-          {pillar.conceptualGoals.length > 0 && (
-            <ul className="flex flex-wrap gap-1.5">
-              {pillar.conceptualGoals.map((g) => (
-                <li
-                  key={g.id}
-                  className="rounded-full border border-border px-2.5 py-0.5 text-xs text-text-secondary"
-                >
-                  {g.title}
+      <div className="flex flex-col gap-1.5">
+        <p className="text-xs font-medium text-text-secondary">Pilares</p>
+        {pillars.length === 0 ? (
+          <BusinessPillarPicker businessId={businessId} pillarIds={[]} />
+        ) : (
+          <>
+            <ul className="flex flex-col gap-2">
+              {pillars.map((p) => (
+                <li key={p.id} className="flex flex-col gap-1">
+                  <Link
+                    href={`/visao/${p.id}`}
+                    className="flex w-fit items-center gap-2 text-sm font-medium text-text-primary hover:underline"
+                  >
+                    <span className="size-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+                    {p.name}
+                  </Link>
+                  {p.conceptualGoals.length > 0 && (
+                    <ul className="flex flex-wrap gap-1.5">
+                      {p.conceptualGoals.map((g) => (
+                        <li
+                          key={g.id}
+                          className="rounded-full border border-border px-2.5 py-0.5 text-xs text-text-secondary"
+                        >
+                          {g.title}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      )}
+            <details className="text-xs">
+              <summary className="w-fit cursor-pointer text-text-secondary hover:text-text-primary">
+                Escolher pilares
+              </summary>
+              <div className="mt-1.5">
+                <BusinessPillarPicker
+                  businessId={businessId}
+                  pillarIds={pillars.map((p) => p.id)}
+                />
+              </div>
+            </details>
+          </>
+        )}
+      </div>
 
       {measuredGoals.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -125,7 +131,7 @@ export function BusinessGoalsCard({
                       <span className="font-medium text-text-primary">{pct}%</span>
                     </span>
                   </div>
-                  <Bar value={pct} color={pillar?.color} />
+                  <Bar value={pct} color={mainPillar?.color} />
                 </li>
               );
             })}
@@ -146,7 +152,7 @@ export function BusinessGoalsCard({
             ))}
           </ul>
           <Link
-            href={pillar ? `/visao/${pillar.id}` : "/visao"}
+            href={mainPillar ? `/visao/${mainPillar.id}` : "/visao"}
             className="w-fit text-xs font-medium text-accent hover:underline"
           >
             Preencher na Central de Visão

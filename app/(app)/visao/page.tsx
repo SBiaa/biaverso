@@ -89,7 +89,7 @@ export default async function VisaoPage({
     prisma.business.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, color: true, pillarId: true },
+      select: { id: true, name: true, color: true },
     }),
   ]);
 
