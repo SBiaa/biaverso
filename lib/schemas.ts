@@ -553,7 +553,12 @@ export const contentPostCreateSchema = z.object({
 export const contentPostPatchSchema = contentPostCreateSchema
   .omit({ businessId: true, status: true })
   .partial()
-  .extend({ status: z.enum(E.ContentStatus).optional() });
+  .extend({
+    status: z.enum(E.ContentStatus).optional(),
+    // Feed: fixar grava a hora (o Instagram ordena os fixados por ela).
+    pinned: z.boolean().optional(),
+    gridGroupId: optionalTextPatch,
+  });
 
 export const productionTaskCreateSchema = z.object({
   title: text,
@@ -1421,4 +1426,43 @@ export const businessCoverSchema = z.object({
     .string()
     .startsWith("data:image/", "Imagem inválida.")
     .max(1_500_000, "Imagem grande demais."),
+});
+
+// ------------------------------------------------------------------ feed
+// Capa do post: JPEG 1080x1350 reduzido no navegador, ~200–400 KB.
+export const postCoverSchema = businessCoverSchema;
+
+/** Foto ou capa pequena (256px) que mora na própria linha. */
+const smallImage = z
+  .string()
+  .startsWith("data:image/", "Imagem inválida.")
+  .max(300_000, "Imagem grande demais.")
+  .nullish();
+
+const profileCount = z.number().int().min(0).nullish();
+
+export const instagramProfileSchema = z.object({
+  handle: optionalTextPatch,
+  displayName: optionalTextPatch,
+  category: optionalTextPatch,
+  bio: z
+    .string()
+    .nullish()
+    .transform((v) => (v === undefined ? undefined : v?.trim() ? v.replace(/\s+$/, "") : null)),
+  link: optionalTextPatch,
+  photo: smallImage,
+  postsCount: profileCount,
+  followersCount: profileCount,
+  followingCount: profileCount,
+});
+
+export const instagramHighlightCreateSchema = z.object({
+  name: text,
+  cover: smallImage,
+});
+export const instagramHighlightPatchSchema = instagramHighlightCreateSchema.partial();
+
+/** O trio do grid: 3 posts que formam uma imagem lado a lado. */
+export const gridGroupSchema = z.object({
+  ids: z.array(id).length(3, "Um conjunto tem 3 posts."),
 });

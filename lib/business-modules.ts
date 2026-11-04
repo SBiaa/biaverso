@@ -11,6 +11,7 @@ import type { ModuleType } from "@/app/generated/prisma/client";
 /** Ordem em que os módulos aparecem nos seletores. */
 export const MODULE_TYPES: ModuleType[] = [
   "CRONOGRAMA",
+  "FEED",
   "PRODUCAO",
   "CLIENTES",
   "PROJETOS",
@@ -25,6 +26,7 @@ export const DEFAULT_MODULES: ModuleType[] = ["CLIENTES", "PROJETOS", "FINANCEIR
 
 export const moduleLabels: Record<ModuleType, string> = {
   CRONOGRAMA: "Cronograma",
+  FEED: "Feed",
   PRODUCAO: "Produção",
   CLIENTES: "Clientes",
   PROJETOS: "Projetos",
@@ -36,6 +38,7 @@ export const moduleLabels: Record<ModuleType, string> = {
 
 export const moduleDescriptions: Record<ModuleType, string> = {
   CRONOGRAMA: "Posts, stories e reels no calendário",
+  FEED: "Prévia do perfil do Instagram de cada cliente",
   PRODUCAO: "Tarefas de edição, arte e site no kanban",
   CLIENTES: "Gestão de clientes do negócio",
   PROJETOS: "Projetos internos e de cliente",
@@ -53,6 +56,7 @@ const MODULE_TABS: Record<ModuleType, { key: string; label: string; path?: strin
   CLIENTES: { key: "clientes", label: "Clientes" },
   PROJETOS: { key: "interno", label: "Interno" },
   CRONOGRAMA: { key: "calendario", label: "Calendário" },
+  FEED: { key: "feed", label: "Feed", path: "feed" },
   PRODUCAO: { key: "kanban", label: "Kanban" },
   PEDIDOS: { key: "pedidos", label: "Pedidos", path: "pedidos" },
   COLECOES: { key: "colecoes", label: "Coleções", path: "colecoes" },

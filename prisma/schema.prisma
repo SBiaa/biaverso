@@ -343,17 +343,17 @@ model TimeEntry {
   // Estilo Toggl: `title` é a linha do que foi feito; `description` é o detalhe.
   // Projeto e tarefa dizem "o que da Ace" — são opcionais e, se o projeto ou a
   // tarefa sumirem, o registro fica (só perde o vínculo).
-  description String?
-  projectId   String?
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  taskId      String?
-  task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  description      String?
+  projectId        String?
+  project          Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  taskId           String?
+  task             Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
   // As tarefas da página do projeto ("Tarefas e posts") moram em ProductionTask,
   // não em Task. Um registro aponta para uma ou para a outra, nunca as duas.
   productionTaskId String?
   productionTask   ProductionTask? @relation(fields: [productionTaskId], references: [id], onDelete: SetNull)
   /// Nasceu de um ciclo de foco do pomodoro: encerra sozinho quando o tempo acaba.
-  pomodoro    Boolean  @default(false)
+  pomodoro         Boolean         @default(false)
 
   @@index([dayId])
   @@index([categoryId])
@@ -366,14 +366,14 @@ model TimeEntry {
 // Configuração do pomodoro. Uma linha só (id "default"): o app tem uma usuária,
 // e guardar no banco faz a configuração acompanhar o celular e o computador.
 model PomodoroSettings {
-  id                    String  @id @default("default")
-  focusMinutes          Int     @default(25)
-  shortBreakMinutes     Int     @default(5)
-  longBreakMinutes      Int     @default(15)
-  cyclesBeforeLongBreak Int     @default(4)
-  autoStartBreaks       Boolean @default(true)
-  autoStartFocus        Boolean @default(false)
-  sound                 Boolean @default(true)
+  id                    String   @id @default("default")
+  focusMinutes          Int      @default(25)
+  shortBreakMinutes     Int      @default(5)
+  longBreakMinutes      Int      @default(15)
+  cyclesBeforeLongBreak Int      @default(4)
+  autoStartBreaks       Boolean  @default(true)
+  autoStartFocus        Boolean  @default(false)
+  sound                 Boolean  @default(true)
   updatedAt             DateTime @updatedAt
 }
 
@@ -902,6 +902,7 @@ enum ModuleType {
   COLECOES // coleções sazonais de produtos
   FINANCEIRO // visão financeira do negócio
   SENHAS // credenciais do negócio, vindas do cofre
+  FEED // prévia do perfil do Instagram de cada cliente
 }
 
 model Project {
@@ -1060,6 +1061,43 @@ model Client {
   whatsappChats   WhatsappChat[]
   contentPosts    ContentPost[]
   productionTasks ProductionTask[]
+
+  instagramProfile    InstagramProfile?
+  instagramHighlights InstagramHighlight[]
+}
+
+// FEED — prévia do perfil do Instagram da cliente antes de publicar.
+
+/// Cabeçalho do perfil como aparece no app. Um por cliente; tudo opcional,
+/// porque a prévia já funciona com o que tiver (vazio mostra "—" ou some).
+model InstagramProfile {
+  clientId       String   @id
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  handle         String?
+  displayName    String?
+  category       String?
+  bio            String?
+  link           String?
+  /// Data URL JPEG 256px. Nula = usa a foto da cliente (`Client.photo`).
+  photo          String?
+  postsCount     Int?
+  followersCount Int?
+  followingCount Int?
+  updatedAt      DateTime @updatedAt
+}
+
+/// Destaque dos stories. A capa é pequena (256px), mora na própria linha.
+model InstagramHighlight {
+  id        String   @id @default(cuid())
+  name      String
+  cover     String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, order])
 }
 
 model ClientBusiness {
@@ -1183,6 +1221,14 @@ model ContentPost {
   visualBrief  Json?
   storySupport String?
 
+  /// Fixado no topo do perfil. A data, e não um booleano, porque o Instagram
+  /// mostra os fixados na ordem em que foram fixados.
+  pinnedAt    DateTime?
+  /// Posts que formam uma imagem juntos no grid (o trio). Mesmo id = mesmo
+  /// conjunto; o Feed avisa quando o alinhamento vai quebrar.
+  gridGroupId String?
+  cover       ContentPostCover?
+
   // Origem de um import externo. `externalSource` + `externalId` juntos
   // identificam o post lá fora, pra reimportar atualizar em vez de duplicar.
   externalSource String?
@@ -1200,6 +1246,15 @@ model ContentPost {
   @@index([businessId, publishDate])
   @@index([clientId])
   @@index([projectId])
+}
+
+/// Capa do post no Feed, em data URL JPEG 4:5 (1080x1350). Tabela à parte,
+/// como a capa do negócio: o calendário e o kanban listam posts sem `select`.
+model ContentPostCover {
+  postId    String      @id
+  post      ContentPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  image     String
+  updatedAt DateTime    @updatedAt
 }
 
 enum ContentPilar {
@@ -1230,6 +1285,8 @@ enum SocialNetwork {
 enum ContentStatus {
   PLANEJADO
   EM_CRIACAO
+  /// Pronto, esperando a cliente aprovar. Aprovado = a cliente já aprovou.
+  AGUARDANDO_APROVACAO
   APROVADO
   PUBLICADO
   CANCELADO

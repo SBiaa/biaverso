@@ -238,6 +238,7 @@ export const contentPilarLabels: Record<string, string> = {
 export const contentStatusLabels: Record<string, string> = {
   PLANEJADO: "Planejado",
   EM_CRIACAO: "Em criação",
+  AGUARDANDO_APROVACAO: "Aguardando aprovação",
   APROVADO: "Aprovado",
   PUBLICADO: "Publicado",
   CANCELADO: "Cancelado",

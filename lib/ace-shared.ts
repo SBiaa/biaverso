@@ -37,7 +37,9 @@ export type KanbanColumnKey = (typeof KANBAN_COLUMNS)[number]["key"];
 const contentStatusToColumn: Record<string, KanbanColumnKey | null> = {
   PLANEJADO: "A_FAZER",
   EM_CRIACAO: "EM_ANDAMENTO",
-  APROVADO: "AGUARDANDO_APROVACAO",
+  AGUARDANDO_APROVACAO: "AGUARDANDO_APROVACAO",
+  // A cliente aprovou: a produção acabou, falta só a data de publicar.
+  APROVADO: "CONCLUIDO",
   PUBLICADO: "CONCLUIDO",
   PRAZO_PERDIDO: "PRAZO_PERDIDO",
   CANCELADO: null,
@@ -59,6 +61,7 @@ export function getKanbanColumn(kind: AceItemKind, status: string): KanbanColumn
 export const contentStatusColors: Record<string, string> = {
   PLANEJADO: "bg-slate-100 text-slate-700",
   EM_CRIACAO: "bg-amber-100 text-amber-800",
+  AGUARDANDO_APROVACAO: "bg-violet-100 text-violet-700",
   APROVADO: "bg-blue-100 text-blue-700",
   PUBLICADO: "bg-emerald-100 text-emerald-700",
   CANCELADO: "bg-red-100 text-red-700",

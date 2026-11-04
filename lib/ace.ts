@@ -48,7 +48,7 @@ export async function syncMissedDeadlines() {
     }),
     prisma.contentPost.updateMany({
       where: {
-        status: { in: ["PLANEJADO", "EM_CRIACAO", "APROVADO"] },
+        status: { in: ["PLANEJADO", "EM_CRIACAO", "AGUARDANDO_APROVACAO", "APROVADO"] },
         publishDate: { lt: limit },
       },
       data: { status: "PRAZO_PERDIDO" },

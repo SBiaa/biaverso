@@ -28,13 +28,12 @@ const pilarToEnum: Record<string, ContentPilar> = {
   Conversa: "CONVERSA",
 };
 
-// "aprovado" no gerador é aprovação do texto, antes de produzir; "produzido"
-// e "agendado" já estão prontos, só esperando a data — mais perto de
-// "aprovado" no biaVerso do que de "ainda em criação".
+// "aprovado" no gerador é aprovação do texto, antes de produzir. "produzido"
+// está pronto mas a cliente ainda não viu; "agendado" já passou por ela.
 const statusToContentStatus: Record<string, ContentStatus> = {
   rascunho: "PLANEJADO",
   aprovado: "EM_CRIACAO",
-  produzido: "APROVADO",
+  produzido: "AGUARDANDO_APROVACAO",
   agendado: "APROVADO",
   publicado: "PUBLICADO",
 };
