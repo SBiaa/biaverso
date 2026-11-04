@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { Button, confirmAction, ErrorNote, IconButton, Modal, notify } from "@/components/ui";
+import {
+  Button,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  Modal,
+  notify,
+} from "@/components/ui";
 import { EntryDetailsPanel } from "@/components/layout/time/EntryDetailsPanel";
 import { TIME_STATUS_REFRESH_EVENT } from "@/components/layout/TimeStatusBar";
 import type { EntryDetails } from "@/lib/pomodoro";
@@ -35,12 +42,7 @@ export function TimeEntryList({
   entries: TimeEntryDTO[];
 }) {
   const router = useRouter();
-  const [showForm, setShowForm] = useState(false);
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
-  const [title, setTitle] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<TimeEntryDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,31 +51,6 @@ export function TimeEntryList({
   const projectById = new Map(projects.map((p) => [p.id, p]));
   // O registro em andamento aparece no cronômetro, não duplicado aqui.
   const finished = entries.filter((e) => e.endedAt);
-
-  async function handleAdd() {
-    if (!categoryId || !startTime || !endTime) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await api.post("/api/time-entries", {
-        dayId,
-        categoryId,
-        title: title.trim() || null,
-        startTime,
-        endTime,
-      });
-      setTitle("");
-      setStartTime("");
-      setEndTime("");
-      setShowForm(false);
-      router.refresh();
-      notify("Registrado.");
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete(entry: TimeEntryDTO) {
     const category = categoryById.get(entry.categoryId);
@@ -99,7 +76,9 @@ export function TimeEntryList({
   return (
     <div className="flex flex-col gap-3">
       {finished.length === 0 ? (
-        <p className="text-sm text-text-secondary">Nenhum registro concluído neste dia.</p>
+        <p className="text-sm text-text-secondary">
+          Nenhum registro concluído neste dia.
+        </p>
       ) : (
         <ul className="divide-y divide-border">
           {finished.map((entry) => {
@@ -111,7 +90,8 @@ export function TimeEntryList({
                 className="-mx-2 flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-hover"
               >
                 <span className="w-24 shrink-0 text-text-secondary">
-                  {formatInstantTime(entry.startedAt)}–{formatInstantTime(entry.endedAt!)}
+                  {formatInstantTime(entry.startedAt)}–
+                  {formatInstantTime(entry.endedAt!)}
                 </span>
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -124,9 +104,13 @@ export function TimeEntryList({
                   <span className="truncate text-xs text-text-secondary">
                     {[
                       entry.title ? category?.name : null,
-                      entry.projectId ? projectById.get(entry.projectId)?.name : null,
+                      entry.projectId
+                        ? projectById.get(entry.projectId)?.name
+                        : null,
                       entry.taskId ? taskTitles[entry.taskId] : null,
-                      entry.productionTaskId ? taskTitles[entry.productionTaskId] : null,
+                      entry.productionTaskId
+                        ? taskTitles[entry.productionTaskId]
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(" › ")}
@@ -138,9 +122,14 @@ export function TimeEntryList({
                   )}
                 </div>
                 <span className="shrink-0 text-xs font-medium text-text-secondary">
-                  {formatDurationMinutes(minutesBetween(entry.startedAt, entry.endedAt))}
+                  {formatDurationMinutes(
+                    minutesBetween(entry.startedAt, entry.endedAt),
+                  )}
                 </span>
-                <IconButton onClick={() => setEditing(entry)} aria-label="Editar registro">
+                <IconButton
+                  onClick={() => setEditing(entry)}
+                  aria-label="Editar registro"
+                >
                   <Pencil size={15} />
                 </IconButton>
                 <IconButton
@@ -160,67 +149,32 @@ export function TimeEntryList({
         </ul>
       )}
 
-      {categories.length > 0 &&
-        (showForm ? (
-          <div className="grid grid-cols-2 gap-2 border-t border-border pt-3">
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className={inputClass}
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <input
-              placeholder="Título (opcional)"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className={inputClass}
-            />
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className={inputClass}
-            />
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className={inputClass}
-            />
-            <div className="col-span-2 flex gap-2">
-              <Button onClick={handleAdd} disabled={saving || !startTime || !endTime}>
-                Salvar
-              </Button>
-              <Button variant="ghost" onClick={() => setShowForm(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Button variant="secondary" onClick={() => setShowForm(true)}>
-            <Plus size={14} />
-            Registrar tempo manualmente
-          </Button>
-        ))}
+      {categories.length > 0 && (
+        <Button variant="secondary" onClick={() => setCreating(true)}>
+          <Plus size={14} />
+          Adicionar registro
+        </Button>
+      )}
 
       <ErrorNote message={error} />
 
-      {editing && (
-        <EditEntryModal
+      {(editing || creating) && (
+        <EntryModal
           entry={editing}
+          dayId={dayId}
           categories={categories}
           projects={projects}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
+          onClose={() => {
             setEditing(null);
+            setCreating(false);
+          }}
+          onSaved={() => {
+            const wasCreating = creating;
+            setEditing(null);
+            setCreating(false);
             router.refresh();
             window.dispatchEvent(new Event(TIME_STATUS_REFRESH_EVENT));
-            notify("Salvo.");
+            notify(wasCreating ? "Registrado." : "Salvo.");
           }}
         />
       )}
@@ -228,21 +182,28 @@ export function TimeEntryList({
   );
 }
 
-export function EditEntryModal({
+/** Edita um registro concluído; sem `entry`, adiciona um novo no dia `dayId`. */
+export function EntryModal({
   entry,
+  dayId,
   categories,
   projects,
   onClose,
   onSaved,
 }: {
-  entry: TimeEntryDTO;
+  entry: TimeEntryDTO | null;
+  dayId: string;
   categories: ActivityCategoryDTO[];
   projects: ProjectOptionDTO[];
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [startTime, setStartTime] = useState(formatInstantTime(entry.startedAt));
-  const [endTime, setEndTime] = useState(formatInstantTime(entry.endedAt!));
+  const [startTime, setStartTime] = useState(
+    entry ? formatInstantTime(entry.startedAt) : "",
+  );
+  const [endTime, setEndTime] = useState(
+    entry?.endedAt ? formatInstantTime(entry.endedAt) : "",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -250,7 +211,7 @@ export function EditEntryModal({
     setSaving(true);
     setError(null);
     try {
-      await api.patch(`/api/time-entries/${entry.id}`, {
+      const payload = {
         categoryId: details.categoryId,
         title: details.title.trim() || null,
         description: details.description.trim() || null,
@@ -259,7 +220,9 @@ export function EditEntryModal({
         productionTaskId: details.productionTaskId,
         startTime,
         endTime,
-      });
+      };
+      if (entry) await api.patch(`/api/time-entries/${entry.id}`, payload);
+      else await api.post("/api/time-entries", { dayId, ...payload });
       onSaved();
     } catch (e) {
       setError(errorMessage(e));
@@ -269,7 +232,10 @@ export function EditEntryModal({
   }
 
   return (
-    <Modal title="Editar registro" onClose={onClose}>
+    <Modal
+      title={entry ? "Editar registro" : "Adicionar registro"}
+      onClose={onClose}
+    >
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-text-secondary">
@@ -296,12 +262,12 @@ export function EditEntryModal({
           projects={projects}
           settings={DEFAULT_POMODORO_SETTINGS}
           initial={{
-            categoryId: entry.categoryId,
-            title: entry.title ?? "",
-            description: entry.description ?? "",
-            projectId: entry.projectId,
-            taskId: entry.taskId,
-            productionTaskId: entry.productionTaskId,
+            categoryId: entry?.categoryId ?? categories[0]?.id ?? "",
+            title: entry?.title ?? "",
+            description: entry?.description ?? "",
+            projectId: entry?.projectId ?? null,
+            taskId: entry?.taskId ?? null,
+            productionTaskId: entry?.productionTaskId ?? null,
           }}
           running
           busy={saving || !startTime || !endTime}
