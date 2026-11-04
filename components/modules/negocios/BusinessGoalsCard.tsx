@@ -6,6 +6,7 @@ import { formatGoalValue, goalProgress } from "@/lib/vision-shared";
 import { measuredGoalStatusLabels } from "@/lib/labels";
 import type { BusinessVision } from "@/lib/business-overview";
 import type { ProjectCard } from "@/lib/projects-shared";
+import { BusinessPillarPicker } from "./BusinessPillarPicker";
 
 function Bar({ value, color }: { value: number; color?: string }) {
   return (
@@ -37,7 +38,7 @@ export function BusinessGoalsCard({
 }) {
   const { pillar, measuredGoals } = vision;
   const missing = [
-    !pillar && "O negócio ainda não tem um pilar escolhido (dá para escolher em Editar negócio).",
+    !pillar && "O negócio ainda não tem um pilar escolhido (escolha no campo “Pilar” acima).",
     measuredGoals.length === 0 &&
       "Nenhuma meta metrificada está ligada a este negócio (na meta, campo “Negócio”).",
   ].filter(Boolean) as string[];
@@ -57,16 +58,33 @@ export function BusinessGoalsCard({
         )}
       </div>
 
+      {!pillar && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-medium text-text-secondary">Pilar</p>
+          <BusinessPillarPicker businessId={businessId} pillarId={null} />
+        </div>
+      )}
+
       {pillar && (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-medium text-text-secondary">Pilar</p>
-          <Link
-            href={`/visao/${pillar.id}`}
-            className="flex w-fit items-center gap-2 text-sm font-medium text-text-primary hover:underline"
-          >
-            <span className="size-2.5 rounded-full" style={{ backgroundColor: pillar.color }} />
-            {pillar.name}
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/visao/${pillar.id}`}
+              className="flex w-fit items-center gap-2 text-sm font-medium text-text-primary hover:underline"
+            >
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: pillar.color }} />
+              {pillar.name}
+            </Link>
+            <details className="text-xs">
+              <summary className="cursor-pointer text-text-secondary hover:text-text-primary">
+                Trocar
+              </summary>
+              <div className="mt-1.5">
+                <BusinessPillarPicker businessId={businessId} pillarId={pillar.id} />
+              </div>
+            </details>
+          </div>
           {pillar.conceptualGoals.length > 0 && (
             <ul className="flex flex-wrap gap-1.5">
               {pillar.conceptualGoals.map((g) => (
