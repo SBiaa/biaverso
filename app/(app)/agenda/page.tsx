@@ -6,7 +6,8 @@ import { getAgendaEvents } from "@/lib/agenda";
 export const dynamic = "force-dynamic";
 
 export default async function AgendaPage() {
-  const events = await getAgendaEvents();
+  // Uns três meses para trás: o bastante para navegar pelo mês passado inteiro.
+  const events = await getAgendaEvents(100);
 
   return (
     <>

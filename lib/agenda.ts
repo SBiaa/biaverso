@@ -25,9 +25,14 @@ export function serializeEvent(event: Event): AgendaEvent {
   };
 }
 
-export async function getAgendaEvents(): Promise<AgendaEvent[]> {
+/**
+ * `daysBack`: a tela da agenda pede mais que o padrão porque a semana e o mês
+ * deixam voltar no tempo; sem esse histórico as semanas anteriores abririam
+ * vazias.
+ */
+export async function getAgendaEvents(daysBack = DAYS_BACK): Promise<AgendaEvent[]> {
   const events = await prisma.event.findMany({
-    where: { date: { gte: addUtcDays(todayUtc(), -DAYS_BACK) } },
+    where: { date: { gte: addUtcDays(todayUtc(), -daysBack) } },
     orderBy: [{ date: "asc" }, { time: "asc" }],
   });
 
