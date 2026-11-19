@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
-import { Button, CardTitle, ErrorNote } from "@/components/ui";
+import { Button, CardTitle, confirmAction, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { MoodboardItemModal } from "./MoodboardItemModal";
 
@@ -54,21 +54,33 @@ function MoodboardCard({
       style={style}
       className="group relative w-full max-w-[220px] flex-1 basis-[160px]"
     >
-      <div className="absolute right-1.5 top-1.5 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      {/* Escondidos só onde existe mouse: no celular "passar por cima" não
+          existe, e um botão invisível era um item impossível de apagar. O
+          foco pelo teclado também os revela. */}
+      <div
+        className={
+          "absolute right-1.5 top-1.5 z-10 flex gap-1 transition-opacity " +
+          "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+        }
+      >
         <button
           type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab rounded-md bg-black/50 p-1 text-white"
+          aria-label="Arrastar para reordenar"
+          title="Arrastar para reordenar"
+          className="grid size-9 cursor-grab place-items-center rounded-md bg-black/50 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:size-7"
         >
-          <GripVertical size={12} />
+          <GripVertical size={14} />
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="rounded-md bg-black/50 p-1 text-white hover:bg-red-600"
+          aria-label="Apagar do moodboard"
+          title="Apagar"
+          className="grid size-9 place-items-center rounded-md bg-black/50 text-white hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:size-7"
         >
-          <Trash2 size={12} />
+          <Trash2 size={14} />
         </button>
       </div>
 
@@ -141,6 +153,13 @@ export function MoodboardSection({
   }
 
   async function handleDelete(id: string) {
+    const confirmed = await confirmAction({
+      title: "Apagar este item do moodboard?",
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const previous = items;
     setError(null);
     setItems((prev) => prev.filter((i) => i.id !== id));

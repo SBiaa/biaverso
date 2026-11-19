@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink, Plus, Trash2 } from "lucide-react";
-import { Button, ErrorNote, IconButton } from "@/components/ui";
+import { Button, confirmAction, ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { documentTypeColors, documentTypeLabels } from "@/lib/labels";
 import { hexToRgba } from "@/lib/utils";
@@ -51,6 +51,15 @@ export function ProjectDocuments({
   }
 
   async function remove(id: string) {
+    const name = documents.find((x) => x.id === id)?.title;
+    const confirmed = await confirmAction({
+      title: "Remover este documento do projeto?",
+      description: name ? `"${name}" sai da lista.` : undefined,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const previous = documents;
     setError(null);
     setDocuments((prev) => prev.filter((d) => d.id !== id));

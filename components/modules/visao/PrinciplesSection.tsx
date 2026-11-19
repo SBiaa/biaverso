@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardTitle,
+  confirmAction,
   ErrorNote,
   IconButton,
 } from "@/components/ui";
@@ -38,6 +39,15 @@ export function PrinciplesSection({
   }
 
   async function handleDelete(id: string) {
+    const title = principles.find((p) => p.id === id)?.title;
+    const confirmed = await confirmAction({
+      title: "Apagar este princípio?",
+      description: title ? `"${title}" sai do pilar.` : undefined,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const previous = principles;
     setError(null);
     setPrinciples((prev) => prev.filter((p) => p.id !== id));
@@ -88,17 +98,21 @@ export function PrinciplesSection({
                   </span>
                   <div className="flex items-center gap-2">
                     <IconButton
+                      aria-label={`Editar princípio ${principle.title}`}
+                      title="Editar"
                       onClick={(e) => {
-                      e.stopPropagation();
-                      setEditing(principle);
+                        e.stopPropagation();
+                        setEditing(principle);
                       }}
                     >
                       <Pencil size={15} />
                     </IconButton>
                     <IconButton
+                      aria-label={`Apagar princípio ${principle.title}`}
+                      title="Apagar"
                       onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(principle.id);
+                        e.stopPropagation();
+                        handleDelete(principle.id);
                       }}
                       tone="danger"
                     >

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronRight, Circle, Plus, Trash2 } from "lucide-react";
 
-import { ErrorNote, IconButton, InlineEdit } from "@/components/ui";
+import { confirmAction, ErrorNote, IconButton, InlineEdit } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
   stageTemplateName,
@@ -202,9 +202,18 @@ export function StagedSteps({
                 </div>
                 <IconButton
                   title="Apagar passo"
-                  onClick={() => onRemove(step.id)}
+                  aria-label={`Apagar passo ${step.title}`}
+                  onClick={async () => {
+                    const confirmed = await confirmAction({
+                      title: "Apagar este passo?",
+                      description: `"${step.title}" sai da lista.`,
+                      confirmLabel: "Apagar",
+                      destructive: true,
+                    });
+                    if (confirmed) onRemove(step.id);
+                  }}
                   tone="danger"
-                  className="opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
+                  revealOnHover
                 >
                   <Trash2 size={15} />
                 </IconButton>

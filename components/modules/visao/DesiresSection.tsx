@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import {
   Button,
   CardTitle,
+  confirmAction,
   ErrorNote,
   IconButton,
 } from "@/components/ui";
@@ -34,6 +35,15 @@ export function DesiresSection({
   }
 
   async function handleDelete(id: string) {
+    const title = desires.find((d) => d.id === id)?.title;
+    const confirmed = await confirmAction({
+      title: "Apagar este desejo?",
+      description: title ? `"${title}" sai do pilar.` : undefined,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const previous = desires;
     setError(null);
     setDesires((prev) => prev.filter((d) => d.id !== id));
@@ -77,7 +87,9 @@ export function DesiresSection({
               <IconButton
                 onClick={() => handleDelete(desire.id)}
                 tone="danger"
-                className="opacity-0 group-hover:opacity-100"
+                aria-label={`Apagar desejo ${desire.title}`}
+                title="Apagar desejo"
+                revealOnHover
               >
                 <Trash2 size={15} />
               </IconButton>

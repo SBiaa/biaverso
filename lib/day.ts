@@ -3,11 +3,23 @@ import { todayUtc } from "@/lib/utils";
 import type { Day } from "@/app/generated/prisma/client";
 
 export async function getOrCreateDay(date: Date): Promise<Day> {
-  return prisma.day.upsert({
-    where: { date },
-    update: {},
-    create: { date },
-  });
+  try {
+    return await prisma.day.upsert({
+      where: { date },
+      update: {},
+      create: { date },
+    });
+  } catch (error) {
+    // O upsert não é atômico no Postgres: a Home, a barra de horas e o
+    // prefetch abrem o dia juntos, os dois lados veem que ele não existe e os
+    // dois tentam criar. Quem chega depois estoura o único de `date` — e como
+    // isto roda em server component, a tela inteira caía no error boundary
+    // logo no primeiro acesso do dia. O dia já existe nesse ponto: basta lê-lo.
+    if ((error as { code?: string }).code === "P2002") {
+      return prisma.day.findUniqueOrThrow({ where: { date } });
+    }
+    throw error;
+  }
 }
 
 export async function getOrCreateToday(): Promise<Day> {

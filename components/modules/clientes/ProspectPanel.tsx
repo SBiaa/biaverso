@@ -7,6 +7,7 @@ import {
   BusinessBadge,
   Button,
   CardTitle,
+  confirmAction,
   ErrorNote,
   IconButton,
   notify,
@@ -357,9 +358,17 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
                   )}
                   <IconButton
                     aria-label={`Excluir ${step.title}`}
-                    onClick={() =>
-                      run(() => api.delete(`/api/prospect-tasks/${step.id}`))
-                    }
+                    onClick={async () => {
+                      const confirmed = await confirmAction({
+                        title: "Apagar este passo do follow-up?",
+                        description: `"${step.title}" sai da lista.`,
+                        confirmLabel: "Apagar",
+                        destructive: true,
+                      });
+                      if (confirmed) {
+                        run(() => api.delete(`/api/prospect-tasks/${step.id}`));
+                      }
+                    }}
                   >
                     <Trash2 size={14} />
                   </IconButton>
@@ -436,11 +445,18 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
                     {item.noteId && (
                       <IconButton
                         aria-label="Excluir anotação"
-                        onClick={() =>
-                          run(() =>
-                            api.delete(`/api/prospect-notes/${item.noteId}`),
-                          )
-                        }
+                        onClick={async () => {
+                          const confirmed = await confirmAction({
+                            title: "Apagar esta anotação?",
+                            confirmLabel: "Apagar",
+                            destructive: true,
+                          });
+                          if (confirmed) {
+                            run(() =>
+                              api.delete(`/api/prospect-notes/${item.noteId}`),
+                            );
+                          }
+                        }}
                       >
                         <Trash2 size={13} />
                       </IconButton>

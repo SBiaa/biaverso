@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, ErrorNote, IconButton } from "@/components/ui";
+import { Button, confirmAction, ErrorNote, IconButton } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatCurrencyBRL } from "@/lib/utils";
 
@@ -53,6 +53,15 @@ export function ProjectPriceTable({
   }
 
   async function remove(id: string) {
+    const name = items.find((x) => x.id === id)?.name;
+    const confirmed = await confirmAction({
+      title: "Apagar este item da tabela de preços?",
+      description: name ? `"${name}" sai da lista.` : undefined,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const previous = items;
     setError(null);
     setItems((prev) => prev.filter((i) => i.id !== id));

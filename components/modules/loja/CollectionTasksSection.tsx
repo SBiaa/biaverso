@@ -27,6 +27,7 @@ import {
   Button,
   Card,
   CardTitle,
+  confirmAction,
   ErrorNote,
   IconButton,
 } from "@/components/ui";
@@ -229,6 +230,15 @@ export function CollectionTasksSection({
   }
 
   async function remove(id: string) {
+    const name = tasks.find((x) => x.id === id)?.title;
+    const confirmed = await confirmAction({
+      title: "Apagar esta tarefa da coleção?",
+      description: name ? `"${name}" sai da lista.` : undefined,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const previous = tasks;
     setError(null);
     setTasks((prev) => prev.filter((t) => t.id !== id));

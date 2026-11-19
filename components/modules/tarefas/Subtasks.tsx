@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, Circle, ListPlus, Plus, Trash2 } from "lucide-react";
-import { ErrorNote, IconButton, InlineEdit } from "@/components/ui";
+import { confirmAction, ErrorNote, IconButton, InlineEdit } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +76,15 @@ export function useSubtasks(parent: SubtaskParent, initial: SubtaskItem[]) {
   }
 
   async function remove(id: string) {
+    const title = subtasks.find((s) => s.id === id)?.title;
+    const confirmed = await confirmAction({
+      title: "Apagar este passo?",
+      description: title ? `"${title}" sai da lista.` : undefined,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const previous = subtasks;
 
     setError(null);
@@ -176,9 +185,10 @@ export function SubtaskList({
           </div>
           <IconButton
             title="Apagar passo"
+            aria-label={`Apagar passo ${subtask.title}`}
             onClick={() => remove(subtask.id)}
             tone="danger"
-            className="opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
+            revealOnHover
           >
             <Trash2 size={15} />
           </IconButton>
