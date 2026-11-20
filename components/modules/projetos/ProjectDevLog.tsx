@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
-import { Button, ErrorNote, IconButton, useConfirm } from "@/components/ui";
+import { Button, ErrorNote, IconButton, useConfirm, fieldBaseClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { devLogKindColors, devLogKindLabels } from "@/lib/labels";
 import { formatDateBR, hexToRgba, todayInputValue, toDateInputValue } from "@/lib/utils";
@@ -36,9 +36,6 @@ const blankForm = (): Form => ({
   version: "",
   url: "",
 });
-
-const fieldClass =
-  "rounded-md border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 // Mais recente primeiro; no mesmo dia, mantém a ordem em que chegaram.
 function sortEntries(list: DevLogEntry[]) {
@@ -143,13 +140,13 @@ export function ProjectDevLog({
           value={form.date}
           onChange={(e) => setForm({ ...form, date: e.target.value })}
           aria-label="Data"
-          className={fieldClass}
+          className={fieldBaseClass}
         />
         <select
           value={form.kind}
           onChange={(e) => setForm({ ...form, kind: e.target.value })}
           aria-label="Tipo"
-          className={fieldClass}
+          className={fieldBaseClass}
         >
           {kindOptions.map((k) => (
             <option key={k} value={k}>
@@ -161,27 +158,27 @@ export function ProjectDevLog({
           value={form.version}
           onChange={(e) => setForm({ ...form, version: e.target.value })}
           placeholder="Versão (opcional), ex.: 1.2.0"
-          className={fieldClass}
+          className={fieldBaseClass}
         />
       </div>
       <input
         value={form.title}
         onChange={(e) => setForm({ ...form, title: e.target.value })}
         placeholder="O que aconteceu? Ex.: login com Google"
-        className={fieldClass}
+        className={fieldBaseClass}
       />
       <textarea
         value={form.body}
         onChange={(e) => setForm({ ...form, body: e.target.value })}
         rows={3}
         placeholder="Detalhes, por que foi feito, o que ficou faltando… (opcional)"
-        className={`${fieldClass} resize-y`}
+        className={`${fieldBaseClass} resize-y`}
       />
       <input
         value={form.url}
         onChange={(e) => setForm({ ...form, url: e.target.value })}
         placeholder="Link do commit, PR ou deploy (opcional)"
-        className={fieldClass}
+        className={fieldBaseClass}
       />
       <div className="flex gap-2">
         <Button type="button" onClick={save} disabled={saving || !form.title.trim()}>

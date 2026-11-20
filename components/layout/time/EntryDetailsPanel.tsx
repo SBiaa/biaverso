@@ -10,9 +10,7 @@ import type {
   ProjectOptionDTO,
   TaskOptionDTO,
 } from "@/lib/time-tracking-shared";
-
-const fieldClass =
-  "w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm text-text-primary outline-none focus:ring-2 focus:ring-accent";
+import { fieldClass } from "@/components/ui";
 
 /**
  * O formulário do cronômetro, estilo Toggl: o que está fazendo, em que

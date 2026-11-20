@@ -3,12 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, confirmAction, ErrorNote, IconButton, notify } from "@/components/ui";
+import { Button, confirmAction, ErrorNote, IconButton, notify, fieldBaseClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import type { ActivityCategoryDTO, TimeBlockDTO } from "@/lib/time-tracking-shared";
-
-const inputClass =
-  "rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 export function TimeBlockPlanner({
   dayId,
@@ -119,7 +116,7 @@ export function TimeBlockPlanner({
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className={inputClass}
+            className={fieldBaseClass}
           >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -131,19 +128,19 @@ export function TimeBlockPlanner({
             placeholder="Título (opcional)"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className={inputClass}
+            className={fieldBaseClass}
           />
           <input
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className={inputClass}
+            className={fieldBaseClass}
           />
           <input
             type="time"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className={inputClass}
+            className={fieldBaseClass}
           />
           <Button
             className="col-span-2"

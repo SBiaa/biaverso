@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
-import { Card, notify, SaveStatus, useSaveStatus } from "@/components/ui";
+import { Card, notify, SaveStatus, useSaveStatus, fieldClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 export type YearPlanData = {
@@ -31,9 +31,6 @@ const BUDGET_FIELDS = [
   ["incomeTarget", "Quero ganhar (R$)"],
   ["savingsTarget", "Quero guardar (R$)"],
 ] as const;
-
-const fieldClass =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-accent";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 

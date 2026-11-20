@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, fieldBaseClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productionTypeLabels } from "@/lib/labels";
 import { parseMinutes, type PriorityLevelDTO } from "@/lib/task-plan";
@@ -9,9 +9,6 @@ import type { ProjectOption, WorkTask } from "@/components/modules/dia/WorkTasks
 import { projectHref } from "@/lib/projects-shared";
 
 export type BusinessOption = { id: string; name: string; color: string };
-
-const fieldClass =
-  "rounded-md border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 /**
  * Cria uma tarefa de negócio sem sair do dia a dia. O prazo já vem com o dia
@@ -121,7 +118,7 @@ export function NewWorkTaskForm({
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Título da tarefa"
         aria-label="Título da tarefa"
-        className={fieldClass}
+        className={fieldBaseClass}
       />
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <select
@@ -132,7 +129,7 @@ export function NewWorkTaskForm({
             setProjectId("");
           }}
           aria-label="Negócio"
-          className={fieldClass}
+          className={fieldBaseClass}
         >
           {businesses.map((b) => (
             <option key={b.id} value={b.id}>
@@ -144,7 +141,7 @@ export function NewWorkTaskForm({
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           aria-label="Projeto"
-          className={fieldClass}
+          className={fieldBaseClass}
         >
           <option value="">Sem projeto</option>
           {businessProjects.map((p) => (
@@ -157,7 +154,7 @@ export function NewWorkTaskForm({
           value={type}
           onChange={(e) => setType(e.target.value)}
           aria-label="Tipo"
-          className={fieldClass}
+          className={fieldBaseClass}
         >
           {Object.entries(productionTypeLabels).map(([value, label]) => (
             <option key={value} value={value}>
@@ -169,7 +166,7 @@ export function NewWorkTaskForm({
           value={priorityLevelId}
           onChange={(e) => setPriorityLevelId(e.target.value)}
           aria-label="Prioridade"
-          className={fieldClass}
+          className={fieldBaseClass}
         >
           <option value="">Sem prioridade</option>
           {levels.map((l) => (
@@ -183,14 +180,14 @@ export function NewWorkTaskForm({
           onChange={(e) => setTime(e.target.value)}
           placeholder="Tempo (ex.: 45, 1h30)"
           aria-label="Tempo estimado"
-          className={fieldClass}
+          className={fieldBaseClass}
         />
         <input
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
           aria-label="Prazo"
-          className={fieldClass}
+          className={fieldBaseClass}
         />
       </div>
       <ErrorNote message={error} />

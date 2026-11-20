@@ -265,9 +265,19 @@ export function Modal({
   );
 }
 
-/** Estilo padrão dos campos dentro de um modal. */
-export const fieldClass =
-  "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-accent";
+/**
+ * Estilo padrão de campo (input, select, textarea) no app inteiro.
+ *
+ * Sem largura: para campo que divide a linha com outros (hora ao lado de
+ * minuto, busca ao lado de um botão). Antes cada módulo tinha a sua cópia, com
+ * altura, fundo e foco diferentes — no escuro, os sem fundo saíam com a cor do
+ * controle nativo e não a do card.
+ */
+export const fieldBaseClass =
+  "rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-accent";
+
+/** O mesmo, ocupando a largura toda — o caso comum em modal e formulário. */
+export const fieldClass = `w-full ${fieldBaseClass}`;
 
 /** Rótulo + campo. O `<label>` envolve o controle, então o clique no texto foca. */
 export function Field({

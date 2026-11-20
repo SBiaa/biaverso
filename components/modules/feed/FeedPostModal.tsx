@@ -3,16 +3,13 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Trash2 } from "lucide-react";
-import { Button, confirmAction, ErrorNote, Modal, ModalActions, notify } from "@/components/ui";
+import { Button, confirmAction, ErrorNote, Modal, ModalActions, notify, fieldClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { resizePostCover } from "@/lib/client-photo";
 import { contentPilarLabels, contentStatusLabels, postTypeLabels } from "@/lib/labels";
 import { FEED_CREATE_TYPES, FEED_STATUSES, postCoverUrl, type FeedPost } from "@/lib/feed";
 
 export type FeedProjectOption = { id: string; name: string };
-
-const fieldClass =
-  "w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

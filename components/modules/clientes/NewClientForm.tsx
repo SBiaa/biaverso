@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { Button, Card, CardTitle, ErrorNote } from "@/components/ui";
+import { Button, Card, CardTitle, ErrorNote, fieldBaseClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 type BusinessOption = { id: string; name: string; color: string };
@@ -60,9 +60,6 @@ export function NewClientForm({ businesses }: { businesses: BusinessOption[] }) 
     );
   }
 
-  const inputClass =
-    "rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
-
   return (
     <Card className="flex w-full flex-col gap-3">
       <CardTitle>Novo cliente</CardTitle>
@@ -72,31 +69,31 @@ export function NewClientForm({ businesses }: { businesses: BusinessOption[] }) 
           value={form.name}
           onChange={(e) => update("name", e.target.value)}
           placeholder="Nome"
-          className={inputClass}
+          className={fieldBaseClass}
         />
         <input
           value={form.email}
           onChange={(e) => update("email", e.target.value)}
           placeholder="E-mail (opcional)"
-          className={inputClass}
+          className={fieldBaseClass}
         />
         <input
           value={form.phone}
           onChange={(e) => update("phone", e.target.value)}
           placeholder="Telefone (opcional)"
-          className={inputClass}
+          className={fieldBaseClass}
         />
         <input
           value={form.instagram}
           onChange={(e) => update("instagram", e.target.value)}
           placeholder="Instagram (opcional)"
-          className={inputClass}
+          className={fieldBaseClass}
         />
         <input
           value={form.niche}
           onChange={(e) => update("niche", e.target.value)}
           placeholder="Nicho (ex.: odontologia)"
-          className={inputClass}
+          className={fieldBaseClass}
         />
       </div>
 
@@ -104,7 +101,7 @@ export function NewClientForm({ businesses }: { businesses: BusinessOption[] }) 
         value={form.notes}
         onChange={(e) => update("notes", e.target.value)}
         placeholder="Notas (opcional)"
-        className={inputClass}
+        className={fieldBaseClass}
       />
 
       <div className="flex flex-col gap-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Button, ErrorNote, Modal, ModalActions } from "@/components/ui";
+import { Button, ErrorNote, Modal, ModalActions, fieldBaseClass } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,8 +17,8 @@ import { cn } from "@/lib/utils";
 // já estica o filho. Com ele, um seletor solto (o filtro da lista) não
 // conseguia encolher — `w-auto` e `w-full` são do mesmo grupo do Tailwind, e
 // quem ganha é a ordem do CSS gerado, não a ordem em que se escreve.
-export const inputClass =
-  "rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-accent";
+// O estilo de campo do app; o nome antigo fica porque os formulários daqui o importam.
+export const inputClass = fieldBaseClass;
 
 /** Rótulo + campo. O `<label>` envolve o controle, então clicar no texto foca. */
 export function Field({

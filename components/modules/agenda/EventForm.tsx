@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, confirmAction, Modal, notify } from "@/components/ui";
+import { Button, confirmAction, Modal, notify, fieldClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { eventCategoryLabels } from "@/lib/labels";
 import type { AgendaEvent } from "@/lib/agenda-shared";
 
 const categoryOptions = Object.keys(eventCategoryLabels);
-
-const inputClass =
-  "w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 function emptyForm(date: string) {
   return {
@@ -133,7 +130,7 @@ export function EventFormModal({
         placeholder="Título do evento"
         value={form.title}
         onChange={(e) => update("title", e.target.value)}
-        className={inputClass}
+        className={fieldClass}
       />
 
       <div className="grid grid-cols-2 gap-2">
@@ -141,13 +138,13 @@ export function EventFormModal({
           type="date"
           value={form.date}
           onChange={(e) => update("date", e.target.value)}
-          className={inputClass}
+          className={fieldClass}
           aria-label="Data"
         />
         <select
           value={form.category}
           onChange={(e) => update("category", e.target.value)}
-          className={inputClass}
+          className={fieldClass}
           aria-label="Categoria"
         >
           {categoryOptions.map((c) => (
@@ -173,14 +170,14 @@ export function EventFormModal({
             type="time"
             value={form.time}
             onChange={(e) => update("time", e.target.value)}
-            className={inputClass}
+            className={fieldClass}
             aria-label="Início"
           />
           <input
             type="time"
             value={form.endTime}
             onChange={(e) => update("endTime", e.target.value)}
-            className={inputClass}
+            className={fieldClass}
             aria-label="Fim"
           />
         </div>
@@ -191,7 +188,7 @@ export function EventFormModal({
         value={form.description}
         onChange={(e) => update("description", e.target.value)}
         rows={3}
-        className={inputClass}
+        className={fieldClass}
       />
 
       {error && <p className="text-xs text-danger">{error}</p>}

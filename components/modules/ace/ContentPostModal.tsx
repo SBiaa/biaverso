@@ -9,6 +9,7 @@ import {
   ErrorNote,
   Modal,
   notify,
+  fieldClass,
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import {
@@ -358,9 +359,6 @@ function PostSteps({ postId, postType }: { postId: string; postType: string }) {
     </div>
   );
 }
-
-const fieldClass =
-  "w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

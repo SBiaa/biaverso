@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button, ErrorNote, Modal, notify } from "@/components/ui";
+import { Button, ErrorNote, Modal, notify, fieldClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import type { PomodoroSettingsDTO } from "@/lib/time-tracking-shared";
-
-const inputClass =
-  "w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 function NumberField({
   label,
@@ -33,7 +30,7 @@ function NumberField({
         max={max}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={inputClass}
+        className={fieldClass}
       />
       <span className="text-xs text-text-secondary">{hint}</span>
     </label>

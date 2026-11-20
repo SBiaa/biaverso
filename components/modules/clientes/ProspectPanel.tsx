@@ -11,6 +11,7 @@ import {
   ErrorNote,
   IconButton,
   notify,
+  fieldBaseClass,
 } from "@/components/ui";
 import { useOptimisticList } from "@/hooks/useOptimistic";
 import { api, errorMessage } from "@/lib/client-api";
@@ -48,8 +49,6 @@ export type ProspectLink = {
   notes: ProspectNoteItem[];
 };
 
-const inputClass =
-  "rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary outline-none focus:ring-2 focus:ring-accent";
 const labelClass =
   "flex flex-col gap-1 text-xs font-medium text-text-secondary";
 
@@ -179,7 +178,7 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
             value={link.stage ?? "NOVO_CONTATO"}
             onChange={(e) => patchLink({ prospectStage: e.target.value })}
             disabled={busy}
-            className={inputClass}
+            className={fieldBaseClass}
           >
             {prospectOpenStages.map((s) => (
               <option key={s} value={s}>
@@ -198,7 +197,7 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
               e.target.value !== dateValue(link.lastContactAt) &&
               patchLink({ lastContactAt: e.target.value || null })
             }
-            className={inputClass}
+            className={fieldBaseClass}
           />
         </label>
         <label className={labelClass}>
@@ -212,7 +211,7 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
               patchLink({ nextFollowUpAt: e.target.value || null })
             }
             className={cn(
-              inputClass,
+              fieldBaseClass,
               link.nextFollowUpAt &&
                 dateValue(link.nextFollowUpAt) < today &&
                 "border-danger",
@@ -234,7 +233,7 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
               if (value !== link.proposalValue)
                 patchLink({ proposalValue: value });
             }}
-            className={inputClass}
+            className={fieldBaseClass}
           />
         </label>
         <label className={labelClass}>
@@ -243,7 +242,7 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
             value={link.source ?? ""}
             onChange={(e) => patchLink({ source: e.target.value || null })}
             disabled={busy}
-            className={inputClass}
+            className={fieldBaseClass}
           >
             <option value="">Não informada</option>
             {Object.entries(leadSourceLabels).map(([value, label]) => (
@@ -383,14 +382,14 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
               onChange={(e) => setNewStep(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addStep()}
               placeholder="Novo passo (ex.: mandar o portfólio)"
-              className={cn(inputClass, "min-w-0 flex-1")}
+              className={cn(fieldBaseClass, "min-w-0 flex-1")}
             />
             <input
               type="date"
               value={newStepDate}
               onChange={(e) => setNewStepDate(e.target.value)}
               aria-label="Prazo do novo passo"
-              className={inputClass}
+              className={fieldBaseClass}
             />
             <Button
               variant="secondary"
@@ -412,7 +411,7 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
             onChange={(e) => setNoteText(e.target.value)}
             rows={3}
             placeholder="Ex.: perfil sem padrão visual, posta 1x por semana, dona responde rápido no WhatsApp…"
-            className={cn(inputClass, "w-full")}
+            className={cn(fieldBaseClass, "w-full")}
           />
           <div>
             <Button onClick={addNote} disabled={busy || !noteText.trim()}>

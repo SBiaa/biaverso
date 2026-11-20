@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Pencil } from "lucide-react";
-import { Button, CardTitle, ErrorNote, notify } from "@/components/ui";
+import { Button, CardTitle, ErrorNote, notify, fieldBaseClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { resizeClientPhoto } from "@/lib/client-photo";
@@ -106,9 +106,6 @@ export function ClientContactForm({ client }: { client: Client }) {
     );
   }
 
-  const inputClass =
-    "rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
-
   return (
     <div className="flex flex-col gap-2">
       <CardTitle>Contato</CardTitle>
@@ -148,31 +145,31 @@ export function ClientContactForm({ client }: { client: Client }) {
           value={form.name}
           onChange={(e) => update("name", e.target.value)}
           placeholder="Nome"
-          className={inputClass}
+          className={fieldBaseClass}
         />
         <input
           value={form.email}
           onChange={(e) => update("email", e.target.value)}
           placeholder="E-mail"
-          className={inputClass}
+          className={fieldBaseClass}
         />
         <input
           value={form.phone}
           onChange={(e) => update("phone", e.target.value)}
           placeholder="Telefone"
-          className={inputClass}
+          className={fieldBaseClass}
         />
         <input
           value={form.instagram}
           onChange={(e) => update("instagram", e.target.value)}
           placeholder="Instagram"
-          className={inputClass}
+          className={fieldBaseClass}
         />
         <input
           value={form.niche}
           onChange={(e) => update("niche", e.target.value)}
           placeholder="Nicho"
-          className={inputClass}
+          className={fieldBaseClass}
         />
       </div>
 
@@ -180,7 +177,7 @@ export function ClientContactForm({ client }: { client: Client }) {
         value={form.notes}
         onChange={(e) => update("notes", e.target.value)}
         placeholder="Notas"
-        className={inputClass}
+        className={fieldBaseClass}
       />
 
       <div>

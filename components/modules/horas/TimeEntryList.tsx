@@ -10,6 +10,7 @@ import {
   IconButton,
   Modal,
   notify,
+  fieldBaseClass,
 } from "@/components/ui";
 import { EntryDetailsPanel } from "@/components/layout/time/EntryDetailsPanel";
 import { TIME_STATUS_REFRESH_EVENT } from "@/components/layout/TimeStatusBar";
@@ -24,9 +25,6 @@ import {
   type ProjectOptionDTO,
   type TimeEntryDTO,
 } from "@/lib/time-tracking-shared";
-
-const inputClass =
-  "rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 export function TimeEntryList({
   dayId,
@@ -244,7 +242,7 @@ export function EntryModal({
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className={inputClass}
+              className={fieldBaseClass}
             />
           </label>
           <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide text-text-secondary">
@@ -253,7 +251,7 @@ export function EntryModal({
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className={inputClass}
+              className={fieldBaseClass}
             />
           </label>
         </div>

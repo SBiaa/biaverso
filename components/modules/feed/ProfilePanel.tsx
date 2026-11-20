@@ -2,13 +2,10 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote, notify } from "@/components/ui";
+import { Button, ErrorNote, notify, fieldClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { resizeClientPhoto } from "@/lib/client-photo";
 import type { MockupProfile } from "./ProfileMockup";
-
-const fieldClass =
-  "w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 export type ProfileFormValues = Omit<MockupProfile, "photo"> & {
   /** Só a foto própria do perfil; a da cliente é o plano B. */
