@@ -3,8 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { Card, Button, ErrorNote, SaveStatus, useSaveStatus } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { StarRating } from "./StarRating";
 import { cn } from "@/lib/utils";
@@ -62,14 +61,13 @@ function ButtonGroup({
 export function WeekReviewForm({ review }: { review: WeekReviewData }) {
   const router = useRouter();
   const [form, setForm] = useState(review);
-  const [saved, setSaved] = useState(false);
+  const { state: saveState, track } = useSaveStatus();
   const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function persist(patch: Partial<WeekReviewData>) {
     try {
-      await api.patch(`/api/week-reviews/${review.id}`, patch);
+      await track(api.patch(`/api/week-reviews/${review.id}`, patch));
       setError(null);
       // Sem isso, a navegação de volta pra essa semana (ou pra troca de
       // semana no WeekPicker) podia servir o RSC antigo do Router Cache,
@@ -85,13 +83,11 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
 
   function save(patch: Partial<WeekReviewData>) {
     setForm((prev) => ({ ...prev, ...patch }));
-    setSaved(false);
     void persist(patch);
   }
 
   function saveDebounced(patch: Partial<WeekReviewData>) {
     setForm((prev) => ({ ...prev, ...patch }));
-    setSaved(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       void persist(patch);
@@ -100,14 +96,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
 
   async function handleSaveAll() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    // Checa o retorno de `persist`, não o estado `error`: `setError` só
-    // agenda um re-render, então o `error` capturado aqui ainda seria o
-    // de antes desse clique — um save que falhasse mostraria "Salvo" do
-    // mesmo jeito.
-    if (!(await persist(form))) return;
-    setSaved(true);
-    if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
-    savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
+    await persist(form);
   }
 
   return (
@@ -214,11 +203,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
 
       <div className="flex items-center justify-end gap-2">
         <ErrorNote message={error} />
-        {saved && (
-          <span className="flex items-center gap-1 text-xs text-accent">
-            <Check size={14} /> Salvo
-          </span>
-        )}
+        <SaveStatus state={saveState} />
         <Button type="button" onClick={handleSaveAll}>
           Salvar
         </Button>

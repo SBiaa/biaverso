@@ -128,9 +128,11 @@ export function WeeklyMealGrid({
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* No celular cada dia vira uma linha com as 3 refeições lado a lado;
+          a grade de 7 colunas (720px) só a partir do tablet. */}
+      <div className="md:overflow-x-auto">
         <ErrorNote message={error} />
-        <div className="grid min-w-[720px] grid-cols-7 gap-2">
+        <div className="grid grid-cols-1 gap-4 md:min-w-[720px] md:grid-cols-7 md:gap-2">
           {WEEKDAY_LABELS.map((label, dayOfWeek) => {
             const isToday = dayOfWeek === todayIndex;
             return (
@@ -139,7 +141,7 @@ export function WeeklyMealGrid({
                     semana está na tela — "Seg" sozinho servia para qualquer uma. */}
                 <p
                   className={cn(
-                    "text-center text-sm font-semibold",
+                    "text-sm font-semibold md:text-center",
                     isToday ? "text-accent" : "text-text-primary",
                   )}
                 >
@@ -148,27 +150,29 @@ export function WeeklyMealGrid({
                     {addUtcDays(weekStartDate, dayOfWeek).getUTCDate()}
                   </span>
                 </p>
-                {MEAL_TYPES.map((mealType) => {
-                  const entry = plan[planKey(dayOfWeek, mealType)];
-                  return (
-                    <button
-                      key={mealType}
-                      type="button"
-                      onClick={() => setActive({ dayOfWeek, mealType })}
-                      className={cn(
-                        "flex flex-col gap-0.5 rounded-lg border bg-surface p-2 text-left hover:bg-hover",
-                        isToday ? "border-accent/40" : "border-border",
-                      )}
-                    >
-                      <span className="text-[10px] font-medium uppercase tracking-wide text-text-secondary">
-                        {mealTypeLabels[mealType]}
-                      </span>
-                      <span className="text-xs text-text-primary">
-                        {entry?.title || "—"}
-                      </span>
-                    </button>
-                  );
-                })}
+                <div className="grid grid-cols-3 gap-2 md:flex md:flex-col">
+                  {MEAL_TYPES.map((mealType) => {
+                    const entry = plan[planKey(dayOfWeek, mealType)];
+                    return (
+                      <button
+                        key={mealType}
+                        type="button"
+                        onClick={() => setActive({ dayOfWeek, mealType })}
+                        className={cn(
+                          "flex flex-col gap-0.5 rounded-lg border bg-surface p-2 text-left hover:bg-hover",
+                          isToday ? "border-accent/40" : "border-border",
+                        )}
+                      >
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-text-secondary">
+                          {mealTypeLabels[mealType]}
+                        </span>
+                        <span className="text-xs text-text-primary">
+                          {entry?.title || "—"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}

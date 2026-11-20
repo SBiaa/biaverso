@@ -283,7 +283,7 @@ export function CalendarBoard({
             Importar do bot
           </Button>
         </div>
-        <div className="flex overflow-hidden rounded-md border border-border">
+        <div className="hidden overflow-hidden rounded-md border border-border md:flex">
           <button
             type="button"
             onClick={() => setView("grade")}
@@ -309,8 +309,10 @@ export function CalendarBoard({
         </div>
       </div>
 
-      {view === "grade" ? (
-        <Card className="overflow-x-auto p-2">
+      {/* No celular a grade de 7 colunas rolava de lado; lá vale sempre a
+          lista, como na Agenda. A grade fica para telas largas. */}
+      {view === "grade" && (
+        <Card className="hidden overflow-x-auto p-2 md:block">
           {menuDay !== null && (
             <div className="fixed inset-0 z-20" onClick={() => setMenuDay(null)} />
           )}
@@ -339,70 +341,69 @@ export function CalendarBoard({
             </div>
           </DndContext>
         </Card>
-      ) : (
-        <Card className="flex flex-col gap-4 p-3">
-          {Array.from({ length: cells.length / 7 }, (_, weekIndex) => {
-            const daysInWeek = cells
-              .slice(weekIndex * 7, weekIndex * 7 + 7)
-              .filter((d): d is number => d !== null);
-            if (daysInWeek.length === 0) return null;
-
-            const weekItems = daysInWeek
-              .flatMap((d) => itemsByDay[d] ?? [])
-              .sort((a, b) => a.day - b.day);
-
-            const rangeLabel = `${daysInWeek[0]}–${daysInWeek[daysInWeek.length - 1]} de ${monthNameBR(month).toLowerCase()}`;
-
-            return (
-              <div key={weekIndex} className="flex flex-col gap-1.5">
-                <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
-                  {rangeLabel}
-                </p>
-                {weekItems.length === 0 ? (
-                  <p className="text-xs text-text-secondary">Nada planejado.</p>
-                ) : (
-                  <div className="flex flex-col gap-1">
-                    {weekItems.map((item) => (
-                      <button
-                        key={`${item.kind}-${item.id}`}
-                        type="button"
-                        onClick={() => setEditing(item)}
-                        className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5 text-left text-sm hover:bg-hover"
-                      >
-                        <span className="w-6 shrink-0 text-xs text-text-secondary">
-                          {String(item.day).padStart(2, "0")}
-                        </span>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
-                            item.statusColor,
-                          )}
-                        >
-                          {item.statusLabel}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate font-medium text-text-primary">
-                          {item.title}
-                        </span>
-                        {item.clientName && (
-                          <span className="flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
-                            <span
-                              aria-hidden
-                              className="size-2 rounded-full"
-                              style={{ backgroundColor: item.clientColor ?? undefined }}
-                            />
-                            {item.clientName}
-                          </span>
-                        )}
-                        {item.overdue && <AttentionBadge level="atrasado">Atrasado</AttentionBadge>}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </Card>
       )}
+      <Card className={cn("flex flex-col gap-4 p-3", view === "grade" && "md:hidden")}>
+        {Array.from({ length: cells.length / 7 }, (_, weekIndex) => {
+          const daysInWeek = cells
+            .slice(weekIndex * 7, weekIndex * 7 + 7)
+            .filter((d): d is number => d !== null);
+          if (daysInWeek.length === 0) return null;
+
+          const weekItems = daysInWeek
+            .flatMap((d) => itemsByDay[d] ?? [])
+            .sort((a, b) => a.day - b.day);
+
+          const rangeLabel = `${daysInWeek[0]}–${daysInWeek[daysInWeek.length - 1]} de ${monthNameBR(month).toLowerCase()}`;
+
+          return (
+            <div key={weekIndex} className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+                {rangeLabel}
+              </p>
+              {weekItems.length === 0 ? (
+                <p className="text-xs text-text-secondary">Nada planejado.</p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {weekItems.map((item) => (
+                    <button
+                      key={`${item.kind}-${item.id}`}
+                      type="button"
+                      onClick={() => setEditing(item)}
+                      className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5 text-left text-sm hover:bg-hover"
+                    >
+                      <span className="w-6 shrink-0 text-xs text-text-secondary">
+                        {String(item.day).padStart(2, "0")}
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                          item.statusColor,
+                        )}
+                      >
+                        {item.statusLabel}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-medium text-text-primary">
+                        {item.title}
+                      </span>
+                      {item.clientName && (
+                        <span className="flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
+                          <span
+                            aria-hidden
+                            className="size-2 rounded-full"
+                            style={{ backgroundColor: item.clientColor ?? undefined }}
+                          />
+                          {item.clientName}
+                        </span>
+                      )}
+                      {item.overdue && <AttentionBadge level="atrasado">Atrasado</AttentionBadge>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </Card>
 
       {editing && editing.kind === "post" && (
         <ContentPostModal

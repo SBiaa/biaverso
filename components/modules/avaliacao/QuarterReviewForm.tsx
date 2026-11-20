@@ -2,8 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { Card, Button, ErrorNote, SaveStatus, useSaveStatus } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 type QuarterReviewData = {
@@ -16,14 +15,13 @@ type QuarterReviewData = {
 export function QuarterReviewForm({ review }: { review: QuarterReviewData }) {
   const router = useRouter();
   const [form, setForm] = useState(review);
-  const [saved, setSaved] = useState(false);
+  const { state: saveState, track } = useSaveStatus();
   const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function persist(patch: Partial<QuarterReviewData>) {
     try {
-      await api.patch(`/api/quarter-reviews/${review.id}`, patch);
+      await track(api.patch(`/api/quarter-reviews/${review.id}`, patch));
       setError(null);
       router.refresh();
       return true;
@@ -36,7 +34,6 @@ export function QuarterReviewForm({ review }: { review: QuarterReviewData }) {
 
   function saveDebounced(patch: Partial<QuarterReviewData>) {
     setForm((prev) => ({ ...prev, ...patch }));
-    setSaved(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       void persist(patch);
@@ -45,10 +42,7 @@ export function QuarterReviewForm({ review }: { review: QuarterReviewData }) {
 
   async function handleSaveAll() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (!(await persist(form))) return;
-    setSaved(true);
-    if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
-    savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
+    await persist(form);
   }
 
   return (
@@ -84,11 +78,7 @@ export function QuarterReviewForm({ review }: { review: QuarterReviewData }) {
 
       <div className="flex items-center justify-end gap-2">
         <ErrorNote message={error} />
-        {saved && (
-          <span className="flex items-center gap-1 text-xs text-accent">
-            <Check size={14} /> Salvo
-          </span>
-        )}
+        <SaveStatus state={saveState} />
         <Button type="button" onClick={handleSaveAll}>
           Salvar
         </Button>

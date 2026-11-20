@@ -59,6 +59,86 @@ function dayKey(year: number, month: number, day: number) {
   return `${year}-${pad2(month)}-${pad2(day)}`;
 }
 
+/**
+ * O mês em lista, para o celular: só os dias que têm algo, em ordem. A grade
+ * de 7 colunas não cabe em 375px e rolava de lado.
+ */
+function MonthList({
+  year,
+  month,
+  today,
+  byDate,
+  finishingByDate,
+  onOpen,
+}: {
+  year: number;
+  month: number;
+  today: string;
+  byDate: Map<string, ProjectItem[]>;
+  finishingByDate: Map<string, ProjectItem[]>;
+  onOpen: (item: ProjectItem) => void;
+}) {
+  const prefix = `${year}-${pad2(month)}-`;
+  const dates = [...new Set([...byDate.keys(), ...finishingByDate.keys()])]
+    .filter((d) => d.startsWith(prefix))
+    .sort();
+
+  if (dates.length === 0) {
+    return <p className="py-4 text-sm text-text-secondary">Nada marcado neste mês.</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {dates.map((date) => {
+        const day = Number(date.slice(8, 10));
+        const weekday = WEEKDAYS[new Date(`${date}T12:00:00Z`).getUTCDay()];
+        return (
+          <section key={date} className="flex flex-col gap-1.5">
+            <h3
+              className={cn(
+                "text-xs font-medium uppercase tracking-wide",
+                date === today ? "text-accent" : "text-text-secondary",
+              )}
+            >
+              {weekday}, {pad2(day)}
+              {date === today && " · hoje"}
+            </h3>
+            {(byDate.get(date) ?? []).map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => onOpen(item)}
+                style={item.context ? { borderLeft: `3px solid ${item.context.color}` } : undefined}
+                className={cn(
+                  "flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-left text-sm",
+                  item.statusColor,
+                  item.done && "opacity-60",
+                )}
+              >
+                <span className="min-w-0 flex-1 font-medium">
+                  {item.kind === "project" ? `Fim: ${item.title}` : item.title}
+                </span>
+                <span className="shrink-0 text-xs">{item.statusLabel}</span>
+              </button>
+            ))}
+            {(finishingByDate.get(date) ?? []).map((item) => (
+              <button
+                key={`fin-${item.key}`}
+                type="button"
+                onClick={() => onOpen(item)}
+                className="flex min-h-11 items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-left text-sm text-text-secondary"
+              >
+                <span className="shrink-0 text-[10px] font-semibold uppercase">Finalizar</span>
+                <span className="min-w-0 flex-1">{item.title}</span>
+              </button>
+            ))}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 function buildMonthGrid(month: number, year: number) {
   const startWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -331,7 +411,18 @@ export function ProjectCalendar({
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="md:hidden">
+        <MonthList
+          year={year}
+          month={month}
+          today={today}
+          byDate={byDate}
+          finishingByDate={finishingByDate}
+          onOpen={onOpen}
+        />
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="grid min-w-[640px] grid-cols-7 gap-1">
             {WEEKDAYS.map((w) => (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Card, ErrorNote } from "@/components/ui";
+import { Card, ErrorNote, SaveStatus, useSaveStatus } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { StarRating } from "@/components/modules/avaliacao/StarRating";
 import { colorFromString } from "@/lib/utils";
@@ -28,6 +28,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
   const [totalInput, setTotalInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { state: saveState, track } = useSaveStatus();
 
   async function save(patch: Partial<Book>) {
     const previous = book;
@@ -56,7 +57,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(async () => {
       try {
-        await api.patch(`/api/books/${book.id}`, { notes });
+        await track(api.patch(`/api/books/${book.id}`, { notes }));
         setError(null);
       } catch (e) {
         // As notas continuam na tela; só o aviso aparece.
@@ -218,6 +219,9 @@ export function BookCard({ book: initialBook }: { book: Book }) {
         rows={2}
         className="resize-none rounded-md border border-border p-2 text-xs outline-none focus:ring-2 focus:ring-accent"
       />
+      {/* As notas gravam sozinhas enquanto você digita; sem este aviso não
+          dava para saber se tinham ido. */}
+      <SaveStatus state={saveState} className="-mt-2 self-end" />
     </Card>
   );
 }

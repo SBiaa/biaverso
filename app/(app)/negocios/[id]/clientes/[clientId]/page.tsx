@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowUpRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { BusinessBadge, Card, CardTitle } from "@/components/ui";
+import { BusinessBadge, Card } from "@/components/ui";
+import { ClientContactForm } from "@/components/modules/clientes/ClientContactForm";
 import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
 import { getMonthlyHistory, getPendingItems, toPostRecord, toTaskRecord } from "@/lib/ace";
 import { ProjectsSection, type ProjectWithItems } from "@/components/modules/ace/ProjectsSection";
@@ -101,12 +104,19 @@ export default async function AceClientProfilePage({
               </div>
             </Card>
 
-            <Card className="flex flex-col gap-2">
-              <CardTitle>Contato</CardTitle>
-              <p className="text-sm text-text-secondary">E-mail: {client.email ?? "—"}</p>
-              <p className="text-sm text-text-secondary">Telefone: {client.phone ?? "—"}</p>
-              <p className="text-sm text-text-secondary">Instagram: {client.instagram ?? "—"}</p>
+            {/* O mesmo formulário do perfil geral: editar o contato daqui ou de
+                lá muda a mesma ficha, e as duas telas se comportam igual. */}
+            <Card>
+              <ClientContactForm client={client} />
             </Card>
+
+            <Link
+              href={`/clientes/${client.id}`}
+              className="inline-flex items-center gap-1.5 self-start text-sm text-text-secondary hover:text-text-primary"
+            >
+              Perfil completo do cliente
+              <ArrowUpRight size={14} />
+            </Link>
 
             <PendingItemsSection items={pending} />
           </div>

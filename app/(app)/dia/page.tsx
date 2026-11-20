@@ -686,7 +686,10 @@ export default async function DiaPage({
                   o que ele troca são as tarefas de rotina desta lista. Ao lado
                   dos hábitos, parecia mexer neles. */}
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <CardTitle>Tarefas de hoje</CardTitle>
+                {/* Na Home, "Tarefas de hoje" junta todas as origens. Aqui o
+                    trabalho mora em "Tarefas em andamento", então o nome diz
+                    o que esta lista mostra. */}
+                <CardTitle>Casa e pessoal</CardTitle>
                 <DayTypeToggle dayId={day.id} initialType={day.type} />
               </div>
               <TaskListByOrigin

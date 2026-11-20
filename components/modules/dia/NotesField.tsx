@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, SaveStatus, useSaveStatus } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 
 type NotesFieldProps = {
@@ -12,21 +11,19 @@ type NotesFieldProps = {
 
 export function NotesField({ dayId, initialNotes }: NotesFieldProps) {
   const [notes, setNotes] = useState(initialNotes ?? "");
-  const [saved, setSaved] = useState(false);
+  const { state: saveState, track } = useSaveStatus();
   const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
     };
   }, []);
 
   async function persist(value: string) {
     try {
-      await api.patch(`/api/dias/${dayId}`, { notes: value });
+      await track(api.patch(`/api/dias/${dayId}`, { notes: value }));
       setError(null);
       return true;
     } catch (e) {
@@ -38,18 +35,13 @@ export function NotesField({ dayId, initialNotes }: NotesFieldProps) {
 
   function handleChange(value: string) {
     setNotes(value);
-    setSaved(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => void persist(value), 700);
   }
 
   async function handleSave() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (!(await persist(notes))) return;
-
-    setSaved(true);
-    if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
-    savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
+    await persist(notes);
   }
 
   return (
@@ -63,11 +55,7 @@ export function NotesField({ dayId, initialNotes }: NotesFieldProps) {
       />
       <div className="flex items-center justify-end gap-2">
         <ErrorNote message={error} />
-        {saved && (
-          <span className="flex items-center gap-1 text-xs text-accent">
-            <Check size={14} /> Salvo
-          </span>
-        )}
+        <SaveStatus state={saveState} />
         <Button type="button" variant="secondary" onClick={handleSave}>
           Salvar
         </Button>
