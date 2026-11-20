@@ -389,7 +389,7 @@ function TaskRow({
           {task.originHref ? (
             <Link
               href={task.originHref}
-              className="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium hover:underline"
+              className="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium hover:underline"
               style={{
                 backgroundColor: hexToRgba(task.originColor, 0.12),
                 color: task.originColor,
@@ -399,7 +399,7 @@ function TaskRow({
             </Link>
           ) : (
             <span
-              className="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium"
+              className="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
               style={{
                 backgroundColor: hexToRgba(task.originColor, 0.12),
                 color: task.originColor,

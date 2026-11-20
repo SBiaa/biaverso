@@ -33,7 +33,7 @@ function ClientPill({ name, color }: { name: string | null; color: string | null
   return (
     <span
       className={cn(
-        "rounded-full px-2 py-0.5 text-[11px] font-medium",
+        "rounded-full px-2 py-0.5 text-xs font-medium",
         !name && "bg-accent/10 text-accent",
       )}
       style={
@@ -156,7 +156,7 @@ export function KanbanBoard({
                       <p className="text-sm font-medium text-text-primary">{item.title}</p>
                       <div className="flex flex-wrap items-center gap-1">
                         <ClientPill name={item.clientName} color={item.clientColor} />
-                        <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+                        <span className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary">
                           {item.typeLabel}
                         </span>
                         {item.overdue && (

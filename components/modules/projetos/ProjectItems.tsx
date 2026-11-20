@@ -616,7 +616,7 @@ function StatusSelect({
       value={current}
       onChange={(e) => onChange(e.target.value)}
       className={cn(
-        "cursor-pointer appearance-none whitespace-nowrap rounded-full border-0 px-2 py-0.5 text-[11px] font-medium outline-none hover:ring-1 hover:ring-border focus-visible:ring-2 focus-visible:ring-accent",
+        "cursor-pointer appearance-none whitespace-nowrap rounded-full border-0 px-2 py-0.5 text-xs font-medium outline-none hover:ring-1 hover:ring-border focus-visible:ring-2 focus-visible:ring-accent",
         item.statusColor,
       )}
     >

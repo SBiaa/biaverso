@@ -99,12 +99,12 @@ function ItemCard({ item, onOpen }: { item: CalendarItem; onOpen: () => void }) 
           <span className="font-medium" style={{ color: item.clientColor ?? undefined }}>
             {item.clientName}
           </span>
-          <span className={cn("rounded-sm px-1 text-[9px] font-medium", item.statusColor)}>
+          <span className={cn("rounded-sm px-1 text-[11px] font-medium", item.statusColor)}>
             {item.statusLabel}
           </span>
         </span>
       ) : (
-        <span className="rounded-sm bg-black/10 px-1 text-[10px] font-semibold uppercase tracking-wide">
+        <span className="rounded-sm bg-black/10 px-1 text-[11px] font-semibold uppercase tracking-wide">
           Interno
         </span>
       )}
@@ -377,7 +377,7 @@ export function CalendarBoard({
                       </span>
                       <span
                         className={cn(
-                          "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                          "shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium",
                           item.statusColor,
                         )}
                       >
