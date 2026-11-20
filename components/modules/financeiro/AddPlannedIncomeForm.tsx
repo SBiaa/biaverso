@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote, notify } from "@/components/ui";
+import {
+  Button,
+  ErrorNote,
+  Field,
+  fieldClass,
+  Modal,
+  ModalActions,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { transactionCategoryLabels } from "@/lib/labels";
 import { utcDate } from "@/lib/finance-calc";
@@ -72,88 +80,98 @@ export function AddPlannedIncomeForm({
     }
   }
 
-  if (!open) {
-    return (
+  return (
+    <>
       <Button variant="secondary" onClick={() => setOpen(true)}>
         + Adicionar entrada prevista
       </Button>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
-      <ErrorNote message={error} />
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          placeholder="De onde vem (ex: mensalidade Ana Lima)"
-          value={form.name}
-          onChange={(e) => update("name", e.target.value)}
-          className="col-span-2 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">Valor</span>
-          <input
-            type="number"
-            step="0.01"
-            placeholder="0,00"
-            value={form.amount}
-            onChange={(e) => update("amount", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">Dia do mês</span>
-          <input
-            type="number"
-            min={1}
-            max={31}
-            value={form.day}
-            onChange={(e) => update("day", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-        </label>
-        <select
-          value={form.businessId}
-          onChange={(e) => update("businessId", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      {open && (
+        <Modal
+          title="Entrada prevista"
+          onClose={() => setOpen(false)}
+          onSubmit={handleSubmit}
+          size="md"
         >
-          <option value="">Pessoal/Casa</option>
-          {businesses.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={form.category}
-          onChange={(e) => update("category", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {categoryOptions.map((c) => (
-            <option key={c} value={c}>
-              {transactionCategoryLabels[c]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <input
-        placeholder="Notas (opcional)"
-        value={form.notes}
-        onChange={(e) => update("notes", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <p className="text-xs text-text-secondary">
-        Entra como previsão. Ela só soma no saldo do mês depois que você marcar
-        que caiu na conta.
-      </p>
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          Cancelar
-        </Button>
-      </div>
-    </div>
+          <Field label="De onde vem">
+            <input
+              placeholder="Ex.: mensalidade Ana Lima"
+              value={form.name}
+              onChange={(e) => update("name", e.target.value)}
+              className={fieldClass}
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Valor (R$)">
+              <input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={form.amount}
+                onChange={(e) => update("amount", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Dia do mês">
+              <input
+                type="number"
+                min={1}
+                max={31}
+                value={form.day}
+                onChange={(e) => update("day", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="De quem é">
+              <select
+                value={form.businessId}
+                onChange={(e) => update("businessId", e.target.value)}
+                className={fieldClass}
+              >
+                <option value="">Pessoal/Casa</option>
+                {businesses.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Categoria">
+              <select
+                value={form.category}
+                onChange={(e) => update("category", e.target.value)}
+                className={fieldClass}
+              >
+                {categoryOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {transactionCategoryLabels[c]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field label="Notas (opcional)">
+            <input
+              value={form.notes}
+              onChange={(e) => update("notes", e.target.value)}
+              className={fieldClass}
+            />
+          </Field>
+          <p className="text-xs text-text-secondary">
+            Entra como previsão. Ela só soma no saldo do mês depois que você
+            marcar que caiu na conta.
+          </p>
+          <ErrorNote message={error} />
+          <ModalActions>
+            <Button type="submit" disabled={saving || !form.name.trim() || !form.amount}>
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+          </ModalActions>
+        </Modal>
+      )}
+    </>
   );
 }

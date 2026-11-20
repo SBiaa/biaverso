@@ -42,6 +42,7 @@ export function TransactionsList({
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = transactions.find((t) => t.id === editingId) ?? null;
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,18 +79,6 @@ export function TransactionsList({
       <ErrorNote message={error} />
       <ul className="flex flex-col divide-y divide-border">
         {transactions.map((t) => {
-          if (editingId === t.id) {
-            return (
-              <li key={t.id} className="py-2.5">
-                <AddTransactionForm
-                  businesses={businesses}
-                  transaction={t}
-                  onClose={() => setEditingId(null)}
-                />
-              </li>
-            );
-          }
-
           return (
             // No celular a linha quebra em duas: descrição em cima, valor e
             // ações embaixo. Em uma linha só, num visor de 375px, o nome
@@ -162,6 +151,13 @@ export function TransactionsList({
           );
         })}
       </ul>
+      {editing && (
+        <AddTransactionForm
+          businesses={businesses}
+          transaction={editing}
+          onClose={() => setEditingId(null)}
+        />
+      )}
     </>
   );
 }

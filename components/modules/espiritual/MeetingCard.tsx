@@ -25,10 +25,6 @@ export function MeetingCard({ meeting }: { meeting: MeetingView }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (editing) {
-    return <MeetingForm meeting={meeting} onClose={() => setEditing(false)} />;
-  }
-
   const date = parseDateOnly(meeting.date);
 
   async function handleDelete() {
@@ -50,109 +46,112 @@ export function MeetingCard({ meeting }: { meeting: MeetingView }) {
   }
 
   return (
-    <Card className="group flex flex-col gap-2">
-      <ErrorNote message={error} />
+    <>
+      <Card className="group flex flex-col gap-2">
+        <ErrorNote message={error} />
 
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs text-text-secondary">
-            {covenMeetingKindLabels[meeting.kind] ?? meeting.kind}
-          </p>
-          <p className="text-sm font-semibold text-text-primary">{meeting.title}</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs text-text-secondary">
+              {covenMeetingKindLabels[meeting.kind] ?? meeting.kind}
+            </p>
+            <p className="text-sm font-semibold text-text-primary">{meeting.title}</p>
+          </div>
+          <div className="flex shrink-0 items-center">
+            <IconButton
+              aria-label="Editar encontro"
+              revealOnHover
+              onClick={() => setEditing(true)}
+            >
+              <Pencil size={15} />
+            </IconButton>
+            <IconButton
+              aria-label="Excluir encontro"
+              tone="danger"
+              revealOnHover
+              onClick={handleDelete}
+            >
+              <Trash2 size={15} />
+            </IconButton>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center">
-          <IconButton
-            aria-label="Editar encontro"
-            revealOnHover
-            onClick={() => setEditing(true)}
-          >
-            <Pencil size={15} />
-          </IconButton>
-          <IconButton
-            aria-label="Excluir encontro"
-            tone="danger"
-            revealOnHover
-            onClick={handleDelete}
-          >
-            <Trash2 size={15} />
-          </IconButton>
-        </div>
-      </div>
 
-      <p className="text-sm text-text-primary">
-        {date ? formatDateLongBR(date) : meeting.date}
-        {meeting.time && (
-          <span className="text-text-secondary">
-            {" "}
-            · {meeting.time}
-            {meeting.endTime ? ` às ${meeting.endTime}` : ""}
-          </span>
+        <p className="text-sm text-text-primary">
+          {date ? formatDateLongBR(date) : meeting.date}
+          {meeting.time && (
+            <span className="text-text-secondary">
+              {" "}
+              · {meeting.time}
+              {meeting.endTime ? ` às ${meeting.endTime}` : ""}
+            </span>
+          )}
+        </p>
+
+        {meeting.place && (
+          <p className="text-xs text-text-secondary">{meeting.place}</p>
         )}
-      </p>
 
-      {meeting.place && (
-        <p className="text-xs text-text-secondary">{meeting.place}</p>
-      )}
-
-      {meeting.agenda && (
-        <div className="rounded-lg bg-hover p-2.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-            Pauta
-          </p>
-          <p className="whitespace-pre-wrap text-sm text-text-primary">
-            {meeting.agenda}
-          </p>
-        </div>
-      )}
-
-      {meeting.notes && (
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-            Como foi
-          </p>
-          <p className="whitespace-pre-wrap text-sm text-text-primary">
-            {meeting.notes}
-          </p>
-        </div>
-      )}
-
-      {meeting.studies.length > 0 && (
-        <div className="border-t border-border/60 pt-2">
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-            Saiu daqui
-          </p>
-          <ul className="flex flex-col gap-1">
-            {meeting.studies.map((study) => (
-              <li
-                key={study.id}
-                className="flex items-baseline justify-between gap-2 text-sm"
-              >
-                <span className="min-w-0 truncate text-text-primary">
-                  {study.title}
-                </span>
-                <span className="shrink-0 text-xs text-text-secondary">
-                  {studyStatusLabels[study.status] ?? study.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        {meeting.attended === true && (
-          <AttentionBadge level="ok">Fui</AttentionBadge>
+        {meeting.agenda && (
+          <div className="rounded-lg bg-hover p-2.5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+              Pauta
+            </p>
+            <p className="whitespace-pre-wrap text-sm text-text-primary">
+              {meeting.agenda}
+            </p>
+          </div>
         )}
-        {meeting.attended === false && (
-          <AttentionBadge level="neutro">Não fui</AttentionBadge>
+
+        {meeting.notes && (
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+              Como foi
+            </p>
+            <p className="whitespace-pre-wrap text-sm text-text-primary">
+              {meeting.notes}
+            </p>
+          </div>
         )}
-        {meeting.onAgenda && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-text-secondary">
-            <CalendarCheck size={12} />
-            na agenda
-          </span>
+
+        {meeting.studies.length > 0 && (
+          <div className="border-t border-border/60 pt-2">
+            <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+              Saiu daqui
+            </p>
+            <ul className="flex flex-col gap-1">
+              {meeting.studies.map((study) => (
+                <li
+                  key={study.id}
+                  className="flex items-baseline justify-between gap-2 text-sm"
+                >
+                  <span className="min-w-0 truncate text-text-primary">
+                    {study.title}
+                  </span>
+                  <span className="shrink-0 text-xs text-text-secondary">
+                    {studyStatusLabels[study.status] ?? study.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
-      </div>
-    </Card>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {meeting.attended === true && (
+            <AttentionBadge level="ok">Fui</AttentionBadge>
+          )}
+          {meeting.attended === false && (
+            <AttentionBadge level="neutro">Não fui</AttentionBadge>
+          )}
+          {meeting.onAgenda && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-text-secondary">
+              <CalendarCheck size={12} />
+              na agenda
+            </span>
+          )}
+        </div>
+      </Card>
+      {editing && <MeetingForm meeting={meeting} onClose={() => setEditing(false)} />}
+    </>
   );
 }

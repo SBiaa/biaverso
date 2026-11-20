@@ -75,12 +75,13 @@ export function AltarForm({
     notify("Salvo.");
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Novo item</Button>;
-  }
+  // Editando, quem chama já mostra o próprio cartão: só a criação tem botão.
+  const trigger = isEdit ? null : <Button onClick={() => setOpen(true)}>+ Novo item</Button>;
+  if (!open) return trigger;
 
   return (
     <FormCard
+      trigger={trigger}
       title={isEdit ? "Editar item" : "Novo item do altar"}
       error={error}
       saving={saving}

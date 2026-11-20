@@ -179,137 +179,136 @@ export function WishlistCard({
     }
   }
 
-  if (editing) {
-    return (
-      <WishlistForm
-        businesses={businesses}
-        item={item}
-        onClose={() => setEditing(false)}
-      />
-    );
-  }
-
   return (
-    <Card className={cn("flex flex-col gap-2", descartado && "opacity-60")}>
-      <ErrorNote message={error} />
+    <>
+      <Card className={cn("flex flex-col gap-2", descartado && "opacity-60")}>
+        <ErrorNote message={error} />
 
-      <div className="flex items-start justify-between gap-2">
-        <p
-          className={cn(
-            "text-sm font-medium text-text-primary",
-            (comprado || descartado) && "line-through",
+        <div className="flex items-start justify-between gap-2">
+          <p
+            className={cn(
+              "text-sm font-medium text-text-primary",
+              (comprado || descartado) && "line-through",
+            )}
+          >
+            {item.name}
+          </p>
+          {item.price != null && (
+            <span className="shrink-0 text-sm font-semibold text-text-primary">
+              {formatCurrencyBRL(item.price)}
+            </span>
           )}
-        >
-          {item.name}
-        </p>
-        {item.price != null && (
-          <span className="shrink-0 text-sm font-semibold text-text-primary">
-            {formatCurrencyBRL(item.price)}
-          </span>
+        </div>
+
+        {item.description && (
+          <p className="text-xs text-text-secondary">{item.description}</p>
         )}
-      </div>
 
-      {item.description && (
-        <p className="text-xs text-text-secondary">{item.description}</p>
-      )}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <BusinessBadge business={item.business} />
+          <Badge>{wishCategoryLabels[item.category]}</Badge>
+          {!comprado && !descartado && (
+            <Badge className={priorityStyles[item.priority]}>
+              {wishPriorityLabels[item.priority]}
+            </Badge>
+          )}
+          {comprado && (
+            <Badge className="bg-emerald-500/10 text-emerald-600">
+              Comprado
+              {item.boughtPrice != null &&
+                ` · ${formatCurrencyBRL(item.boughtPrice)}`}
+            </Badge>
+          )}
+          {descartado && <Badge>Descartado</Badge>}
+        </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        <BusinessBadge business={item.business} />
-        <Badge>{wishCategoryLabels[item.category]}</Badge>
-        {!comprado && !descartado && (
-          <Badge className={priorityStyles[item.priority]}>
-            {wishPriorityLabels[item.priority]}
-          </Badge>
+        {item.targetDate && !comprado && (
+          <p className="text-xs text-text-secondary">
+            quer ter até {formatDateBR(new Date(item.targetDate))}
+          </p>
         )}
-        {comprado && (
-          <Badge className="bg-emerald-500/10 text-emerald-600">
-            Comprado
-            {item.boughtPrice != null &&
-              ` · ${formatCurrencyBRL(item.boughtPrice)}`}
-          </Badge>
+        {comprado && item.boughtAt && (
+          <p className="text-xs text-text-secondary">
+            comprado em {formatDateBR(new Date(item.boughtAt))}
+          </p>
         )}
-        {descartado && <Badge>Descartado</Badge>}
-      </div>
+        {item.notes && (
+          <p className="text-xs text-text-secondary">{item.notes}</p>
+        )}
 
-      {item.targetDate && !comprado && (
-        <p className="text-xs text-text-secondary">
-          quer ter até {formatDateBR(new Date(item.targetDate))}
-        </p>
-      )}
-      {comprado && item.boughtAt && (
-        <p className="text-xs text-text-secondary">
-          comprado em {formatDateBR(new Date(item.boughtAt))}
-        </p>
-      )}
-      {item.notes && (
-        <p className="text-xs text-text-secondary">{item.notes}</p>
-      )}
-
-      {buying ? (
-        <BuyPanel item={item} onClose={() => setBuying(false)} />
-      ) : (
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {comprado || descartado ? (
-              <button
-                type="button"
-                onClick={() => setStatus("DESEJADO")}
-                disabled={busy}
-                title="Voltar para a lista"
-                className="flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
-              >
-                <Undo2 size={13} /> voltar pra lista
-              </button>
-            ) : (
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={() => setBuying(true)}
-                  disabled={busy}
-                >
-                  Comprei
-                </Button>
+        {buying ? (
+          <BuyPanel item={item} onClose={() => setBuying(false)} />
+        ) : (
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {comprado || descartado ? (
                 <button
                   type="button"
-                  onClick={() => setStatus("DESCARTADO")}
+                  onClick={() => setStatus("DESEJADO")}
                   disabled={busy}
-                  className="text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
+                  title="Voltar para a lista"
+                  className="flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
                 >
-                  descartar
+                  <Undo2 size={13} /> voltar pra lista
                 </button>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setBuying(true)}
+                    disabled={busy}
+                  >
+                    Comprei
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setStatus("DESCARTADO")}
+                    disabled={busy}
+                    className="text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
+                  >
+                    descartar
+                  </button>
+                </>
+              )}
+            </div>
 
-          <div className="flex items-center gap-2">
-            {item.url && (
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Abrir link"
-                className="text-text-secondary hover:text-text-primary"
+            <div className="flex items-center gap-2">
+              {item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Abrir link"
+                  className="text-text-secondary hover:text-text-primary"
+                >
+                  <ExternalLink size={14} />
+                </a>
+              )}
+              <IconButton
+                title="Editar"
+                onClick={() => setEditing(true)}
               >
-                <ExternalLink size={14} />
-              </a>
-            )}
-            <IconButton
-              title="Editar"
-              onClick={() => setEditing(true)}
-            >
-              <Pencil size={15} />
-            </IconButton>
-            <IconButton
-              title="Deletar"
-              onClick={handleDelete}
-              disabled={busy}
-              tone="danger"
-            >
-              <Trash2 size={15} />
-            </IconButton>
+                <Pencil size={15} />
+              </IconButton>
+              <IconButton
+                title="Deletar"
+                onClick={handleDelete}
+                disabled={busy}
+                tone="danger"
+              >
+                <Trash2 size={15} />
+              </IconButton>
+            </div>
           </div>
-        </div>
+        )}
+      </Card>
+      {editing && (
+        <WishlistForm
+          businesses={businesses}
+          item={item}
+          onClose={() => setEditing(false)}
+        />
       )}
-    </Card>
+    </>
   );
 }

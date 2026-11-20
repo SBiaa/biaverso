@@ -91,12 +91,13 @@ export function DivinationForm({
     notify("Tiragem salva.");
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Nova tiragem</Button>;
-  }
+  // Editando, quem chama já mostra o próprio cartão: só a criação tem botão.
+  const trigger = isEdit ? null : <Button onClick={() => setOpen(true)}>+ Nova tiragem</Button>;
+  if (!open) return trigger;
 
   return (
     <FormCard
+      trigger={trigger}
       title={isEdit ? "Editar tiragem" : "Nova tiragem"}
       error={error}
       saving={saving}

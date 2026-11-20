@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote, notify } from "@/components/ui";
+import {
+  Button,
+  ErrorNote,
+  Field,
+  fieldClass,
+  Modal,
+  ModalActions,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { transactionCategoryLabels } from "@/lib/labels";
 import {
@@ -112,130 +120,140 @@ export function AddCreditCardEntryForm({
     }
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Nova compra</Button>;
-  }
-
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
-      <ErrorNote message={error} />
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          placeholder="Descrição"
-          value={form.description}
-          onChange={(e) => update("description", e.target.value)}
-          className="col-span-2 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">Valor total</span>
-          <input
-            type="number"
-            step="0.01"
-            placeholder="0,00"
-            value={form.amount}
-            onChange={(e) => update("amount", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">Data da compra</span>
-          <input
-            type="date"
-            value={form.purchaseDate}
-            onChange={(e) => updatePurchaseDate(e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">
-            Parcelas (1 = à vista)
-          </span>
-          <input
-            type="number"
-            min={1}
-            max={72}
-            value={form.installments}
-            onChange={(e) => update("installments", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-        </label>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">
-            {installments > 1 ? "Primeira parcela na fatura de" : "Fatura de"}
-          </span>
-          <div className="flex gap-2">
-            <select
-              value={form.invoiceMonth}
-              onChange={(e) => update("invoiceMonth", e.target.value)}
-              className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            >
-              {monthOptions.map((m) => (
-                <option key={m} value={m}>
-                  {monthNameBR(m)}
-                </option>
-              ))}
-            </select>
+    <>
+      <Button onClick={() => setOpen(true)}>+ Nova compra</Button>
+      {open && (
+        <Modal
+          title="Nova compra no cartão"
+          onClose={() => setOpen(false)}
+          onSubmit={handleSubmit}
+          size="md"
+        >
+          <Field label="Descrição">
             <input
-              type="number"
-              value={form.invoiceYear}
-              onChange={(e) => update("invoiceYear", e.target.value)}
-              className="w-24 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+              value={form.description}
+              onChange={(e) => update("description", e.target.value)}
+              className={fieldClass}
             />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Valor total (R$)">
+              <input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={form.amount}
+                onChange={(e) => update("amount", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Data da compra">
+              <input
+                type="date"
+                value={form.purchaseDate}
+                onChange={(e) => updatePurchaseDate(e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Parcelas (1 = à vista)">
+              <input
+                type="number"
+                min={1}
+                max={72}
+                value={form.installments}
+                onChange={(e) => update("installments", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-text-secondary">
+                {installments > 1 ? "Primeira parcela na fatura de" : "Fatura de"}
+              </span>
+              <div className="flex gap-2">
+                <select
+                  value={form.invoiceMonth}
+                  onChange={(e) => update("invoiceMonth", e.target.value)}
+                  aria-label="Mês da fatura"
+                  className={fieldClass}
+                >
+                  {monthOptions.map((m) => (
+                    <option key={m} value={m}>
+                      {monthNameBR(m)}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={form.invoiceYear}
+                  onChange={(e) => update("invoiceYear", e.target.value)}
+                  aria-label="Ano da fatura"
+                  className={`${fieldClass} w-24! shrink-0`}
+                />
+              </div>
+            </div>
+            <Field label="De quem é">
+              <select
+                value={form.businessId}
+                onChange={(e) => update("businessId", e.target.value)}
+                className={fieldClass}
+              >
+                <option value="">Pessoal/Casa</option>
+                {businesses.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Categoria">
+              <select
+                value={form.category}
+                onChange={(e) => update("category", e.target.value)}
+                className={fieldClass}
+              >
+                {categoryOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {transactionCategoryLabels[c]}
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
-        </div>
-        <select
-          value={form.businessId}
-          onChange={(e) => update("businessId", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          <option value="">Pessoal/Casa</option>
-          {businesses.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={form.category}
-          onChange={(e) => update("category", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {categoryOptions.map((c) => (
-            <option key={c} value={c}>
-              {transactionCategoryLabels[c]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <input
-        placeholder="Notas (opcional)"
-        value={form.notes}
-        onChange={(e) => update("notes", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
+          <Field label="Notas (opcional)">
+            <input
+              value={form.notes}
+              onChange={(e) => update("notes", e.target.value)}
+              className={fieldClass}
+            />
+          </Field>
 
-      {preview && (
-        <p className="text-xs text-text-secondary">
-          {installments}x de {formatCurrencyBRL(preview.amounts[1])}
-          {preview.amounts[0] !== preview.amounts[1] &&
-            ` (primeira de ${formatCurrencyBRL(preview.amounts[0])})`}
-          {" · "}
-          {formatMonthYearBR(
-            Number(form.invoiceMonth),
-            Number(form.invoiceYear),
-          )}{" "}
-          até {formatMonthYearBR(preview.last.month, preview.last.year)}
-        </p>
+          {preview && (
+            <p className="text-xs text-text-secondary">
+              {installments}x de {formatCurrencyBRL(preview.amounts[1])}
+              {preview.amounts[0] !== preview.amounts[1] &&
+                ` (primeira de ${formatCurrencyBRL(preview.amounts[0])})`}
+              {" · "}
+              {formatMonthYearBR(Number(form.invoiceMonth), Number(form.invoiceYear))} até{" "}
+              {formatMonthYearBR(preview.last.month, preview.last.year)}
+            </p>
+          )}
+
+          <ErrorNote message={error} />
+          <ModalActions>
+            <Button
+              type="submit"
+              disabled={saving || !form.description.trim() || !form.amount}
+            >
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+          </ModalActions>
+        </Modal>
       )}
-
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          Cancelar
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }

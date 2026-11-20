@@ -97,13 +97,14 @@ export function StudyForm({
     notify("Salvo.");
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Novo texto ou exercício</Button>;
-  }
+  // Editando, quem chama já mostra o próprio cartão: só a criação tem botão.
+  const trigger = isEdit ? null : <Button onClick={() => setOpen(true)}>+ Novo texto ou exercício</Button>;
+  if (!open) return trigger;
 
   return (
     <FormCard
-      title={isEdit ? "Editar" : "Novo texto ou exercício"}
+      trigger={trigger}
+      title={isEdit ? "Editar texto ou exercício" : "Novo texto ou exercício"}
       error={error}
       saving={saving}
       canSave={form.title.trim().length > 0}

@@ -104,12 +104,13 @@ export function MeetingForm({
     notify(isEdit ? "Salvo." : "Encontro marcado — já está na agenda.");
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Novo encontro</Button>;
-  }
+  // Editando, quem chama já mostra o próprio cartão: só a criação tem botão.
+  const trigger = isEdit ? null : <Button onClick={() => setOpen(true)}>+ Novo encontro</Button>;
+  if (!open) return trigger;
 
   return (
     <FormCard
+      trigger={trigger}
       title={isEdit ? "Editar encontro" : "Novo encontro"}
       error={error}
       saving={saving}

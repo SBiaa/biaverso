@@ -82,9 +82,9 @@ export function RitualForm({
     notify("Registrado.");
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Novo registro</Button>;
-  }
+  // Editando, quem chama já mostra o próprio cartão: só a criação tem botão.
+  const trigger = isEdit ? null : <Button onClick={() => setOpen(true)}>+ Novo registro</Button>;
+  if (!open) return trigger;
 
   // A lua do dia escolhido, mostrada enquanto ela digita: é a informação que
   // dá contexto ao registro, e ninguém lembra de cabeça a fase de uma data.
@@ -93,6 +93,7 @@ export function RitualForm({
 
   return (
     <FormCard
+      trigger={trigger}
       title={isEdit ? "Editar registro" : "Novo registro"}
       error={error}
       saving={saving}

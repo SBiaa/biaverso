@@ -12,7 +12,11 @@ import {
   Card,
   confirmAction,
   ErrorNote,
+  Field,
+  fieldClass,
   IconButton,
+  Modal,
+  ModalActions,
   notify,
 } from "@/components/ui";
 import { BillAmountOverride } from "@/components/modules/financeiro/BillAmountOverride";
@@ -63,6 +67,7 @@ function FixedBillForm({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: item?.name ?? "",
     // O formulário edita a conta, não o mês — por isso o valor padrão dela.
@@ -80,81 +85,92 @@ function FixedBillForm({
   async function handleSubmit() {
     if (!form.name.trim() || !form.amount || !form.dueDate) return;
     setSaving(true);
+    setError(null);
     // A conta se repete todo mês, então o que fica guardado é o dia da data escolhida.
     const dueDay = Number(form.dueDate.split("-")[2]);
-    await fetch(
-      item ? `/api/fixed-bills/${item.fixedBillId}` : "/api/fixed-bills",
-      {
-        method: item ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          amount: Number(form.amount),
-          dueDay,
-          type: form.type,
-          paymentMethod: form.paymentMethod,
-          notes: form.notes || null,
-        }),
-      },
-    );
-    setSaving(false);
-    onClose();
-    router.refresh();
-    notify("Salvo.");
+    const payload = {
+      name: form.name,
+      amount: Number(form.amount),
+      dueDay,
+      type: form.type,
+      paymentMethod: form.paymentMethod,
+      notes: form.notes || null,
+    };
+    try {
+      // Antes era um `fetch` sem checar a resposta: se o servidor recusasse,
+      // o formulário fechava e dizia "Salvo" do mesmo jeito.
+      if (item) await api.patch(`/api/fixed-bills/${item.fixedBillId}`, payload);
+      else await api.post("/api/fixed-bills", payload);
+      onClose();
+      router.refresh();
+      notify("Salvo.");
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <Card className="flex flex-col gap-2">
-      <input
-        placeholder="Nome"
-        value={form.name}
-        onChange={(e) => update("name", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div className="flex gap-2">
+    <Modal
+      title={item ? "Editar conta fixa" : "Nova conta fixa"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      size="md"
+    >
+      <Field label="Nome">
         <input
-          type="number"
-          step="0.01"
-          placeholder="Valor"
-          value={form.amount}
-          onChange={(e) => update("amount", e.target.value)}
-          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          value={form.name}
+          onChange={(e) => update("name", e.target.value)}
+          placeholder="Ex.: Aluguel"
+          className={fieldClass}
         />
-        <label className="flex flex-1 flex-col gap-1">
-          <span className="text-xs text-text-secondary">
-            Vencimento (repete todo mês nesse dia)
-          </span>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Valor (R$)">
+          <input
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={form.amount}
+            onChange={(e) => update("amount", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="Vencimento (repete todo mês)">
           <input
             type="date"
             value={form.dueDate}
             onChange={(e) => update("dueDate", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+            className={fieldClass}
           />
-        </label>
-      </div>
-      <div className="flex gap-2">
-        <select
-          value={form.type}
-          onChange={(e) => update("type", e.target.value)}
-          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>
-              {fixedBillTypeLabels[t]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={form.paymentMethod}
-          onChange={(e) => update("paymentMethod", e.target.value)}
-          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {payMethodOptions.map((p) => (
-            <option key={p} value={p}>
-              {payMethodLabels[p]}
-            </option>
-          ))}
-        </select>
+        </Field>
+        <Field label="Tipo">
+          <select
+            value={form.type}
+            onChange={(e) => update("type", e.target.value)}
+            className={fieldClass}
+          >
+            {typeOptions.map((t) => (
+              <option key={t} value={t}>
+                {fixedBillTypeLabels[t]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Forma de pagamento">
+          <select
+            value={form.paymentMethod}
+            onChange={(e) => update("paymentMethod", e.target.value)}
+            className={fieldClass}
+          >
+            {payMethodOptions.map((p) => (
+              <option key={p} value={p}>
+                {payMethodLabels[p]}
+              </option>
+            ))}
+          </select>
+        </Field>
       </div>
       {form.paymentMethod === "CARTAO_CREDITO" && (
         <p className="text-xs text-text-secondary">
@@ -162,21 +178,26 @@ function FixedBillForm({
           tela do cartão.
         </p>
       )}
-      <input
-        placeholder="Notas (opcional)"
-        value={form.notes}
-        onChange={(e) => update("notes", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
+      <Field label="Notas (opcional)">
+        <input
+          value={form.notes}
+          onChange={(e) => update("notes", e.target.value)}
+          className={fieldClass}
+        />
+      </Field>
+      <ErrorNote message={error} />
+      <ModalActions>
+        <Button
+          type="submit"
+          disabled={saving || !form.name.trim() || !form.amount || !form.dueDate}
+        >
+          {saving ? "Salvando..." : "Salvar"}
         </Button>
         <Button variant="ghost" onClick={onClose}>
           Cancelar
         </Button>
-      </div>
-    </Card>
+      </ModalActions>
+    </Modal>
   );
 }
 
@@ -187,6 +208,7 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const editingItem = items.find((i) => i.fixedBillId === editingId) ?? null;
 
   async function toggle(logId: string) {
     const item = items.find((i) => i.logId === logId);
@@ -239,23 +261,13 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
     <div className="flex flex-col gap-2">
       <ErrorNote message={error} />
 
-      {items.length === 0 && !creating && (
+      {items.length === 0 && (
         <p className="text-sm text-text-secondary">
           Nenhuma conta fixa cadastrada.
         </p>
       )}
 
       {items.map((item) => {
-        if (editingId === item.fixedBillId) {
-          return (
-            <FixedBillForm
-              key={item.logId}
-              item={item}
-              onClose={() => setEditingId(null)}
-            />
-          );
-        }
-
         return (
           <Card
             key={item.logId}
@@ -347,16 +359,16 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
         );
       })}
 
-      {creating ? (
-        <FixedBillForm onClose={() => setCreating(false)} />
-      ) : (
-        <Button
-          variant="secondary"
-          className="self-start"
-          onClick={() => setCreating(true)}
-        >
-          + Nova conta fixa
-        </Button>
+      <Button
+        variant="secondary"
+        className="self-start"
+        onClick={() => setCreating(true)}
+      >
+        + Nova conta fixa
+      </Button>
+      {creating && <FixedBillForm onClose={() => setCreating(false)} />}
+      {editingItem && (
+        <FixedBillForm item={editingItem} onClose={() => setEditingId(null)} />
       )}
     </div>
   );

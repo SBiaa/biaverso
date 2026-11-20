@@ -10,7 +10,11 @@ import {
   Button,
   confirmAction,
   ErrorNote,
+  Field,
+  fieldClass,
   IconButton,
+  Modal,
+  ModalActions,
   notify,
 } from "@/components/ui";
 import { BillAmountOverride } from "@/components/modules/financeiro/BillAmountOverride";
@@ -80,90 +84,104 @@ function EditCreditCardEntryForm({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
-      <ErrorNote message={error} />
-      <div className="grid grid-cols-2 gap-2">
+    <Modal title="Editar compra no cartão" onClose={onClose} onSubmit={handleSubmit} size="md">
+      <Field label="Descrição">
         <input
-          placeholder="Descrição"
           value={form.description}
           onChange={(e) => update("description", e.target.value)}
-          className="col-span-2 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          className={fieldClass}
         />
-        <input
-          type="number"
-          step="0.01"
-          placeholder="Valor"
-          value={form.amount}
-          onChange={(e) => update("amount", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <input
-          type="date"
-          value={form.purchaseDate}
-          onChange={(e) => update("purchaseDate", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <input
-          type="number"
-          min={1}
-          max={12}
-          placeholder="Mês da fatura"
-          value={form.invoiceMonth}
-          onChange={(e) => update("invoiceMonth", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <input
-          type="number"
-          placeholder="Ano da fatura"
-          value={form.invoiceYear}
-          onChange={(e) => update("invoiceYear", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <select
-          value={form.businessId}
-          onChange={(e) => update("businessId", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          <option value="">Pessoal/Casa</option>
-          {businesses.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={form.category}
-          onChange={(e) => update("category", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {categoryOptions.map((c) => (
-            <option key={c} value={c}>
-              {transactionCategoryLabels[c]}
-            </option>
-          ))}
-        </select>
-        <input
-          placeholder="Parcela (opcional)"
-          value={form.installment}
-          onChange={(e) => update("installment", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Valor (R$)">
+          <input
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={form.amount}
+            onChange={(e) => update("amount", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="Data da compra">
+          <input
+            type="date"
+            value={form.purchaseDate}
+            onChange={(e) => update("purchaseDate", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="Mês da fatura">
+          <input
+            type="number"
+            min={1}
+            max={12}
+            value={form.invoiceMonth}
+            onChange={(e) => update("invoiceMonth", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="Ano da fatura">
+          <input
+            type="number"
+            value={form.invoiceYear}
+            onChange={(e) => update("invoiceYear", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="De quem é">
+          <select
+            value={form.businessId}
+            onChange={(e) => update("businessId", e.target.value)}
+            className={fieldClass}
+          >
+            <option value="">Pessoal/Casa</option>
+            {businesses.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Categoria">
+          <select
+            value={form.category}
+            onChange={(e) => update("category", e.target.value)}
+            className={fieldClass}
+          >
+            {categoryOptions.map((c) => (
+              <option key={c} value={c}>
+                {transactionCategoryLabels[c]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Parcela (opcional)">
+          <input
+            placeholder="Ex.: 2/6"
+            value={form.installment}
+            onChange={(e) => update("installment", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
       </div>
-      <input
-        placeholder="Notas (opcional)"
-        value={form.notes}
-        onChange={(e) => update("notes", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
+      <Field label="Notas (opcional)">
+        <input
+          value={form.notes}
+          onChange={(e) => update("notes", e.target.value)}
+          className={fieldClass}
+        />
+      </Field>
+      <ErrorNote message={error} />
+      <ModalActions>
+        <Button type="submit" disabled={saving || !form.description.trim() || !form.amount}>
+          {saving ? "Salvando..." : "Salvar"}
         </Button>
         <Button variant="ghost" onClick={onClose}>
           Cancelar
         </Button>
-      </div>
-    </div>
+      </ModalActions>
+    </Modal>
   );
 }
 
@@ -185,6 +203,7 @@ export function InvoiceItemsList({
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editingItem = items.find((i) => i.id === editingId) ?? null;
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
 
@@ -271,20 +290,6 @@ export function InvoiceItemsList({
             );
           }
 
-          if (editingId === item.id) {
-            return (
-              <li key={item.id} className="py-2.5">
-                <EditCreditCardEntryForm
-                  item={item}
-                  invoiceMonth={invoiceMonth}
-                  invoiceYear={invoiceYear}
-                  businesses={businesses}
-                  onClose={() => setEditingId(null)}
-                />
-              </li>
-            );
-          }
-
           return (
             <li
               key={item.id}
@@ -328,6 +333,15 @@ export function InvoiceItemsList({
           );
         })}
       </ul>
+      {editingItem && (
+        <EditCreditCardEntryForm
+          item={editingItem}
+          invoiceMonth={invoiceMonth}
+          invoiceYear={invoiceYear}
+          businesses={businesses}
+          onClose={() => setEditingId(null)}
+        />
+      )}
     </>
   );
 }

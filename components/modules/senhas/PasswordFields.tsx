@@ -1,5 +1,6 @@
 "use client";
 
+import { Field, fieldClass } from "@/components/ui";
 import { passwordCategoryLabels } from "@/lib/labels";
 
 export type PasswordForm = {
@@ -34,13 +35,11 @@ export function passwordFormPayload(form: PasswordForm) {
   };
 }
 
-const inputClass =
-  "rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
-
 /**
  * Campos de uma senha. Mesmo formulário no cadastro do cofre, na edição e no
  * "criar nova" das credenciais — assim os três não saem do lugar quando um
- * campo muda.
+ * campo muda. Cada campo tem rótulo: só com placeholder, ao começar a digitar
+ * não dava mais para saber se aquele era o login ou a senha.
  */
 export function PasswordFields({
   form,
@@ -54,42 +53,54 @@ export function PasswordFields({
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      <input
-        value={form.name}
-        onChange={(e) => update("name", e.target.value)}
-        placeholder="Nome"
-        className={inputClass}
-      />
-      <select
-        value={form.category}
-        onChange={(e) => update("category", e.target.value)}
-        className={inputClass}
-      >
-        {Object.keys(passwordCategoryLabels).map((c) => (
-          <option key={c} value={c}>
-            {passwordCategoryLabels[c]}
-          </option>
-        ))}
-      </select>
-      <input
-        value={form.login}
-        onChange={(e) => update("login", e.target.value)}
-        placeholder="Login/e-mail (opcional)"
-        className={inputClass}
-      />
-      <input
-        value={form.password}
-        onChange={(e) => update("password", e.target.value)}
-        placeholder="Senha"
-        className={inputClass}
-      />
-      <input
-        value={form.url}
-        onChange={(e) => update("url", e.target.value)}
-        placeholder="URL (opcional)"
-        className={`${inputClass} sm:col-span-2`}
-      />
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Nome">
+        <input
+          value={form.name}
+          onChange={(e) => update("name", e.target.value)}
+          placeholder="Ex.: Banco"
+          className={fieldClass}
+        />
+      </Field>
+      <Field label="Categoria">
+        <select
+          value={form.category}
+          onChange={(e) => update("category", e.target.value)}
+          className={fieldClass}
+        >
+          {Object.keys(passwordCategoryLabels).map((c) => (
+            <option key={c} value={c}>
+              {passwordCategoryLabels[c]}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Login/e-mail (opcional)">
+        <input
+          value={form.login}
+          onChange={(e) => update("login", e.target.value)}
+          autoComplete="off"
+          className={fieldClass}
+        />
+      </Field>
+      <Field label="Senha">
+        <input
+          value={form.password}
+          onChange={(e) => update("password", e.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+          className={fieldClass}
+        />
+      </Field>
+      <Field label="URL (opcional)" className="sm:col-span-2">
+        <input
+          type="url"
+          value={form.url}
+          onChange={(e) => update("url", e.target.value)}
+          placeholder="https://"
+          className={fieldClass}
+        />
+      </Field>
     </div>
   );
 }

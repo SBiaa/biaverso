@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Button, ErrorNote } from "@/components/ui";
+import { Button, ErrorNote, Modal, ModalActions } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 /**
@@ -46,6 +46,14 @@ export function FieldRow({ children }: { children: ReactNode }) {
   return <div className="grid gap-2 sm:grid-cols-2">{children}</div>;
 }
 
+/**
+ * A casca dos cinco cadastros: o mesmo `Modal` do resto do app (Esc fecha,
+ * Enter salva, foco preso, folha de baixo no celular). Antes era um cartão
+ * aberto no meio da lista, o único lugar do app que cadastrava assim.
+ *
+ * `trigger` é o botão "+ Novo…": fica na página enquanto o modal está aberto,
+ * para a lista atrás não pular.
+ */
 export function FormCard({
   title,
   error,
@@ -53,6 +61,7 @@ export function FormCard({
   canSave = true,
   onSubmit,
   onCancel,
+  trigger,
   children,
 }: {
   title: string;
@@ -61,33 +70,27 @@ export function FormCard({
   canSave?: boolean;
   onSubmit: () => void;
   onCancel: () => void;
+  trigger?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit();
-      }}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 md:p-5"
-    >
-      <p className="text-[0.9375rem] font-semibold tracking-tight text-text-primary">
-        {title}
-      </p>
+    <>
+      {trigger}
+      <Modal title={title} onClose={onCancel} onSubmit={onSubmit} size="md">
+        {children}
 
-      {children}
+        <ErrorNote message={error} />
 
-      <ErrorNote message={error} />
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={saving || !canSave}>
-          {saving ? "Salvando..." : "Salvar"}
-        </Button>
-        <Button variant="secondary" onClick={onCancel} disabled={saving}>
-          Cancelar
-        </Button>
-      </div>
-    </form>
+        <ModalActions>
+          <Button type="submit" disabled={saving || !canSave}>
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+          <Button variant="ghost" onClick={onCancel} disabled={saving}>
+            Cancelar
+          </Button>
+        </ModalActions>
+      </Modal>
+    </>
   );
 }
 

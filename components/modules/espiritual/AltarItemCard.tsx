@@ -21,10 +21,6 @@ export function AltarItemCard({ item }: { item: AltarItemView }) {
   const [runningLow, setRunningLow] = useState(item.runningLow);
   const [error, setError] = useState<string | null>(null);
 
-  if (editing) {
-    return <AltarForm item={item} onClose={() => setEditing(false)} />;
-  }
-
   async function toggleRunningLow() {
     const next = !runningLow;
     // Otimista: marcar "está acabando" é um clique de passagem, e esperar o
@@ -58,53 +54,56 @@ export function AltarItemCard({ item }: { item: AltarItemView }) {
   }
 
   return (
-    <Card className="group flex flex-col gap-2">
-      <ErrorNote message={error} />
+    <>
+      <Card className="group flex flex-col gap-2">
+        <ErrorNote message={error} />
 
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs text-text-secondary">
-            {altarCategoryLabels[item.category] ?? item.category}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs text-text-secondary">
+              {altarCategoryLabels[item.category] ?? item.category}
+            </p>
+            <p className="text-sm font-semibold text-text-primary">{item.name}</p>
+          </div>
+          <div className="flex shrink-0 items-center">
+            <IconButton aria-label="Editar" revealOnHover onClick={() => setEditing(true)}>
+              <Pencil size={15} />
+            </IconButton>
+            <IconButton
+              aria-label="Excluir"
+              tone="danger"
+              revealOnHover
+              onClick={handleDelete}
+            >
+              <Trash2 size={15} />
+            </IconButton>
+          </div>
+        </div>
+
+        {item.quantity && (
+          <p className="text-sm text-text-primary">{item.quantity}</p>
+        )}
+        {item.properties && (
+          <p className="text-xs text-text-secondary">{item.properties}</p>
+        )}
+        {item.notes && (
+          <p className="whitespace-pre-wrap text-xs text-text-secondary">
+            {item.notes}
           </p>
-          <p className="text-sm font-semibold text-text-primary">{item.name}</p>
-        </div>
-        <div className="flex shrink-0 items-center">
-          <IconButton aria-label="Editar" revealOnHover onClick={() => setEditing(true)}>
-            <Pencil size={15} />
-          </IconButton>
-          <IconButton
-            aria-label="Excluir"
-            tone="danger"
-            revealOnHover
-            onClick={handleDelete}
+        )}
+
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={toggleRunningLow}
+            className="-my-1 py-1 text-xs font-medium text-accent"
           >
-            <Trash2 size={15} />
-          </IconButton>
+            {runningLow ? "Repus" : "Está acabando"}
+          </button>
+          {runningLow && <AttentionBadge level="atencao">acabando</AttentionBadge>}
         </div>
-      </div>
-
-      {item.quantity && (
-        <p className="text-sm text-text-primary">{item.quantity}</p>
-      )}
-      {item.properties && (
-        <p className="text-xs text-text-secondary">{item.properties}</p>
-      )}
-      {item.notes && (
-        <p className="whitespace-pre-wrap text-xs text-text-secondary">
-          {item.notes}
-        </p>
-      )}
-
-      <div className="flex items-center gap-2 pt-1">
-        <button
-          type="button"
-          onClick={toggleRunningLow}
-          className="-my-1 py-1 text-xs font-medium text-accent"
-        >
-          {runningLow ? "Repus" : "Está acabando"}
-        </button>
-        {runningLow && <AttentionBadge level="atencao">acabando</AttentionBadge>}
-      </div>
-    </Card>
+      </Card>
+      {editing && <AltarForm item={item} onClose={() => setEditing(false)} />}
+    </>
   );
 }

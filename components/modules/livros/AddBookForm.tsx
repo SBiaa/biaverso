@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, ErrorNote, notify } from "@/components/ui";
+import {
+  Button,
+  ErrorNote,
+  Field,
+  fieldClass,
+  Modal,
+  ModalActions,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { bookStatusLabels } from "@/lib/labels";
 
@@ -54,64 +62,71 @@ export function AddBookForm() {
     }
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Novo livro</Button>;
-  }
-
   return (
-    <Card className="flex flex-col gap-2">
-      <ErrorNote message={error} />
-      <input
-        placeholder="Título"
-        value={form.title}
-        onChange={(e) => update("title", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div className="flex gap-2">
-        <input
-          placeholder="Autor (opcional)"
-          value={form.author}
-          onChange={(e) => update("author", e.target.value)}
-          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <select
-          value={form.status}
-          onChange={(e) => update("status", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {statusOptions.map((s) => (
-            <option key={s} value={s}>
-              {bookStatusLabels[s]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex gap-2">
-        <input
-          type="number"
-          placeholder="Total de páginas"
-          value={form.totalPages}
-          onChange={(e) => update("totalPages", e.target.value)}
-          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        {form.status === "LENDO" && (
-          <input
-            type="number"
-            placeholder="Página atual"
-            value={form.currentPage}
-            onChange={(e) => update("currentPage", e.target.value)}
-            className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-        )}
-      </div>
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          Cancelar
-        </Button>
-      </div>
-    </Card>
+    <>
+      <Button onClick={() => setOpen(true)}>+ Novo livro</Button>
+      {open && (
+        <Modal title="Novo livro" onClose={() => setOpen(false)} onSubmit={handleSubmit}>
+          <Field label="Título">
+            <input
+              value={form.title}
+              onChange={(e) => update("title", e.target.value)}
+              className={fieldClass}
+            />
+          </Field>
+          <Field label="Autor (opcional)">
+            <input
+              value={form.author}
+              onChange={(e) => update("author", e.target.value)}
+              className={fieldClass}
+            />
+          </Field>
+          <Field label="Status">
+            <select
+              value={form.status}
+              onChange={(e) => update("status", e.target.value)}
+              className={fieldClass}
+            >
+              {statusOptions.map((s) => (
+                <option key={s} value={s}>
+                  {bookStatusLabels[s]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Total de páginas">
+              <input
+                type="number"
+                min={1}
+                value={form.totalPages}
+                onChange={(e) => update("totalPages", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+            {form.status === "LENDO" && (
+              <Field label="Página atual">
+                <input
+                  type="number"
+                  min={0}
+                  value={form.currentPage}
+                  onChange={(e) => update("currentPage", e.target.value)}
+                  className={fieldClass}
+                />
+              </Field>
+            )}
+          </div>
+          <ErrorNote message={error} />
+          <ModalActions>
+            <Button type="submit" disabled={saving || !form.title.trim()}>
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+          </ModalActions>
+        </Modal>
+      )}
+    </>
   );
 }

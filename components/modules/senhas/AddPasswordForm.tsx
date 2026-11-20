@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, ErrorNote, notify } from "@/components/ui";
+import { Button, ErrorNote, Modal, ModalActions, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import {
   PasswordFields,
@@ -37,22 +37,23 @@ export function AddPasswordForm() {
     }
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Nova senha</Button>;
-  }
-
   return (
-    <Card className="flex flex-col gap-2">
-      <ErrorNote message={error} />
-      <PasswordFields form={form} onChange={setForm} />
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving || !isPasswordFormValid(form)}>
-          Salvar
-        </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          Cancelar
-        </Button>
-      </div>
-    </Card>
+    <>
+      <Button onClick={() => setOpen(true)}>+ Nova senha</Button>
+      {open && (
+        <Modal title="Nova senha" onClose={() => setOpen(false)} onSubmit={handleSubmit} size="md">
+          <PasswordFields form={form} onChange={setForm} />
+          <ErrorNote message={error} />
+          <ModalActions>
+            <Button type="submit" disabled={saving || !isPasswordFormValid(form)}>
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+          </ModalActions>
+        </Modal>
+      )}
+    </>
   );
 }

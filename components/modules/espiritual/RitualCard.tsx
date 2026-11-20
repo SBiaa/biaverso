@@ -34,10 +34,6 @@ export function RitualCard({ ritual }: { ritual: RitualView }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (editing) {
-    return <RitualForm ritual={ritual} onClose={() => setEditing(false)} />;
-  }
-
   const date = parseDateOnly(ritual.date);
   // A fase não está gravada: sai da data, então nunca contradiz o calendário.
   const moon = date ? moonPhaseOfDay(date) : null;
@@ -60,55 +56,58 @@ export function RitualCard({ ritual }: { ritual: RitualView }) {
   }
 
   return (
-    <Card className="group flex flex-col gap-2">
-      <ErrorNote message={error} />
+    <>
+      <Card className="group flex flex-col gap-2">
+        <ErrorNote message={error} />
 
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs text-text-secondary">
-            {ritualKindLabels[ritual.kind] ?? ritual.kind}
-          </p>
-          <p className="text-sm font-semibold text-text-primary">{ritual.title}</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs text-text-secondary">
+              {ritualKindLabels[ritual.kind] ?? ritual.kind}
+            </p>
+            <p className="text-sm font-semibold text-text-primary">{ritual.title}</p>
+          </div>
+          <div className="flex shrink-0 items-center">
+            <IconButton aria-label="Editar" revealOnHover onClick={() => setEditing(true)}>
+              <Pencil size={15} />
+            </IconButton>
+            <IconButton
+              aria-label="Excluir"
+              tone="danger"
+              revealOnHover
+              onClick={handleDelete}
+            >
+              <Trash2 size={15} />
+            </IconButton>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center">
-          <IconButton aria-label="Editar" revealOnHover onClick={() => setEditing(true)}>
-            <Pencil size={15} />
-          </IconButton>
-          <IconButton
-            aria-label="Excluir"
-            tone="danger"
-            revealOnHover
-            onClick={handleDelete}
-          >
-            <Trash2 size={15} />
-          </IconButton>
-        </div>
-      </div>
 
-      <p className="flex flex-wrap items-center gap-x-2 text-xs text-text-secondary">
-        <span>{date ? formatDateLongBR(date) : ritual.date}</span>
-        {moon && (
-          <span className="inline-flex items-center gap-1">
-            <span aria-hidden>{moonPhaseGlyph[moon.phase]}</span>
-            {moonPhaseLabels[moon.phase]}
-          </span>
+        <p className="flex flex-wrap items-center gap-x-2 text-xs text-text-secondary">
+          <span>{date ? formatDateLongBR(date) : ritual.date}</span>
+          {moon && (
+            <span className="inline-flex items-center gap-1">
+              <span aria-hidden>{moonPhaseGlyph[moon.phase]}</span>
+              {moonPhaseLabels[moon.phase]}
+            </span>
+          )}
+        </p>
+
+        <Block label="Intenção" text={ritual.intention} />
+        <Block label="O que usou" text={ritual.elements} />
+        <Block label="Como foi" text={ritual.notes} />
+
+        {ritual.outcome && (
+          <div className="rounded-lg bg-hover p-2.5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+              O que veio depois
+            </p>
+            <p className="whitespace-pre-wrap text-sm text-text-primary">
+              {ritual.outcome}
+            </p>
+          </div>
         )}
-      </p>
-
-      <Block label="Intenção" text={ritual.intention} />
-      <Block label="O que usou" text={ritual.elements} />
-      <Block label="Como foi" text={ritual.notes} />
-
-      {ritual.outcome && (
-        <div className="rounded-lg bg-hover p-2.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-            O que veio depois
-          </p>
-          <p className="whitespace-pre-wrap text-sm text-text-primary">
-            {ritual.outcome}
-          </p>
-        </div>
-      )}
-    </Card>
+      </Card>
+      {editing && <RitualForm ritual={ritual} onClose={() => setEditing(false)} />}
+    </>
   );
 }

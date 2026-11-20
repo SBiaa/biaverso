@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote, notify } from "@/components/ui";
+import {
+  Button,
+  ErrorNote,
+  Field,
+  fieldClass,
+  Modal,
+  ModalActions,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { toDateInputValue } from "@/lib/utils";
 import { wishCategoryLabels, wishPriorityLabels } from "@/lib/labels";
@@ -24,9 +32,6 @@ export type WishlistItemInput = {
   notes: string | null;
   businessId: string | null;
 };
-
-const field =
-  "rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
 export function WishlistForm({
   businesses,
@@ -103,33 +108,34 @@ export function WishlistForm({
     }
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Novo desejo</Button>;
-  }
+  const modal = open && (
+    <Modal
+      title={isEdit ? "Editar desejo" : "Novo desejo"}
+      onClose={close}
+      onSubmit={handleSubmit}
+      size="md"
+    >
+      <Field label="O que você quer">
+        <input
+          value={form.name}
+          onChange={(e) => update("name", e.target.value)}
+          className={fieldClass}
+        />
+      </Field>
+      <Field label="Descrição (opcional)">
+        <input
+          value={form.description}
+          onChange={(e) => update("description", e.target.value)}
+          className={fieldClass}
+        />
+      </Field>
 
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
-      <ErrorNote message={error} />
-      <input
-        placeholder="O que você quer"
-        value={form.name}
-        onChange={(e) => update("name", e.target.value)}
-        className={field}
-      />
-      <input
-        placeholder="Descrição (opcional)"
-        value={form.description}
-        onChange={(e) => update("description", e.target.value)}
-        className={field}
-      />
-
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">Para o que é</span>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Para o que é">
           <select
             value={form.businessId}
             onChange={(e) => update("businessId", e.target.value)}
-            className={field}
+            className={fieldClass}
           >
             <option value="">Pessoal/Casa</option>
             {businesses.map((b) => (
@@ -138,14 +144,12 @@ export function WishlistForm({
               </option>
             ))}
           </select>
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">Categoria</span>
+        </Field>
+        <Field label="Categoria">
           <select
             value={form.category}
             onChange={(e) => update("category", e.target.value)}
-            className={field}
+            className={fieldClass}
           >
             {categoryOptions.map((c) => (
               <option key={c} value={c}>
@@ -153,14 +157,12 @@ export function WishlistForm({
               </option>
             ))}
           </select>
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">Prioridade</span>
+        </Field>
+        <Field label="Prioridade">
           <select
             value={form.priority}
             onChange={(e) => update("priority", e.target.value)}
-            className={field}
+            className={fieldClass}
           >
             {priorityOptions.map((p) => (
               <option key={p} value={p}>
@@ -168,60 +170,64 @@ export function WishlistForm({
               </option>
             ))}
           </select>
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">
-            Quanto custa (opcional)
-          </span>
+        </Field>
+        <Field label="Quanto custa (opcional)">
           <input
             type="number"
             step="0.01"
+            inputMode="decimal"
             placeholder="0,00"
             value={form.price}
             onChange={(e) => update("price", e.target.value)}
-            className={field}
+            className={fieldClass}
           />
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">
-            Quer ter até (opcional)
-          </span>
+        </Field>
+        <Field label="Quer ter até (opcional)">
           <input
             type="date"
             value={form.targetDate}
             onChange={(e) => update("targetDate", e.target.value)}
-            className={field}
+            className={fieldClass}
           />
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text-secondary">Link (opcional)</span>
+        </Field>
+        <Field label="Link (opcional)">
           <input
+            type="url"
             placeholder="https://"
             value={form.url}
             onChange={(e) => update("url", e.target.value)}
-            className={field}
+            className={fieldClass}
           />
-        </label>
+        </Field>
       </div>
 
-      <input
-        placeholder="Notas (opcional)"
-        value={form.notes}
-        onChange={(e) => update("notes", e.target.value)}
-        className={field}
-      />
+      <Field label="Notas (opcional)">
+        <input
+          value={form.notes}
+          onChange={(e) => update("notes", e.target.value)}
+          className={fieldClass}
+        />
+      </Field>
 
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving || !form.name.trim()}>
-          Salvar
+      <ErrorNote message={error} />
+      <ModalActions>
+        <Button type="submit" disabled={saving || !form.name.trim()}>
+          {saving ? "Salvando..." : "Salvar"}
         </Button>
         <Button variant="ghost" onClick={close}>
           Cancelar
         </Button>
-      </div>
-    </div>
+      </ModalActions>
+    </Modal>
+  );
+
+  // Editando, o cartão de quem chama continua na tela: aqui só entra o modal.
+  if (isEdit) return modal;
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>+ Novo desejo</Button>
+      {modal}
+    </>
   );
 }
