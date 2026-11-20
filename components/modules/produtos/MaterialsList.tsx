@@ -288,7 +288,7 @@ export function MaterialsList({ materials }: { materials: MaterialRecord[] }) {
                 </span>
               </p>
 
-              <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
                 <span>
                   {material.usageCount === 0
                     ? "Sem produto usando"

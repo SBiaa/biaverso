@@ -67,7 +67,7 @@ function AddBusinessSelect({
       disabled={disabled}
       onChange={(e) => e.target.value && onPick(e.target.value)}
       aria-label="Ligar um negócio a este pilar"
-      className="max-w-[9rem] cursor-pointer rounded-full border border-dashed border-border bg-transparent px-2 py-0.5 text-[11px] text-text-secondary outline-none hover:text-text-primary focus:ring-2 focus:ring-accent disabled:opacity-50"
+      className="max-w-[9rem] cursor-pointer rounded-full border border-dashed border-border bg-transparent px-2 py-0.5 text-xs text-text-secondary outline-none hover:text-text-primary focus:ring-2 focus:ring-accent disabled:opacity-50"
     >
       <option value="">+ negócio</option>
       {options.map((b) => (
@@ -188,7 +188,7 @@ export function PillarsTable({
                       {row.businesses.map((b) => (
                         <span
                           key={b.id}
-                          className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full py-0.5 pl-2 pr-1 text-[11px] font-medium"
+                          className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full py-0.5 pl-2 pr-1 text-xs font-medium"
                           style={{ backgroundColor: hexToRgba(b.color, 0.12), color: b.color }}
                         >
                           <Link href={`/negocios/${b.id}`} className="hover:underline">

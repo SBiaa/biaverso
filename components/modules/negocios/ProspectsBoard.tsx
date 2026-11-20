@@ -72,12 +72,12 @@ export function ProspectsBoard({
                           </div>
                           <div className="flex flex-wrap items-center gap-1">
                             {p.source && (
-                              <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+                              <span className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary">
                                 {leadSourceLabels[p.source]}
                               </span>
                             )}
                             {p.proposalValue != null && (
-                              <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+                              <span className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary">
                                 {formatCurrencyBRL(p.proposalValue)}
                               </span>
                             )}

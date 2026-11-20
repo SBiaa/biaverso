@@ -93,7 +93,7 @@ export function DayTimeline({
           {Array.from({ length: 13 }).map((_, i) => (
             <div
               key={i}
-              className="text-right text-[10px] text-text-secondary"
+              className="text-right text-[11px] text-text-secondary"
               style={{ height: HOUR_HEIGHT * 2 }}
             >
               {String(i * 2).padStart(2, "0")}h
@@ -103,7 +103,7 @@ export function DayTimeline({
 
         <div className="flex flex-1 gap-1">
           <div className="flex-1">
-            <p className="mb-1 text-center text-[10px] font-medium uppercase text-text-secondary">
+            <p className="mb-1 text-center text-[11px] font-medium uppercase text-text-secondary">
               Planejado
             </p>
             <Lane className="rounded-md border border-border">
@@ -115,7 +115,7 @@ export function DayTimeline({
                   <div
                     key={block.id}
                     title={`${category?.name ?? ""} · ${block.startTime}–${block.endTime}`}
-                    className="absolute left-0.5 right-0.5 overflow-hidden rounded px-1 text-[10px] text-white"
+                    className="absolute left-0.5 right-0.5 overflow-hidden rounded px-1 text-[11px] text-white"
                     style={{
                       top: topFor(start),
                       height: heightFor(start, end),
@@ -130,7 +130,7 @@ export function DayTimeline({
           </div>
 
           <div className="flex-1">
-            <p className="mb-1 text-center text-[10px] font-medium uppercase text-text-secondary">
+            <p className="mb-1 text-center text-[11px] font-medium uppercase text-text-secondary">
               Realizado
             </p>
             <Lane className="rounded-md border border-border">
@@ -159,7 +159,7 @@ export function DayTimeline({
                           }
                         : undefined
                     }
-                    className={`absolute left-0.5 right-0.5 overflow-hidden rounded px-1 text-[10px] text-white ${
+                    className={`absolute left-0.5 right-0.5 overflow-hidden rounded px-1 text-[11px] text-white ${
                       entry.endedAt ? "cursor-pointer hover:brightness-110" : ""
                     }`}
                     style={{

@@ -25,7 +25,7 @@ function MissingHint({ missing }: { missing: number }) {
   return (
     <span
       className={cn(
-        "shrink-0 text-[11px]",
+        "shrink-0 text-xs",
         missing === 0 ? "text-success-soft-text" : "text-warning-soft-text",
       )}
     >
@@ -55,7 +55,7 @@ export function RecipePickerModal({
       >
         <span className="min-w-0 flex-1">
           <span className="block text-text-primary">{recipe.title}</span>
-          <span className="block text-[11px] text-text-secondary">
+          <span className="block text-xs text-text-secondary">
             {recipe.categories.map((c) => recipeCategoryLabels[c] ?? c).join(" · ")}
           </span>
         </span>

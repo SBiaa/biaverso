@@ -113,7 +113,7 @@ export function FocusToday({ dayId, items: serverItems }: { dayId: string; items
 
 function OriginChip({ item, color, label }: { item: FocusItem; color: string; label: string }) {
   const className =
-    "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium";
+    "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium";
   const style = { backgroundColor: hexToRgba(color, 0.12), color };
 
   return item.originHref ? (

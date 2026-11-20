@@ -115,7 +115,7 @@ export function PantryList({ ingredients }: { ingredients: PantryRow[] }) {
               item.inStock ? "text-text-secondary" : "text-text-primary",
             )}
           />
-          <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-text-secondary">
+          <div className="flex flex-wrap items-center gap-x-2 text-xs text-text-secondary">
             {item.recipes.length > 0 && (
               <span title={item.recipes.join(", ")}>
                 {item.recipes.length} receita{item.recipes.length > 1 ? "s" : ""}
@@ -129,7 +129,7 @@ export function PantryList({ ingredients }: { ingredients: PantryRow[] }) {
                 await api.patch(`/api/ingredients/${item.id}`, { notes });
                 router.refresh();
               }}
-              className="text-[11px] text-text-secondary"
+              className="text-xs text-text-secondary"
             />
           </div>
         </div>
@@ -167,7 +167,7 @@ export function PantryList({ ingredients }: { ingredients: PantryRow[] }) {
             Adicionar
           </Button>
         </div>
-        <p className="text-[11px] text-text-secondary">
+        <p className="text-xs text-text-secondary">
           Ingrediente novo de receita também aparece aqui sozinho.
         </p>
       </Card>

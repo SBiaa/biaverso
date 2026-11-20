@@ -312,7 +312,7 @@ export function RecipeFormModal({
             +
           </Button>
         </div>
-        <p className="text-[11px] text-text-secondary">
+        <p className="text-xs text-text-secondary">
           Ingrediente novo entra na despensa como “falta em casa”. Você marca o que
           tem lá.
         </p>

@@ -16,7 +16,7 @@ export function PendingItemsSection({ items }: { items: PendingItem[] }) {
               className="flex items-center justify-between gap-2 p-3"
             >
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+                <span className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary">
                   {item.kind === "post" ? "Post" : "Produção"}
                 </span>
                 <div>

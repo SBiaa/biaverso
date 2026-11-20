@@ -121,7 +121,7 @@ export function BusinessGrid({ businesses }: { businesses: BusinessItem[] }) {
                   {business.modules.map((module) => (
                     <span
                       key={module}
-                      className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary"
+                      className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary"
                     >
                       {moduleLabels[module]}
                     </span>

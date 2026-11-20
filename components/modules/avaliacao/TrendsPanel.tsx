@@ -79,7 +79,7 @@ function unitHint(kind: TrendKind, periodNoun: string) {
 function Verdict({ s }: { s: TrendSeries }) {
   if (!s.trend) {
     return (
-      <span className="shrink-0 whitespace-nowrap text-[11px] text-text-secondary opacity-70" title="Ainda não há períodos suficientes para comparar">
+      <span className="shrink-0 whitespace-nowrap text-xs text-text-secondary opacity-70" title="Ainda não há períodos suficientes para comparar">
         sem base ainda
       </span>
     );
@@ -89,7 +89,7 @@ function Verdict({ s }: { s: TrendSeries }) {
   if (direction === "up") {
     return (
       <span
-        className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-success-soft-bg px-2 py-0.5 text-[11px] font-semibold text-success-soft-text"
+        className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-success-soft-bg px-2 py-0.5 text-xs font-semibold text-success-soft-text"
         title="Subindo: a metade recente está acima da anterior"
       >
         <span aria-hidden>▲</span> subindo <span className="font-normal opacity-80">{text}</span>
@@ -99,7 +99,7 @@ function Verdict({ s }: { s: TrendSeries }) {
   if (direction === "down") {
     return (
       <span
-        className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-danger-soft-bg px-2 py-0.5 text-[11px] font-semibold text-danger-soft-text"
+        className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-danger-soft-bg px-2 py-0.5 text-xs font-semibold text-danger-soft-text"
         title="Caindo: a metade recente está abaixo da anterior"
       >
         <span aria-hidden>▼</span> caindo <span className="font-normal opacity-80">{text}</span>
@@ -108,7 +108,7 @@ function Verdict({ s }: { s: TrendSeries }) {
   }
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-hover px-2 py-0.5 text-[11px] font-semibold text-text-secondary"
+      className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-hover px-2 py-0.5 text-xs font-semibold text-text-secondary"
       title="Estável: a diferença entre as metades é pequena"
     >
       <span aria-hidden>—</span> estável
@@ -234,7 +234,7 @@ function TrendTile({
       </div>
 
       <Sparkline s={s} labels={labels} />
-      <div className="flex justify-between text-[10px] text-text-secondary opacity-80">
+      <div className="flex justify-between text-[11px] text-text-secondary opacity-80">
         <span>{labels[0]}</span>
         <span>{labels[labels.length - 1]}</span>
       </div>

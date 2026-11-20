@@ -137,7 +137,7 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
             </button>
           ))}
         </div>
-        <p className="mt-1.5 text-[11px] text-text-secondary">
+        <p className="mt-1.5 text-xs text-text-secondary">
           Pode marcar mais de um.
         </p>
       </div>
@@ -200,7 +200,7 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
             </button>
           ))}
         </div>
-        <p className="mt-1.5 text-[11px] text-text-secondary">
+        <p className="mt-1.5 text-xs text-text-secondary">
           Desmarcar só esconde a aba — nada é apagado.
         </p>
       </div>

@@ -116,7 +116,7 @@ function SortableTask({
           <div className="mt-0.5 flex flex-wrap items-center gap-2">
             {level && (
               <span
-                className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                className="rounded-full px-2 py-0.5 text-xs font-medium"
                 style={{ backgroundColor: hexToRgba(level.color, 0.14), color: level.color }}
               >
                 {level.name}

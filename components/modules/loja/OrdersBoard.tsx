@@ -70,7 +70,7 @@ export function OrdersBoard({
                           {order.record.customerName}
                         </p>
                         {order.record.orderNumber && (
-                          <span className="shrink-0 text-[11px] text-text-secondary">
+                          <span className="shrink-0 text-xs text-text-secondary">
                             #{order.record.orderNumber}
                           </span>
                         )}
@@ -85,12 +85,12 @@ export function OrdersBoard({
                       </p>
 
                       <div className="flex flex-wrap items-center gap-1">
-                        <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+                        <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
                           {formatCurrencyBRL(order.record.totalAmount)}
                         </span>
                         {order.record.totalCost > 0 && (
                           <span
-                            className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary"
+                            className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary"
                             title="Lucro depois do custo dos itens"
                           >
                             lucro{" "}
@@ -100,7 +100,7 @@ export function OrdersBoard({
                           </span>
                         )}
                         {order.collectionName && (
-                          <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+                          <span className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary">
                             {order.collectionName}
                           </span>
                         )}

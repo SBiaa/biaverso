@@ -128,7 +128,7 @@ function MonthList({
                 onClick={() => onOpen(item)}
                 className="flex min-h-11 items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-left text-sm text-text-secondary"
               >
-                <span className="shrink-0 text-[10px] font-semibold uppercase">Finalizar</span>
+                <span className="shrink-0 text-[11px] font-semibold uppercase">Finalizar</span>
                 <span className="min-w-0 flex-1">{item.title}</span>
               </button>
             ))}
@@ -280,7 +280,7 @@ function DayCell({
             type="button"
             onClick={() => onOpen(item)}
             title={`Finalizar até este dia: ${item.title}`}
-            className="flex items-start gap-1 rounded border border-dashed border-border px-1.5 py-1 text-left text-[10px] leading-tight text-text-secondary hover:bg-hover"
+            className="flex items-start gap-1 rounded border border-dashed border-border px-1.5 py-1 text-left text-[11px] leading-tight text-text-secondary hover:bg-hover"
           >
             <span className="shrink-0 font-semibold uppercase">Finalizar</span>
             <span className="line-clamp-2">{item.title}</span>
@@ -404,7 +404,7 @@ export function ProjectCalendar({
             showFinishing && "sm:flex",
           )}
         >
-          <span className="rounded border border-dashed border-border px-1 text-[10px] font-semibold uppercase">
+          <span className="rounded border border-dashed border-border px-1 text-[11px] font-semibold uppercase">
             Finalizar
           </span>
           = dia em que o post precisa estar pronto

@@ -43,7 +43,7 @@ export function CollectionsGrid({
                   <p className="text-sm font-semibold text-text-primary">{record.name}</p>
                   <span
                     className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
                       collectionStatusColors[record.status],
                     )}
                   >
@@ -61,10 +61,10 @@ export function CollectionsGrid({
                 </p>
 
                 <div className="mt-auto flex flex-wrap gap-1 pt-1">
-                  <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+                  <span className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary">
                     {productCount} produto(s)
                   </span>
-                  <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+                  <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
                     {orderCount} pedido(s) · {formatCurrencyBRL(ordersTotal)}
                   </span>
                 </div>

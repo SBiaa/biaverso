@@ -143,7 +143,7 @@ export function ClientsTable({
                             }
                           />
                           {pipeline && link.status === "PROSPECT" && (
-                            <span className="rounded-full bg-warning-soft-bg px-2 py-0.5 text-[10px] font-medium text-warning-soft-text">
+                            <span className="rounded-full bg-warning-soft-bg px-2 py-0.5 text-xs font-medium text-warning-soft-text">
                               {prospectStageLabels[link.stage ?? "NOVO_CONTATO"]}
                             </span>
                           )}

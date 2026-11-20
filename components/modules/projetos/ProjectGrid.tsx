@@ -95,7 +95,7 @@ export function ProjectGrid({
                     </p>
                     <div className="flex shrink-0 items-center gap-1">
                       <span
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
                         style={{
                           backgroundColor: hexToRgba(statusColor, 0.12),
                           color: statusColor,
@@ -131,7 +131,7 @@ export function ProjectGrid({
                   </p>
 
                   <div className="mt-auto flex flex-col gap-1.5 pt-1">
-                    <div className="flex items-center justify-between text-[11px] text-text-secondary">
+                    <div className="flex items-center justify-between text-xs text-text-secondary">
                       <span>
                         {project.doneItems}/{project.totalItems} concluídas
                       </span>
@@ -147,7 +147,7 @@ export function ProjectGrid({
                     {project.nextDeadline && (
                       <span
                         className={cn(
-                          "flex items-center gap-1 text-[11px]",
+                          "flex items-center gap-1 text-xs",
                           project.overdue
                             ? "font-medium text-danger"
                             : "text-text-secondary",

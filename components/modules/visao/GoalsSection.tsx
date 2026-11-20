@@ -121,7 +121,7 @@ function ConceptualGoalMeta({
   const level = levels.find((l) => l.id === goal.priorityLevelId);
 
   return (
-    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
       <span className="rounded-full bg-border px-2 py-0.5 font-medium text-text-secondary">
         {measuredGoalStatusLabels[goal.status] ?? goal.status}
       </span>

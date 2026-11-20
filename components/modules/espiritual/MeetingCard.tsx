@@ -144,7 +144,7 @@ export function MeetingCard({ meeting }: { meeting: MeetingView }) {
             <AttentionBadge level="neutro">Não fui</AttentionBadge>
           )}
           {meeting.onAgenda && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-text-secondary">
+            <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
               <CalendarCheck size={12} />
               na agenda
             </span>

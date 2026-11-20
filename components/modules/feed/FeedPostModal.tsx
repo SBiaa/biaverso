@@ -189,7 +189,7 @@ export function FeedPostModal({
               Tirar imagem
             </button>
           )}
-          <p className="text-[11px] leading-tight text-text-secondary">
+          <p className="text-xs leading-tight text-text-secondary">
             As faixas escuras ficam de fora no grid (3:4).
           </p>
         </div>

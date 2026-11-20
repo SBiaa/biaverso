@@ -84,7 +84,7 @@ export function ShoppingList({
                 >
                   {row.name}
                 </span>
-                <span className="text-[11px] text-text-secondary">
+                <span className="text-xs text-text-secondary">
                   {row.uses
                     .map(
                       (use) =>

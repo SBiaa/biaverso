@@ -96,7 +96,7 @@ export function RecipeCard({
             <p className="text-xs font-medium text-text-primary">Ingredientes</p>
             <span
               className={cn(
-                "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                "rounded-full px-2 py-0.5 text-xs font-medium",
                 recipe.missing === 0
                   ? "bg-success-soft-bg text-success-soft-text"
                   : "bg-warning-soft-bg text-warning-soft-text",
@@ -126,7 +126,7 @@ export function RecipeCard({
             ))}
           </ul>
           {missingNames.length > 0 && (
-            <p className="text-[11px] text-text-secondary">
+            <p className="text-xs text-text-secondary">
               Comprar: {missingNames.join(", ")}
             </p>
           )}

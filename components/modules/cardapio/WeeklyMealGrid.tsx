@@ -163,7 +163,7 @@ export function WeeklyMealGrid({
                           isToday ? "border-accent/40" : "border-border",
                         )}
                       >
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-text-secondary">
+                        <span className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
                           {mealTypeLabels[mealType]}
                         </span>
                         <span className="text-xs text-text-primary">

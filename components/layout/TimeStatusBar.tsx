@@ -327,13 +327,13 @@ export function TimeStatusBar() {
         className="hidden items-center gap-3 rounded-md px-2 py-1 hover:bg-border/40 sm:flex"
       >
         <span className="flex flex-col leading-tight">
-          <span className="text-[10px] uppercase tracking-wide text-text-secondary">Hoje</span>
+          <span className="text-[11px] uppercase tracking-wide text-text-secondary">Hoje</span>
           <span className="font-semibold text-text-primary">
             {formatDurationMinutes(trackedMinutes)}
           </span>
         </span>
         <span className="flex flex-col leading-tight">
-          <span className="text-[10px] uppercase tracking-wide text-text-secondary">
+          <span className="text-[11px] uppercase tracking-wide text-text-secondary">
             Sem registro
           </span>
           <span

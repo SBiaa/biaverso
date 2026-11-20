@@ -92,7 +92,7 @@ export function StudyOverview({ stats }: { stats: StudyStats }) {
                 />
                 <span
                   className={cn(
-                    "text-[10px] tabular-nums",
+                    "text-[11px] tabular-nums",
                     i === stats.activity.length - 1
                       ? "font-semibold text-text-primary"
                       : "text-text-secondary",

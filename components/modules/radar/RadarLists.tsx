@@ -252,7 +252,7 @@ export function RadarRoutines({ routines }: { routines: RoutineSignal[] }) {
         >
           <p className="text-sm font-medium text-text-primary">{routine.title}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-            <span className="rounded-full bg-badge-casa-bg px-2 py-0.5 text-[11px] font-medium text-badge-casa-text">
+            <span className="rounded-full bg-badge-casa-bg px-2 py-0.5 text-xs font-medium text-badge-casa-text">
               {taskTypeLabels[routine.type] ?? routine.type}
             </span>
             <ConsistencyLabel

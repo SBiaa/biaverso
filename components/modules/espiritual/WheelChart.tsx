@@ -124,7 +124,7 @@ export function WheelChart({
               y={ly + 14}
               textAnchor={anchor}
               dominantBaseline="middle"
-              className="fill-text-secondary text-[10px] opacity-70"
+              className="fill-text-secondary text-[11px] opacity-70"
             >
               {formatDateBR(sabbat.date).slice(0, 5)}
             </text>

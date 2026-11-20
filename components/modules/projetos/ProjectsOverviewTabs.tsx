@@ -119,13 +119,13 @@ export function ProjectsOverviewTabs({
                               {item.kind === "project" ? `Fim: ${item.title}` : item.title}
                             </span>
                           </span>
-                          <span className="block truncate text-[11px] text-text-secondary">
+                          <span className="block truncate text-xs text-text-secondary">
                             {item.context?.projectName} · {item.context?.businessName}
                           </span>
                         </span>
                         <span
                           className={cn(
-                            "shrink-0 text-[11px]",
+                            "shrink-0 text-xs",
                             late ? "font-medium text-danger" : "text-text-secondary",
                           )}
                         >
@@ -138,7 +138,7 @@ export function ProjectsOverviewTabs({
               </ul>
             )}
             {overdue.length > 0 && (
-              <p className="mt-2 text-[11px] font-medium text-danger">
+              <p className="mt-2 text-xs font-medium text-danger">
                 {overdue.length} {overdue.length === 1 ? "atrasado" : "atrasados"} no total
               </p>
             )}

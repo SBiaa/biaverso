@@ -86,7 +86,7 @@ export function ProjectDocuments({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium"
                   style={{
                     backgroundColor: hexToRgba(documentTypeColors[doc.type] ?? "#6B7280", 0.12),
                     color: documentTypeColors[doc.type] ?? "#6B7280",

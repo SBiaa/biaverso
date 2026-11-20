@@ -48,7 +48,7 @@ export function CommandPaletteTrigger() {
     >
       <Search size={15} className="shrink-0" />
       <span className="flex-1 text-left">Buscar</span>
-      <kbd className="rounded border border-border bg-background px-1.5 py-0.5 font-sans text-[11px] text-text-secondary">
+      <kbd className="rounded border border-border bg-background px-1.5 py-0.5 font-sans text-xs text-text-secondary">
         Ctrl K
       </kbd>
     </button>

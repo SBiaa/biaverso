@@ -225,7 +225,7 @@ export function ProjectDevLog({
                 <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
                   <span>{formatDateBR(new Date(entry.date))}</span>
                   <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
                     style={{
                       backgroundColor: hexToRgba(devLogKindColors[entry.kind] ?? "#6B7280", 0.12),
                       color: devLogKindColors[entry.kind] ?? "#6B7280",

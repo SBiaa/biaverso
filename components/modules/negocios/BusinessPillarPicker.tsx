@@ -95,7 +95,7 @@ export function BusinessPillarPicker({
           );
         })}
       </div>
-      <p className="text-[11px] text-text-secondary">Pode marcar mais de um.</p>
+      <p className="text-xs text-text-secondary">Pode marcar mais de um.</p>
       <ErrorNote message={error} />
     </div>
   );

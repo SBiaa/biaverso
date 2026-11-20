@@ -241,7 +241,7 @@ export function MeasuredGoalsTable({
                     </select>
                     {conceptual && (
                       <span
-                        className="ml-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        className="ml-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
                         style={{
                           backgroundColor: hexToRgba(conceptual.pillarColor, 0.14),
                           color: conceptual.pillarColor,
