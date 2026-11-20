@@ -126,7 +126,7 @@ export function ProjectsOverviewTabs({
                         <span
                           className={cn(
                             "shrink-0 text-[11px]",
-                            late ? "font-medium text-red-600" : "text-text-secondary",
+                            late ? "font-medium text-danger" : "text-text-secondary",
                           )}
                         >
                           {formatDateBR(new Date(item.date!))}
@@ -138,7 +138,7 @@ export function ProjectsOverviewTabs({
               </ul>
             )}
             {overdue.length > 0 && (
-              <p className="mt-2 text-[11px] font-medium text-red-600">
+              <p className="mt-2 text-[11px] font-medium text-danger">
                 {overdue.length} {overdue.length === 1 ? "atrasado" : "atrasados"} no total
               </p>
             )}

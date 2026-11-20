@@ -149,7 +149,7 @@ export function ProjectGrid({
                         className={cn(
                           "flex items-center gap-1 text-[11px]",
                           project.overdue
-                            ? "font-medium text-red-600"
+                            ? "font-medium text-danger"
                             : "text-text-secondary",
                         )}
                       >

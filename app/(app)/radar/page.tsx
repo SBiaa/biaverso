@@ -21,7 +21,7 @@ export default async function RadarPage() {
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         {radar.total === 0 ? (
           <Card className="flex flex-col items-center gap-2 py-10 text-center">
-            <Sparkles size={28} className="text-emerald-600" />
+            <Sparkles size={28} className="text-success" />
             <p className="text-sm font-medium text-text-primary">
               Nada parado por aqui.
             </p>

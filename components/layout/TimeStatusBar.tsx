@@ -339,7 +339,7 @@ export function TimeStatusBar() {
           <span
             className={cn(
               "font-semibold",
-              untrackedMinutes >= 60 ? "text-amber-600" : "text-text-primary",
+              untrackedMinutes >= 60 ? "text-warning" : "text-text-primary",
             )}
           >
             {formatDurationMinutes(untrackedMinutes)}
@@ -415,7 +415,7 @@ export function TimeStatusBar() {
       )}
 
       {failed && (
-        <span className="text-red-600" title="Não consegui atualizar as horas">
+        <span className="text-danger" title="Não consegui atualizar as horas">
           !
         </span>
       )}

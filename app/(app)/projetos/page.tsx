@@ -73,7 +73,7 @@ export default async function ProjetosPage({
             label="Projetos atrasados"
             value={summary.overdueProjects}
             icon={<AlertTriangle size={16} className="text-text-secondary" />}
-            valueClassName={summary.overdueProjects > 0 ? "text-red-600" : undefined}
+            valueClassName={summary.overdueProjects > 0 ? "text-danger" : undefined}
           />
         </div>
 

@@ -56,12 +56,12 @@ export function IncomeReceivedToggle({
         "-m-2.5 flex size-11 shrink-0 items-center justify-center rounded-full",
         "transition-colors hover:bg-hover-strong disabled:opacity-50",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-        error && "text-red-600",
+        error && "text-danger",
         className,
       )}
     >
       {received ? (
-        <CheckCircle2 size={18} className={cn(!error && "text-emerald-600")} />
+        <CheckCircle2 size={18} className={cn(!error && "text-success")} />
       ) : (
         <Circle size={18} className={cn(!error && "text-text-secondary")} />
       )}

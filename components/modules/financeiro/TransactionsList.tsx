@@ -119,10 +119,10 @@ export function TransactionsList({
                   className={cn(
                     "mr-auto whitespace-nowrap font-medium tabular-nums sm:mr-0",
                     t.type !== "ENTRADA"
-                      ? "text-red-600"
+                      ? "text-danger"
                       : t.received === false
                         ? "text-text-secondary"
-                        : "text-emerald-600",
+                        : "text-success",
                   )}
                 >
                   {t.type === "ENTRADA" ? "+" : "-"}

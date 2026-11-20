@@ -33,9 +33,13 @@
   --danger-solid-text: #ffffff;
   --danger-soft-bg: #fef2f2;
   --danger-soft-text: #991b1b;
+  /* Texto/borda de aviso solto (sem fundo). Âmbar-700 e não 600: o 600 sobre
+     branco fica em 3:1 e some em letra pequena. */
+  --warning: #b45309;
   --warning-soft-bg: #fef3c7;
   --warning-soft-text: #92400e;
-  --success: #059669;
+  /* Esmeralda-700: o 600 de antes ficava abaixo de 4.5:1 sobre o branco. */
+  --success: #047857;
   --success-soft-bg: #ecfdf5;
   --success-soft-text: #065f46;
 
@@ -70,6 +74,7 @@
   --color-danger-solid-text: var(--danger-solid-text);
   --color-danger-soft-bg: var(--danger-soft-bg);
   --color-danger-soft-text: var(--danger-soft-text);
+  --color-warning: var(--warning);
   --color-warning-soft-bg: var(--warning-soft-bg);
   --color-warning-soft-text: var(--warning-soft-text);
   --color-success: var(--success);
@@ -123,6 +128,7 @@
   --danger-solid-text: #fee2e2;
   --danger-soft-bg: #450a0a;
   --danger-soft-text: #fca5a5;
+  --warning: #fbbf24;
   --warning-soft-bg: #422006;
   --warning-soft-text: #fcd34d;
   --success: #34d399;

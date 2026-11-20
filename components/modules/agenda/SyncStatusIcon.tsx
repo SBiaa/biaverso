@@ -6,11 +6,11 @@ export function SyncStatusIcon({ status }: { status: string }) {
   const label = syncStatusLabels[status] ?? status;
 
   if (status === "SINCRONIZADO") {
-    return <Check size={14} className="shrink-0 text-emerald-600" aria-label={label} />;
+    return <Check size={14} className="shrink-0 text-success" aria-label={label} />;
   }
 
   if (status === "ERRO") {
-    return <AlertCircle size={14} className="shrink-0 text-red-600" aria-label={label} />;
+    return <AlertCircle size={14} className="shrink-0 text-danger" aria-label={label} />;
   }
 
   return <Clock size={14} className="shrink-0 text-text-secondary" aria-label={label} />;

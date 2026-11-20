@@ -105,7 +105,7 @@ export default async function ProdutosPage({
             label="Sem custo cadastrado"
             value={String(semCusto)}
             icon={<AlertTriangle size={16} className="text-text-secondary" />}
-            valueClassName={semCusto > 0 ? "text-amber-600" : undefined}
+            valueClassName={semCusto > 0 ? "text-warning" : undefined}
           />
           <StatCard
             label="Margem média"

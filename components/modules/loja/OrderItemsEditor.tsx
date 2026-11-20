@@ -359,7 +359,7 @@ export function OrderItemsEditor({
                   onClick={() => setDrafts(drafts.filter((d) => d.key !== draft.key))}
                   aria-label={`Remover ${draft.name || "item"}`}
                   tone="danger"
-                  className="hover:bg-red-50"
+                  className="hover:bg-danger-soft-bg"
                 >
                   <Trash2 size={15} />
                 </IconButton>

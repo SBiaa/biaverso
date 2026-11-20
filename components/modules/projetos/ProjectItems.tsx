@@ -322,7 +322,7 @@ export function ProjectItems({
             value={item.date}
             emptyLabel="Sem data"
             label={item.kind === "post" ? "Data de publicação" : "Prazo"}
-            className={cn(late && "font-medium text-red-600")}
+            className={cn(late && "font-medium text-danger")}
             onSave={(date) => changeDate(item, date)}
           />
           {late && (
@@ -371,7 +371,7 @@ export function ProjectItems({
               {openCount === 1 ? "aberto" : "abertos"}
             </span>
             {lateCount > 0 && (
-              <span className="font-medium text-red-600">
+              <span className="font-medium text-danger">
                 {lateCount} {lateCount === 1 ? "atrasado" : "atrasados"}
               </span>
             )}
@@ -572,7 +572,7 @@ function ItemSection({
           colSpan={5}
           className={cn(
             "pb-1.5 pt-4 text-left text-xs font-semibold",
-            tone === "late" ? "text-red-600" : "text-text-secondary",
+            tone === "late" ? "text-danger" : "text-text-secondary",
           )}
         >
           {onToggle ? (

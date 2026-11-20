@@ -54,7 +54,7 @@ export function ProjectDocumentation({
         </Button>
         {!dirty && !saving && (
           <span className="flex items-center gap-1 text-xs text-text-secondary">
-            <Check size={14} className="text-emerald-600" />
+            <Check size={14} className="text-success" />
             Tudo salvo
           </span>
         )}

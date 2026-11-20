@@ -6,8 +6,8 @@ import type { WaitingChat } from "@/lib/whatsapp";
 
 const tierStyles: Record<WaitingTier, string> = {
   ok: "text-text-secondary",
-  warn: "text-amber-600",
-  late: "text-red-600",
+  warn: "text-warning",
+  late: "text-danger",
 };
 
 function Row({ chat, now }: { chat: WaitingChat; now: number }) {

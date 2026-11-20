@@ -265,7 +265,7 @@ export function ProductCostEditor({
                 onClick={() => handleDelete(item.id)}
                 aria-label={`Remover ${item.label}`}
                 tone="danger"
-                className="hover:bg-red-50"
+                className="hover:bg-danger-soft-bg"
               >
                 <Trash2 size={15} />
               </IconButton>

@@ -223,7 +223,7 @@ export function FeedWorkspace({
             </CardTitle>
             {warnings.length === 0 ? (
               <p className="flex items-center gap-2 text-sm text-text-secondary">
-                <CheckCircle2 size={16} className="text-emerald-600" />
+                <CheckCircle2 size={16} className="text-success" />
                 Nada a ajustar até {shortDate(until)}.
               </p>
             ) : (
@@ -233,7 +233,7 @@ export function FeedWorkspace({
                     key={w.id}
                     onMouseEnter={() => setHighlighted(new Set(w.postIds))}
                     onMouseLeave={() => setHighlighted(new Set())}
-                    className="flex gap-2 rounded-md bg-amber-50 p-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
+                    className="flex gap-2 rounded-md bg-warning-soft-bg p-2 text-sm text-warning-soft-text"
                   >
                     <AlertTriangle size={16} className="mt-0.5 shrink-0" />
                     <span>{w.message}</span>

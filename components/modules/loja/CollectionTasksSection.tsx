@@ -136,7 +136,7 @@ function SortableTask({
           <p
             className={cn(
               "text-xs",
-              overdue ? "font-medium text-red-600" : "text-text-secondary",
+              overdue ? "font-medium text-danger" : "text-text-secondary",
             )}
           >
             {overdue ? "Atrasada — " : "Prazo: "}

@@ -528,7 +528,7 @@ export function ProductionTaskModal({
               variant="ghost"
               onClick={handleDelete}
               disabled={deleting}
-              className="text-red-600 hover:bg-red-50"
+              className="text-danger hover:bg-danger-soft-bg"
             >
               Excluir
             </Button>

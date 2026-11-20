@@ -49,7 +49,7 @@ export function EstimateInput({
       title='Ex.: 45, 1h30, 2h'
       className={cn(
         "w-16 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-text-primary outline-none placeholder:text-text-secondary/60 hover:border-border focus:border-border focus:ring-2 focus:ring-accent disabled:opacity-50",
-        invalid && "border-red-500",
+        invalid && "border-danger",
       )}
     />
   );
@@ -85,7 +85,7 @@ export function DateInput({
       className={cn(
         "w-[8.5rem] cursor-pointer rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm outline-none hover:border-border focus:border-border focus:ring-2 focus:ring-accent",
         late
-          ? "font-medium text-red-600"
+          ? "font-medium text-danger"
           : current
             ? "text-text-secondary"
             : "text-text-secondary/60",

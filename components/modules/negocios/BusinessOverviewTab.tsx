@@ -137,7 +137,7 @@ export function BusinessOverviewTab({
       label: "Saldo do mês",
       value: formatCurrencyBRL(stats.monthBalance),
       icon: <Wallet size={16} className="text-text-secondary" />,
-      valueClassName: stats.monthBalance >= 0 ? "text-emerald-600" : "text-red-600",
+      valueClassName: stats.monthBalance >= 0 ? "text-success" : "text-danger",
     },
   ].filter(Boolean) as {
     label: string;
@@ -149,7 +149,7 @@ export function BusinessOverviewTab({
   return (
     <div className="flex flex-col gap-4">
       {overdueCount > 0 && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-600/20 bg-red-600/5 p-3 text-sm text-red-600">
+        <div className="flex items-center gap-2 rounded-lg border border-danger/20 bg-danger-soft-bg p-3 text-sm text-danger-soft-text">
           <AlertTriangle size={16} className="shrink-0" />
           <span>
             {overdueCount === 1
@@ -215,7 +215,7 @@ export function BusinessOverviewTab({
                   <span
                     className={cn(
                       "shrink-0 whitespace-nowrap text-xs",
-                      item.overdue ? "font-medium text-red-600" : "text-text-secondary",
+                      item.overdue ? "font-medium text-danger" : "text-text-secondary",
                     )}
                   >
                     {formatDateBR(new Date(item.date))}
@@ -253,7 +253,7 @@ export function BusinessOverviewTab({
                 <span
                   className={cn(
                     "shrink-0 font-medium",
-                    t.type === "ENTRADA" ? "text-emerald-600" : "text-red-600",
+                    t.type === "ENTRADA" ? "text-success" : "text-danger",
                   )}
                 >
                   {t.type === "ENTRADA" ? "+" : "−"}

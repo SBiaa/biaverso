@@ -93,7 +93,7 @@ export function ProductCard({
 
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
           {!hasCost && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
+            <span className="rounded-full bg-warning-soft-bg px-2 py-0.5 font-medium text-warning-soft-text">
               Sem custo cadastrado
             </span>
           )}

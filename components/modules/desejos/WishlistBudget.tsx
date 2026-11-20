@@ -95,8 +95,8 @@ export function WishlistBudget({
           <span
             className={
               balance >= 0
-                ? "font-semibold text-emerald-600"
-                : "font-semibold text-red-600"
+                ? "font-semibold text-success"
+                : "font-semibold text-danger"
             }
           >
             {formatCurrencyBRL(balance)}

@@ -206,7 +206,7 @@ export function CredentialsPanel({
                       className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
                     >
                       {copied === `${id}-login` ? (
-                        <Check size={14} className="text-emerald-600" />
+                        <Check size={14} className="text-success" />
                       ) : (
                         <User size={14} />
                       )}
@@ -219,7 +219,7 @@ export function CredentialsPanel({
                     className="rounded-md p-1.5 text-text-secondary hover:bg-hover hover:text-text-primary"
                   >
                     {copied === `${id}-pass` ? (
-                      <Check size={14} className="text-emerald-600" />
+                      <Check size={14} className="text-success" />
                     ) : (
                       <Lock size={14} />
                     )}

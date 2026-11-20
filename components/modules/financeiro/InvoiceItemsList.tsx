@@ -251,18 +251,20 @@ export function InvoiceItemsList({
       <ErrorNote message={listError} />
       <ul className="flex flex-col divide-y divide-border">
         {items.map((item) => {
+          // As duas linhas quebram em duas no celular: descrição em cima, valor
+          // e ações embaixo. Numa linha só, o valor saía da tela de 375px.
           if (item.kind === "ASSINATURA") {
             return (
               <li
                 key={item.id}
-                className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                className="flex flex-col gap-2 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <Badge className="bg-badge-tarot-bg text-badge-tarot-text">
                     Assinatura
                   </Badge>
-                  <div>
-                    <p className="text-text-primary">{item.description}</p>
+                  <div className="min-w-0">
+                    <p className="break-words text-text-primary">{item.description}</p>
                     <p className="text-xs text-text-secondary">
                       vence dia {item.dueDay}
                       {item.fixedBillType
@@ -271,7 +273,7 @@ export function InvoiceItemsList({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center justify-end gap-3">
                   <BillAmountOverride
                     logId={item.id}
                     amount={item.amount}
@@ -293,12 +295,12 @@ export function InvoiceItemsList({
           return (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-3 py-2.5 text-sm"
+              className="flex flex-col gap-2 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <BusinessBadge business={item.business} />
-                <div>
-                  <p className="text-text-primary">{item.description}</p>
+                <div className="min-w-0">
+                  <p className="break-words text-text-primary">{item.description}</p>
                   <p className="text-xs text-text-secondary">
                     {formatDateBR(new Date(item.date))}
                     {item.category
@@ -308,7 +310,7 @@ export function InvoiceItemsList({
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center justify-end gap-3">
                 <span className="font-medium text-text-primary">
                   {formatCurrencyBRL(item.amount)}
                 </span>

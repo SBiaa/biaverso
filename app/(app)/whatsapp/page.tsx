@@ -17,7 +17,7 @@ export default async function WhatsappPage() {
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         {!board.hasData ? (
           <Card className="flex flex-col items-center gap-2 py-10 text-center">
-            <MessageCircle size={28} className="text-emerald-600" />
+            <MessageCircle size={28} className="text-success" />
             <p className="text-sm font-medium text-text-primary">
               Ainda não chegou nenhuma mensagem.
             </p>

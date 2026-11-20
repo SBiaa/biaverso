@@ -73,7 +73,7 @@ function IconButton({
       onClick={onClick}
       disabled={disabled}
       className={`rounded-md p-1.5 text-text-secondary transition-colors hover:bg-hover disabled:pointer-events-none disabled:opacity-40 ${
-        danger ? "hover:text-red-600" : "hover:text-text-primary"
+        danger ? "hover:text-danger" : "hover:text-text-primary"
       }`}
     >
       {children}

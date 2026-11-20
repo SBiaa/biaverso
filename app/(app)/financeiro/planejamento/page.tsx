@@ -61,8 +61,8 @@ export default async function PlanejamentoPage({
           <StatCard
             label="Já caiu na conta"
             value={formatCurrencyBRL(plan.incomeReceivedTotal)}
-            icon={<TrendingUp size={16} className="text-emerald-600" />}
-            valueClassName="text-emerald-600"
+            icon={<TrendingUp size={16} className="text-success" />}
+            valueClassName="text-success"
           />
           <StatCard
             label="Previsto para cair"
@@ -73,15 +73,15 @@ export default async function PlanejamentoPage({
           <StatCard
             label={previsto ? "Saiu previsto" : "Saiu"}
             value={formatCurrencyBRL(plan.expenseTotal)}
-            icon={<TrendingDown size={16} className="text-red-600" />}
-            valueClassName="text-red-600"
+            icon={<TrendingDown size={16} className="text-danger" />}
+            valueClassName="text-danger"
           />
           <StatCard
             label={previsto ? "Saldo projetado" : "Saldo do mês"}
             value={formatCurrencyBRL(plan.balance)}
             icon={<Wallet size={16} className="text-text-secondary" />}
             valueClassName={
-              plan.balance >= 0 ? "text-emerald-600" : "text-red-600"
+              plan.balance >= 0 ? "text-success" : "text-danger"
             }
           />
         </div>
@@ -167,7 +167,7 @@ export default async function PlanejamentoPage({
               <CardTitle className="mb-3 flex items-center gap-2">
                 Cartão de crédito — projeção
                 {plan.invoice.status === "PAGA" && (
-                  <Badge className="bg-emerald-500/10 text-emerald-600">
+                  <Badge className="bg-success-soft-bg text-success-soft-text">
                     Fatura paga
                   </Badge>
                 )}
@@ -258,7 +258,7 @@ export default async function PlanejamentoPage({
                         <span
                           className={
                             income.received
-                              ? "font-medium text-emerald-600"
+                              ? "font-medium text-success"
                               : "font-medium text-text-secondary"
                           }
                         >
@@ -301,7 +301,7 @@ export default async function PlanejamentoPage({
                           </p>
                         </div>
                       </div>
-                      <span className="font-medium text-red-600">
+                      <span className="font-medium text-danger">
                         {formatCurrencyBRL(expense.amount)}
                       </span>
                     </li>

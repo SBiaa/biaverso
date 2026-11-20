@@ -78,7 +78,7 @@ export function GoogleCalendarCard({
       <CardTitle>Google Calendar</CardTitle>
 
       {message && (
-        <p className={cn("text-xs", message.error ? "text-red-600" : "text-emerald-600")}>
+        <p className={cn("text-xs", message.error ? "text-danger" : "text-success")}>
           {message.text}
         </p>
       )}
@@ -138,7 +138,7 @@ export function GoogleCalendarCard({
 
           {status.lastSync?.errors && (
             <details className="text-xs text-text-secondary">
-              <summary className="cursor-pointer text-red-600">
+              <summary className="cursor-pointer text-danger">
                 Erros na última sincronização
               </summary>
               <pre className="mt-1 whitespace-pre-wrap break-words">
@@ -147,7 +147,7 @@ export function GoogleCalendarCard({
             </details>
           )}
 
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
 
           <div className="flex flex-wrap items-center gap-2">
             <SyncNowButton />

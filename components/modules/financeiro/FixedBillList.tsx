@@ -273,8 +273,10 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
             key={item.logId}
             // A borda vermelha na lateral: numa lista de dez contas, o selo
             // "Atrasado" à direita só aparece depois de ler a linha inteira.
+            // No celular a linha quebra em duas: nome em cima; status, valor e
+            // ações embaixo. Numa linha só passava 85px da tela de 375.
             className={cn(
-              "group flex items-center justify-between",
+              "group flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
               attentionBorder[statusLevel[item.status] ?? "neutro"],
             )}
           >
@@ -287,8 +289,8 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
                   ) : (
                     <Circle size={18} className="text-text-secondary" />
                   )}
-                  <div>
-                    <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-text-primary">
                       {item.name}
                       {onCard && (
                         <Badge className="bg-badge-tarot-bg text-badge-tarot-text">
@@ -309,7 +311,7 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
               return onCard ? (
                 <div
                   title="Essa conta é paga junto com a fatura do cartão."
-                  className="flex items-center gap-3 text-left"
+                  className="flex min-w-0 items-center gap-3 text-left"
                 >
                   {content}
                 </div>
@@ -317,13 +319,14 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
                 <button
                   type="button"
                   onClick={() => toggle(item.logId)}
-                  className="flex items-center gap-3 text-left"
+                  className="flex min-w-0 items-center gap-3 text-left"
                 >
                   {content}
                 </button>
               );
             })()}
-            <div className="flex items-center gap-3">
+            {/* pl-[30px]: alinha com o nome, depois do círculo de marcar. */}
+            <div className="flex shrink-0 items-center gap-3 pl-[30px] sm:pl-0">
               <AttentionBadge
                 level={statusLevel[item.status] ?? "neutro"}
                 className="px-2.5 text-xs"

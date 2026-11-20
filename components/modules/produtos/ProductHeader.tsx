@@ -97,7 +97,7 @@ export function ProductHeader({
             variant="ghost"
             onClick={handleDelete}
             disabled={busy}
-            className="text-red-600 hover:bg-red-50"
+            className="text-danger hover:bg-danger-soft-bg"
           >
             <Trash2 size={14} />
             Excluir

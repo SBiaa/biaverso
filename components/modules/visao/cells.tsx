@@ -100,7 +100,7 @@ export function AmountCell({
       title="Ex.: 1800, 1.800, 7k"
       className={cn(
         "w-20 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-text-primary outline-none placeholder:text-text-secondary/60 hover:border-border focus:border-border focus:ring-2 focus:ring-accent",
-        invalid && "border-red-500",
+        invalid && "border-danger",
       )}
     />
   );

@@ -26,7 +26,7 @@ export default async function SenhasPage() {
       <Topbar title="Senhas" />
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <div className="flex items-start gap-2 rounded-lg border border-border bg-surface p-3 text-xs text-text-secondary">
-          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-success" />
           <span>
             As senhas ficam criptografadas no banco (AES-256-GCM). Quem entra no
             app com a senha de acesso continua vendo tudo — é para isso que o

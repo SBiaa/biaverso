@@ -274,7 +274,7 @@ function TaskRow({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 {task.urgent && !task.done && (
-                  <AlertTriangle size={14} className="shrink-0 text-red-600" />
+                  <AlertTriangle size={14} className="shrink-0 text-danger" />
                 )}
                 {/* O título abre o painel com tudo da tarefa. */}
                 <button
@@ -810,7 +810,7 @@ export function WorkTasksToday({
           {range !== "done" && (
             <>
               {lateCount > 0 && (
-                <span className="font-medium text-red-600">
+                <span className="font-medium text-danger">
                   {lateCount} {lateCount === 1 ? "atrasada" : "atrasadas"}
                 </span>
               )}

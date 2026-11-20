@@ -583,7 +583,7 @@ async function BusinessTabContent({
           <StatCard
             label="Saldo do mês"
             value={formatCurrencyBRL(saldo)}
-            valueClassName={saldo >= 0 ? "text-emerald-600" : "text-red-600"}
+            valueClassName={saldo >= 0 ? "text-success" : "text-danger"}
           />
         </div>
 
@@ -611,8 +611,8 @@ async function BusinessTabContent({
                   <span
                     className={
                       t.type === "ENTRADA"
-                        ? "font-medium text-emerald-600"
-                        : "font-medium text-red-600"
+                        ? "font-medium text-success"
+                        : "font-medium text-danger"
                     }
                   >
                     {t.type === "ENTRADA" ? "+" : "−"}

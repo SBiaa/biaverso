@@ -116,8 +116,8 @@ export default async function FinanceiroPage() {
           <StatCard
             label="Já caiu na conta"
             value={formatCurrencyBRL(data.entradas)}
-            icon={<TrendingUp size={16} className="text-emerald-600" />}
-            valueClassName="text-emerald-600"
+            icon={<TrendingUp size={16} className="text-success" />}
+            valueClassName="text-success"
           />
           <StatCard
             label="Previsto para cair"
@@ -128,14 +128,14 @@ export default async function FinanceiroPage() {
           <StatCard
             label="Total saiu"
             value={formatCurrencyBRL(data.saidas)}
-            icon={<TrendingDown size={16} className="text-red-600" />}
-            valueClassName="text-red-600"
+            icon={<TrendingDown size={16} className="text-danger" />}
+            valueClassName="text-danger"
           />
           <StatCard
             label="Saldo do mês"
             value={formatCurrencyBRL(data.saldo)}
             icon={<Wallet size={16} className="text-text-secondary" />}
-            valueClassName={data.saldo >= 0 ? "text-emerald-600" : "text-red-600"}
+            valueClassName={data.saldo >= 0 ? "text-success" : "text-danger"}
           />
           <StatCard
             // Cinco cards em duas colunas deixam o último sozinho na linha,
@@ -147,7 +147,7 @@ export default async function FinanceiroPage() {
               <CreditCard
                 size={16}
                 className={
-                  data.faturaPaga ? "text-emerald-600" : "text-text-secondary"
+                  data.faturaPaga ? "text-success" : "text-text-secondary"
                 }
               />
             }
@@ -173,7 +173,7 @@ export default async function FinanceiroPage() {
                     >
                       <BusinessBadge business={item.business} />
                       <span className="text-right">
-                        <span className="font-medium text-emerald-600">
+                        <span className="font-medium text-success">
                           {formatCurrencyBRL(item.recebido)}
                         </span>
                         {item.previsto > 0 && (

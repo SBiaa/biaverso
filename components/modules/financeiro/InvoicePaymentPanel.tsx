@@ -52,7 +52,7 @@ export function InvoicePaymentPanel({ invoice }: { invoice: Invoice }) {
         <ErrorNote message={error} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-sm text-text-primary">
-            <CheckCircle2 size={16} className="text-emerald-600" />
+            <CheckCircle2 size={16} className="text-success" />
             Fatura paga
             {invoice.paidAt && ` em ${formatDateBR(new Date(invoice.paidAt))}`}
             {invoice.paidAmount !== null && (

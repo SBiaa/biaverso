@@ -20,7 +20,7 @@ export async function RadarHomeNote() {
       href="/radar"
       className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-4 py-2.5 text-sm text-text-primary transition-colors hover:bg-hover"
     >
-      <Radar size={16} className="shrink-0 text-amber-600" />
+      <Radar size={16} className="shrink-0 text-warning" />
       <span className="flex-1">
         <strong className="font-semibold">{total}</strong>{" "}
         {total === 1 ? "coisa parada" : "coisas paradas"} esperando você decidir

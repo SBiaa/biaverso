@@ -87,7 +87,7 @@ function NoteField({
         aria-label={label}
         className="w-full resize-y rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary outline-none placeholder:text-text-secondary/60 hover:border-border focus:border-border focus:ring-2 focus:ring-accent"
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </section>
   );
 }
@@ -300,7 +300,7 @@ export function TaskPeek({
                       // fica marcado para ela escolher.
                       task.project
                         ? "border-transparent font-medium text-text-primary"
-                        : "border-dashed border-amber-400 text-amber-700",
+                        : "border-dashed border-warning text-warning",
                     )}
                   >
                     <option value="">Sem projeto — escolher</option>
@@ -332,7 +332,7 @@ export function TaskPeek({
               ) : (
                 <span className="px-1.5 text-text-secondary/60">Sem projeto</span>
               )}
-              {projectError && <p className="text-xs text-red-600">{projectError}</p>}
+              {projectError && <p className="text-xs text-danger">{projectError}</p>}
             </Property>
 
             <Property label="Status">

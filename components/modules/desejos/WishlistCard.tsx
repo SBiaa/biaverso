@@ -213,7 +213,7 @@ export function WishlistCard({
             </Badge>
           )}
           {comprado && (
-            <Badge className="bg-emerald-500/10 text-emerald-600">
+            <Badge className="bg-success-soft-bg text-success-soft-text">
               Comprado
               {item.boughtPrice != null &&
                 ` · ${formatCurrencyBRL(item.boughtPrice)}`}

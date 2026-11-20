@@ -74,7 +74,7 @@ function MeasuredGoalRow({
           <button type="button" onClick={onEdit} className="text-text-secondary hover:text-text-primary">
             <Pencil size={14} />
           </button>
-          <button type="button" onClick={onDelete} className="text-text-secondary hover:text-red-600">
+          <button type="button" onClick={onDelete} className="text-text-secondary hover:text-danger">
             <Trash2 size={14} />
           </button>
         </div>

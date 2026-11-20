@@ -62,7 +62,7 @@ export function OrdersBoard({
                       className={cn(
                         "flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-hover",
                         // Prazo estourado com o pedido ainda em aberto.
-                        order.overdue && "border-red-500 bg-red-50",
+                        order.overdue && "border-danger bg-danger-soft-bg",
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -115,7 +115,7 @@ export function OrdersBoard({
                         <span
                           className={cn(
                             "text-xs",
-                            order.overdue ? "font-medium text-red-600" : "text-text-secondary",
+                            order.overdue ? "font-medium text-danger" : "text-text-secondary",
                           )}
                         >
                           Entrega: {formatDateBR(new Date(order.record.dueDate))}

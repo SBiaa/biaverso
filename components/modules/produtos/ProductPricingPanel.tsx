@@ -74,7 +74,7 @@ export function ProductPricingPanel({
       <CardTitle>Preço e margem</CardTitle>
 
       {breakdown.missingHourlyRate && (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <p className="rounded-lg bg-warning-soft-bg px-3 py-2 text-xs text-warning-soft-text">
           Este produto tem custo por tempo, mas você ainda não definiu quanto vale
           sua hora — o seu trabalho está entrando como R$0 na conta.{" "}
           <Link href="/configuracoes" className="font-medium underline">

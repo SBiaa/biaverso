@@ -45,7 +45,7 @@ export function MonthlyHistorySection({ months }: { months: MonthlyHistoryEntry[
                         )}
                         <span
                           className={
-                            item.late ? "font-medium text-red-600" : "text-text-secondary"
+                            item.late ? "font-medium text-danger" : "text-text-secondary"
                           }
                         >
                           {item.late ? "Ficou atrasado" : "Pendente"}

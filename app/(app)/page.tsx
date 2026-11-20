@@ -210,7 +210,7 @@ export default async function HomePage() {
             label="Saldo do mês"
             value={formatCurrencyBRL(saldo)}
             icon={<Wallet size={16} className="text-text-secondary" />}
-            valueClassName={saldo >= 0 ? "text-emerald-600" : "text-red-600"}
+            valueClassName={saldo >= 0 ? "text-success" : "text-danger"}
           />
         </div>
 

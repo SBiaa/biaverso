@@ -187,7 +187,7 @@ export function BusinessGoalsCard({
                   <span
                     className={cn(
                       "shrink-0 text-xs tabular-nums text-text-secondary",
-                      p.overdue && "text-red-600",
+                      p.overdue && "text-danger",
                     )}
                   >
                     {p.totalItems === 0

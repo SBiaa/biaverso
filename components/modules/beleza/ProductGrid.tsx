@@ -107,7 +107,7 @@ function ProductCard({
             <ExpiryPill status={product.status} days={product.daysUntilExpiry} />
           )}
           {product.runningLow && !product.finished && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+            <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft-bg px-2.5 py-0.5 text-xs font-medium text-warning-soft-text">
               <TriangleAlert size={11} />
               Quase acabando
             </span>
