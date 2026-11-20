@@ -204,9 +204,16 @@ model Subtask {
   collectionTaskId String?
   collectionTask   CollectionTask? @relation(fields: [collectionTaskId], references: [id], onDelete: Cascade)
 
+  // Etapas do próprio post do cronograma (Roteiro, Gravação, Edição, Legenda...).
+  // O post é o item único do calendário: as etapas moram dentro dele, sem criar
+  // uma tarefa de produção paralela com o mesmo nome.
+  contentPostId String?
+  contentPost   ContentPost? @relation(fields: [contentPostId], references: [id], onDelete: Cascade)
+
   @@index([taskId, order])
   @@index([productionTaskId, order])
   @@index([collectionTaskId, order])
+  @@index([contentPostId, order])
 }
 
 // AGENDA
@@ -1227,6 +1234,7 @@ model ContentPost {
   /// conjunto; o Feed avisa quando o alinhamento vai quebrar.
   gridGroupId String?
   cover       ContentPostCover?
+  subtasks    Subtask[]
 
   // Origem de um import externo. `externalSource` + `externalId` juntos
   // identificam o post lá fora, pra reimportar atualizar em vez de duplicar.
@@ -2617,4 +2625,24 @@ model WhatsappMessage {
   @@index([chatId, sentAt])
   @@index([sentAt])
   @@index([important, sentAt])
+}
+
+// PLANEJAMENTO DO ANO — uma linha por ano. As partes de texto livre (retro,
+// intenções por pilar, datas) ficam em JSON: são anotações dela, não algo que
+// outra tela precise consultar campo a campo.
+model YearPlan {
+  id            String   @id @default(cuid())
+  year          Int      @unique
+  word          String?
+  // { deuCerto, naoDeuCerto, aprendi }
+  retro         Json     @default("{}")
+  // { [pillarId]: "o que quero conquistar nesse pilar" }
+  pillarNotes   Json     @default("{}")
+  // [{ id, date: "2027-03-14", title }]
+  dates         Json     @default("[]")
+  incomeTarget  Float?
+  savingsTarget Float?
+  budgetNotes   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

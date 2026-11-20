@@ -103,9 +103,12 @@ export const subtaskCreateSchema = z
     taskId: optionalId,
     productionTaskId: optionalId,
     collectionTaskId: optionalId,
+    contentPostId: optionalId,
   })
   .refine(
-    (v) => [v.taskId, v.productionTaskId, v.collectionTaskId].filter(Boolean).length === 1,
+    (v) =>
+      [v.taskId, v.productionTaskId, v.collectionTaskId, v.contentPostId].filter(Boolean)
+        .length === 1,
     { message: "informe a tarefa dona da subtarefa", path: ["taskId"] },
   );
 
@@ -1469,3 +1472,27 @@ export const instagramHighlightPatchSchema = instagramHighlightCreateSchema.part
 export const gridGroupSchema = z.object({
   ids: z.array(id).length(3, "Um conjunto tem 3 posts."),
 });
+
+export const yearPlanSchema = z
+  .object({
+    word: z.string().max(200).nullable(),
+    retro: z.object({
+      deuCerto: z.string().max(10000).optional(),
+      naoDeuCerto: z.string().max(10000).optional(),
+      aprendi: z.string().max(10000).optional(),
+    }),
+    pillarNotes: z.record(z.string(), z.string().max(10000)),
+    dates: z
+      .array(
+        z.object({
+          id: z.string(),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          title: z.string().max(300),
+        }),
+      )
+      .max(500),
+    incomeTarget: z.number().nonnegative().nullable(),
+    savingsTarget: z.number().nonnegative().nullable(),
+    budgetNotes: z.string().max(10000).nullable(),
+  })
+  .partial();

@@ -4,17 +4,17 @@ import { parseBody, route } from "@/lib/api";
 import { subtaskCreateSchema } from "@/lib/schemas";
 
 export const POST = route(async (request: Request) => {
-  const { title, stage, taskId, productionTaskId, collectionTaskId } = await parseBody(
-    request,
-    subtaskCreateSchema,
-  );
+  const { title, stage, taskId, productionTaskId, collectionTaskId, contentPostId } =
+    await parseBody(request, subtaskCreateSchema);
 
   // O schema garante que só um destes veio preenchido.
   const owner = taskId
     ? { taskId }
     : productionTaskId
       ? { productionTaskId }
-      : { collectionTaskId };
+      : collectionTaskId
+        ? { collectionTaskId }
+        : { contentPostId };
 
   // Entra no fim da lista da tarefa dona, sem depender da ordem de criação.
   const last = await prisma.subtask.findFirst({

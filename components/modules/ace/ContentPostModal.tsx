@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -26,6 +26,8 @@ import {
   todayUtc,
 } from "@/lib/utils";
 import { ClientOptions } from "./ClientOptions";
+import { StagedSteps } from "./StagedSteps";
+import { useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
 
 const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -86,6 +88,14 @@ function dateInputValue(date: string | Date | null) {
   return `${year}-${month}-${day}`;
 }
 
+/** "2026-11-11" → "2026-11-10". Vazio se a data vier vazia. */
+function dayBefore(date: string) {
+  if (!date) return "";
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 function todayInputValue() {
   return dateInputValue(new Date());
 }
@@ -116,7 +126,7 @@ function emptyForm(
     network: networkOptions[0],
     status: "PLANEJADO",
     publishDate: defaultDate ?? "",
-    completedAt: "",
+    completedAt: defaultDate ? dayBefore(defaultDate) : "",
     caption: "",
     notes: "",
     clientId,
@@ -279,6 +289,76 @@ function ImportedContentDetails({ post }: { post: PostInitial }) {
   );
 }
 
+/** Formato do post → modelo de etapas (os modelos são indexados por tipo de produção). */
+function stageTemplateTypeFor(postType: string) {
+  return postType === "CARROSSEL" || postType === "FEED_FOTO" ? "CRIACAO_ARTE" : "EDICAO_VIDEO";
+}
+
+/** Passos já carregados: cada um grava na hora, pela API de subtarefas. */
+function LoadedPostSteps({
+  postId,
+  postType,
+  initial,
+}: {
+  postId: string;
+  postType: string;
+  initial: SubtaskItem[];
+}) {
+  const steps = useSubtasks({ kind: "post", id: postId }, initial);
+
+  return (
+    <StagedSteps
+      steps={steps.subtasks.map((s) => ({ ...s, stage: s.stage ?? null }))}
+      checkable
+      type={stageTemplateTypeFor(postType)}
+      error={steps.error}
+      saving={steps.saving}
+      onAdd={steps.add}
+      onToggle={steps.toggle}
+      onRename={steps.rename}
+      onRemove={steps.remove}
+      onRenameStage={steps.renameStage}
+      onApplyTemplate={async (items) => {
+        for (const item of items) {
+          if (!(await steps.add(item.title, item.stage))) break;
+        }
+      }}
+    />
+  );
+}
+
+/** Etapas do post (gravar, editar, design, legenda...). Buscadas ao abrir. */
+function PostSteps({ postId, postType }: { postId: string; postType: string }) {
+  const [initial, setInitial] = useState<SubtaskItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ subtasks: SubtaskItem[] }>(`/api/ace/posts/${postId}`)
+      .then((r) => {
+        if (!cancelled) setInitial(r.subtasks);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(errorMessage(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [postId]);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs text-text-secondary">Etapas</span>
+      {initial ? (
+        <LoadedPostSteps postId={postId} postType={postType} initial={initial} />
+      ) : (
+        <p className="text-xs text-text-secondary">{error ?? "Carregando…"}</p>
+      )}
+    </div>
+  );
+}
+
 const fieldClass =
   "w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent";
 
@@ -330,6 +410,15 @@ export function ContentPostModal({
       const next = { ...prev, [key]: value };
       if (key === "clientId") {
         next.projectId = mostRecentProjectId(projects, value);
+      }
+      // Finalização vai pra véspera da publicação, a não ser que já tenha sido
+      // escolhida à mão (diferente da véspera da data anterior).
+      if (
+        key === "publishDate" &&
+        value &&
+        (!prev.completedAt || prev.completedAt === dayBefore(prev.publishDate))
+      ) {
+        next.completedAt = dayBefore(value);
       }
       if (key === "status" && value === "PUBLICADO" && !prev.completedAt) {
         next.completedAt = todayInputValue();
@@ -599,6 +688,14 @@ export function ContentPostModal({
               className={`${fieldClass} resize-y`}
             />
           </Field>
+
+          {post ? (
+            <PostSteps postId={post.id} postType={form.type} />
+          ) : (
+            <p className="text-xs text-text-secondary">
+              Salve o post para quebrar em etapas (gravar, editar, design, legenda…).
+            </p>
+          )}
 
           {post && <ImportedContentDetails post={post} />}
         </div>

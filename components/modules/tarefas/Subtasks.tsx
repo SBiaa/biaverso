@@ -10,11 +10,15 @@ import { cn } from "@/lib/utils";
 export type SubtaskItem = { id: string; title: string; done: boolean; stage?: string | null };
 
 /** De qual lista vem a tarefa dona dos passos. */
-export type SubtaskParent = { kind: "task" | "production" | "collection"; id: string };
+export type SubtaskParent = {
+  kind: "task" | "production" | "collection" | "post";
+  id: string;
+};
 
 function parentField(parent: SubtaskParent) {
   if (parent.kind === "task") return { taskId: parent.id };
   if (parent.kind === "production") return { productionTaskId: parent.id };
+  if (parent.kind === "post") return { contentPostId: parent.id };
   return { collectionTaskId: parent.id };
 }
 

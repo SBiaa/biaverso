@@ -6,6 +6,17 @@ import { linkClientToBusiness, resolvePostCompletedAt } from "@/lib/ace";
 
 type Params = { params: Promise<{ id: string }> };
 
+/** Etapas do post (gravar, editar, design...), na ordem em que foram criadas. */
+export const GET = route(async (_request: Request, { params }: Params) => {
+  const { id } = await params;
+  const subtasks = await prisma.subtask.findMany({
+    where: { contentPostId: id },
+    orderBy: { order: "asc" },
+    select: { id: true, title: true, done: true, stage: true },
+  });
+  return NextResponse.json({ subtasks });
+});
+
 export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
   const { completedAt, status, pinned, ...patch } = await parseBody(

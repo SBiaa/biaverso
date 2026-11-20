@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
+  CalendarRange,
   Clock,
   Compass,
   Droplet,
@@ -70,6 +71,7 @@ export const navGroups: NavGroup[] = [
     title: "Vida",
     items: [
       { href: "/visao", label: "Central de Visão", icon: Compass },
+      { href: "/ano", label: "Planejamento do ano", icon: CalendarRange },
       { href: "/financeiro", label: "Financeiro", icon: Wallet },
       // Fica colada no financeiro porque é dinheiro: a lista soma preço e
       // compara com o que sobra do mês. Na Biblioteca era só uma lista.
