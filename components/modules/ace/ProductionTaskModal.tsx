@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
   Button,
-  confirmAction,
   ErrorNote,
   Modal,
   notify,
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productionTypeLabels, priorityLabels, productionStatusLabels } from "@/lib/labels";
-import { addUtcDays, formatDateBR, parseDateOnly, toDateInputValue } from "@/lib/utils";
 import {
   INTERNAL_CLIENT,
   projectsForClient,
@@ -21,9 +19,9 @@ import {
 } from "./ContentPostModal";
 import { ClientOptions } from "./ClientOptions";
 import { StagedSteps } from "./StagedSteps";
-import { formatMinutes, parseMinutes } from "@/lib/task-plan";
+import { parseMinutes } from "@/lib/task-plan";
 import { usePriorityLevels } from "@/components/modules/tarefas/usePriorityLevels";
-import { useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
+import type { SubtaskItem } from "@/components/modules/tarefas/Subtasks";
 
 const typeOptions = Object.keys(productionTypeLabels);
 const priorityOptions = Object.keys(priorityLabels);
@@ -46,53 +44,6 @@ export type TaskRecord = {
   estimateMinutes: number | null;
   subtasks: SubtaskItem[];
 };
-type TaskInitial = TaskRecord;
-
-/** Tarefa existente: cada passo grava na hora, pela API de subtarefas. */
-function SavedSteps({
-  taskId,
-  type,
-  initial,
-}: {
-  taskId: string;
-  type: string;
-  initial: SubtaskItem[];
-}) {
-  const router = useRouter();
-  const steps = useSubtasks({ kind: "production", id: taskId }, initial);
-
-  // O contador (2/5) da tabela e do calendário vem do servidor: recarrega quando
-  // um passo muda, menos na montagem.
-  const mounted = useRef(false);
-  useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true;
-      return;
-    }
-    router.refresh();
-  }, [steps.subtasks, router]);
-
-  return (
-    <StagedSteps
-      steps={steps.subtasks.map((s) => ({ ...s, stage: s.stage ?? null }))}
-      checkable
-      type={type}
-      error={steps.error}
-      saving={steps.saving}
-      onAdd={steps.add}
-      onToggle={steps.toggle}
-      onRename={steps.rename}
-      onRemove={steps.remove}
-      onRenameStage={steps.renameStage}
-      // Um a um, na ordem: o servidor põe cada passo no fim da lista.
-      onApplyTemplate={async (items) => {
-        for (const item of items) {
-          if (!(await steps.add(item.title, item.stage))) break;
-        }
-      }}
-    />
-  );
-}
 
 /**
  * Tarefa nova: ainda não tem id, então os passos ficam só na tela e seguem
@@ -188,28 +139,14 @@ function emptyForm(
   };
 }
 
-function formFromTask(task: TaskInitial) {
-  return {
-    title: task.title,
-    type: task.type,
-    description: task.description ?? "",
-    priority: task.priority,
-    status: task.status,
-    dueDate: dateInputValue(task.dueDate),
-    completedAt: dateInputValue(task.completedAt),
-    notes: task.notes ?? "",
-    clientId: task.clientId ?? INTERNAL_CLIENT,
-    projectId: task.projectId ?? "",
-    priorityLevelId: task.priorityLevelId ?? "",
-    estimate: task.estimateMinutes === null ? "" : formatMinutes(task.estimateMinutes),
-  };
-}
-
+/**
+ * Criar tarefa de produção. Editar uma que já existe é no painel lateral
+ * (`ProductionTaskPanel`), o mesmo do Dia — este modal ficou só para criar.
+ */
 export function ProductionTaskModal({
   businessId,
   clients,
   projects,
-  task,
   defaultClientId,
   defaultProjectId,
   defaultDate,
@@ -218,7 +155,6 @@ export function ProductionTaskModal({
   businessId: string;
   clients: ClientOption[];
   projects: ProjectOption[];
-  task?: TaskInitial;
   defaultClientId?: string;
   defaultProjectId?: string;
   /** "YYYY-MM-DD" — preenche o prazo ao criar a partir de um dia do calendário. */
@@ -226,16 +162,12 @@ export function ProductionTaskModal({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const isEdit = !!task;
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const levels = usePriorityLevels();
   const [draftSteps, setDraftSteps] = useState<DraftStep[]>([]);
-  const [form, setForm] = useState(
-    task
-      ? formFromTask(task)
-      : emptyForm(clients, projects, defaultClientId, defaultProjectId, defaultDate),
+  const [form, setForm] = useState(() =>
+    emptyForm(clients, projects, defaultClientId, defaultProjectId, defaultDate),
   );
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -277,8 +209,7 @@ export function ProductionTaskModal({
     };
 
     try {
-      if (isEdit) await api.patch(`/api/ace/tasks/${task!.id}`, payload);
-      else await api.post("/api/ace/tasks", { ...payload, steps: stepsPayload(draftSteps) });
+      await api.post("/api/ace/tasks", { ...payload, steps: stepsPayload(draftSteps) });
       router.refresh();
       notify("Salvo.");
       onClose();
@@ -289,76 +220,9 @@ export function ProductionTaskModal({
     }
   }
 
-  // Copia a tarefa para a semana seguinte — útil pra produção recorrente
-  // (ex.: "edição do reels toda semana") sem preencher tudo de novo.
-  async function handleDuplicate() {
-    if (!isEdit) return;
-    setSaving(true);
-    setError(null);
-
-    const nextDate = form.dueDate
-      ? toDateInputValue(addUtcDays(parseDateOnly(form.dueDate)!, 7))
-      : "";
-
-    const payload = {
-      title: form.title,
-      type: form.type,
-      description: form.description,
-      priority: form.priority,
-      priorityLevelId: form.priorityLevelId || null,
-      estimateMinutes: parseMinutes(form.estimate) ?? null,
-      status: "A_FAZER",
-      dueDate: nextDate || null,
-      completedAt: null,
-      notes: form.notes,
-      businessId,
-      clientId: form.clientId || null,
-      projectId: form.projectId || null,
-      // A cópia leva os passos, todos por fazer.
-      steps: stepsPayload(task!.subtasks),
-    };
-
-    try {
-      await api.post("/api/ace/tasks", payload);
-      router.refresh();
-      notify(
-        nextDate
-          ? `Duplicado para ${formatDateBR(new Date(`${nextDate}T00:00:00Z`))}.`
-          : "Duplicado.",
-      );
-      onClose();
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!isEdit) return;
-    const confirmed = await confirmAction({
-      title: "Excluir esta tarefa de produção?",
-      destructive: true,
-    });
-    if (!confirmed) return;
-    setDeleting(true);
-    setError(null);
-
-    try {
-      await api.delete(`/api/ace/tasks/${task!.id}`);
-      router.refresh();
-      notify("Excluído.");
-      onClose();
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   return (
     <Modal
-      title={isEdit ? "Editar tarefa" : "Nova tarefa de produção"}
+      title="Nova tarefa de produção"
       size="md"
       onClose={onClose}
       onSubmit={handleSubmit}
@@ -393,11 +257,7 @@ export function ProductionTaskModal({
 
       <div>
         <p className="mb-1 text-xs text-text-secondary">Passos</p>
-        {isEdit ? (
-          <SavedSteps taskId={task!.id} type={form.type} initial={task!.subtasks} />
-        ) : (
-          <DraftSteps steps={draftSteps} type={form.type} onChange={setDraftSteps} />
-        )}
+        <DraftSteps steps={draftSteps} type={form.type} onChange={setDraftSteps} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -519,21 +379,6 @@ export function ProductionTaskModal({
             Cancelar
           </Button>
         </div>
-        {isEdit && (
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleDuplicate} disabled={saving || deleting}>
-              Duplicar
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-danger hover:bg-danger-soft-bg"
-            >
-              Excluir
-            </Button>
-          </div>
-        )}
       </div>
     </Modal>
   );

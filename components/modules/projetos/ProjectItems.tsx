@@ -29,6 +29,7 @@ import {
   ProductionTaskModal,
   type TaskRecord,
 } from "@/components/modules/ace/ProductionTaskModal";
+import { ProductionTaskPanel } from "@/components/modules/ace/ProductionTaskPanel";
 import { ProjectCalendar, type ProjectItem } from "./ProjectCalendar";
 
 type View = "tabela" | "calendario";
@@ -525,13 +526,7 @@ export function ProjectItems({
         />
       )}
       {editingTask && (
-        <ProductionTaskModal
-          businessId={businessId}
-          clients={clients}
-          projects={projectOptions}
-          task={editingTask}
-          onClose={() => setEditingTask(null)}
-        />
+        <ProductionTaskPanel taskId={editingTask.id} onClose={() => setEditingTask(null)} />
       )}
     </div>
   );

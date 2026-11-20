@@ -15,6 +15,7 @@ import {
   type PostRecord,
 } from "./ContentPostModal";
 import { ProductionTaskModal, type TaskRecord } from "./ProductionTaskModal";
+import { ProductionTaskPanel } from "./ProductionTaskPanel";
 
 export type ProjectWithItems = {
   id: string;
@@ -258,13 +259,7 @@ export function ProjectsSection({
         />
       )}
       {editingTask && (
-        <ProductionTaskModal
-          businessId={businessId}
-          clients={clients}
-          projects={projectOptions}
-          task={editingTask}
-          onClose={() => setEditingTask(null)}
-        />
+        <ProductionTaskPanel taskId={editingTask.id} onClose={() => setEditingTask(null)} />
       )}
     </div>
   );

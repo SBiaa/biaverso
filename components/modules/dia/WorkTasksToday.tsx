@@ -190,6 +190,8 @@ function TaskRow({
   projects,
   covers,
   onEdit,
+  onSave,
+  onRemoved,
 }: {
   task: WorkTask;
   dayId: string;
@@ -206,6 +208,8 @@ function TaskRow({
   onPatch: (task: WorkTask, patch: Patch) => void;
   onStatus: (task: WorkTask, status: TaskStatus) => void;
   onDate: (task: WorkTask, field: DateField, value: string | null) => void;
+  onSave: (task: WorkTask, local: Partial<WorkTask>, body: object) => Promise<void>;
+  onRemoved: (task: WorkTask) => void;
 }) {
   // Passo de prospecção não tem subtarefas: o próprio checklist já é a quebra.
   const subtasks = useSubtasks(
@@ -341,6 +345,8 @@ function TaskRow({
               onStatus={onStatus}
               onDate={onDate}
               onEdit={onEdit}
+              onSave={onSave}
+              onRemoved={onRemoved}
             />
           )}
         </td>
@@ -629,6 +635,23 @@ export function WorkTasksToday({
     } catch (e) {
       setItems(previous);
       setError(errorMessage(e));
+    }
+  }
+
+  /**
+   * Como o `save`, mas o erro sobe: o painel da tarefa desfaz a própria troca
+   * (tipo, cliente...) em vez de ficar mostrando um valor que não gravou.
+   */
+  async function saveStrict(task: WorkTask, change: Partial<WorkTask>, body: object) {
+    const previous = items;
+    setError(null);
+    update(taskKey(task), change);
+    try {
+      await api.patch(patchUrl(task), body);
+      router.refresh();
+    } catch (e) {
+      setItems(previous);
+      throw e;
     }
   }
 
@@ -966,6 +989,10 @@ export function WorkTasksToday({
                           projects={projects}
                           covers={covers}
                           onEdit={edit}
+                          onSave={saveStrict}
+                          onRemoved={(t) =>
+                            setItems((prev) => prev.filter((i) => taskKey(i) !== taskKey(t)))
+                          }
                         />
                       ))}
                     </SortableContext>

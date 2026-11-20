@@ -18,6 +18,7 @@ import { api, errorMessage } from "@/lib/client-api";
 import { cn, monthNameBR } from "@/lib/utils";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
 import { ProductionTaskModal, type TaskRecord } from "./ProductionTaskModal";
+import { ProductionTaskPanel } from "./ProductionTaskPanel";
 import { ImportCalendarioModal } from "./ImportCalendarioModal";
 
 export type CalendarItem = {
@@ -415,11 +416,8 @@ export function CalendarBoard({
         />
       )}
       {editing && editing.kind === "task" && (
-        <ProductionTaskModal
-          businessId={businessId}
-          clients={clients}
-          projects={projects}
-          task={editing.record as TaskRecord}
+        <ProductionTaskPanel
+          taskId={(editing.record as TaskRecord).id}
           onClose={() => setEditing(null)}
         />
       )}

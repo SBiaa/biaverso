@@ -27,6 +27,14 @@ import type {
 } from "@/components/modules/dia/WorkTasksToday";
 import type { TaskStatus } from "@/app/generated/prisma/enums";
 import { BusinessCover } from "@/components/modules/negocios/BusinessCover";
+import { StagedSteps } from "@/components/modules/ace/StagedSteps";
+import {
+  ProductionActions,
+  ProductionProperties,
+  useProductionExtras,
+  type SaveTask,
+} from "@/components/modules/ace/ProductionPanelParts";
+import type { ProductionExtras } from "@/lib/production-peek";
 
 /** Para onde leva o botão de origem, conforme o tipo da tarefa. */
 const originLinkLabel: Record<WorkTask["kind"], string> = {
@@ -109,6 +117,9 @@ export function TaskPeek({
   onStatus,
   onDate,
   onEdit,
+  onSave,
+  onRemoved,
+  production,
 }: {
   task: WorkTask;
   levels: PriorityLevelDTO[];
@@ -122,8 +133,15 @@ export function TaskPeek({
   onStatus: (task: WorkTask, status: TaskStatus) => void;
   onDate: (task: WorkTask, field: DateField, value: string | null) => void;
   onEdit: (task: WorkTask, edit: TaskEdit) => Promise<unknown>;
+  /** Grava um campo que só a tarefa de produção tem (tipo, cliente...). */
+  onSave: SaveTask;
+  /** A tarefa foi excluída pelo painel: some da lista de quem abriu. */
+  onRemoved?: (task: WorkTask) => void;
+  /** Já buscado por quem abriu; sem isso o painel busca sozinho. */
+  production?: ProductionExtras;
 }) {
   const panelRef = useRef<HTMLElement>(null);
+  const { extras, setExtras, error: extrasError } = useProductionExtras(task, production);
   const onCloseRef = useRef(onClose);
   const [projectError, setProjectError] = useState<string | null>(null);
 
@@ -335,7 +353,24 @@ export function TaskPeek({
               {projectError && <p className="text-xs text-danger">{projectError}</p>}
             </Property>
 
-            <Property label="Status">
+            {task.kind === "production" &&
+              (extras ? (
+                <ProductionProperties
+                  task={task}
+                  extras={extras}
+                  Property={Property}
+                  onExtras={setExtras}
+                  onSave={onSave}
+                />
+              ) : (
+                <p className={cn("py-1 text-xs", extrasError ? "text-danger" : "text-text-secondary")}>
+                  {extrasError ?? "Carregando tipo e cliente…"}
+                </p>
+              ))}
+
+            {/* Na produção já existe "No Kanban" (a coluna do negócio); este é o
+                andamento pessoal — iniciei, pausei… — e ganha o nome dele. */}
+            <Property label={task.kind === "production" ? "Andamento" : "Status"}>
               {task.progress === null ? (
                 <span className="px-1.5 text-text-secondary">{task.done ? "Feita" : "A fazer"}</span>
               ) : (
@@ -417,8 +452,41 @@ export function TaskPeek({
                 {subtasks.subtasks.length > 0 &&
                   ` · ${subtasks.doneCount}/${subtasks.subtasks.length}`}
               </h3>
-              <SubtaskList {...subtasks} />
+              {/* Produção tem passos por etapa (Roteiro, Gravação...), como no
+                  Kanban; o resto segue a lista simples. */}
+              {task.kind === "production" ? (
+                <StagedSteps
+                  steps={subtasks.subtasks.map((s) => ({ ...s, stage: s.stage ?? null }))}
+                  checkable
+                  type={extras?.type ?? ""}
+                  error={subtasks.error}
+                  saving={subtasks.saving}
+                  onAdd={subtasks.add}
+                  onToggle={subtasks.toggle}
+                  onRename={subtasks.rename}
+                  onRemove={subtasks.remove}
+                  onRenameStage={subtasks.renameStage}
+                  // Um a um, na ordem: o servidor põe cada passo no fim da lista.
+                  onApplyTemplate={async (items) => {
+                    for (const item of items) {
+                      if (!(await subtasks.add(item.title, item.stage))) break;
+                    }
+                  }}
+                />
+              ) : (
+                <SubtaskList {...subtasks} />
+              )}
             </section>
+          )}
+
+          {task.kind === "production" && extras && (
+            <ProductionActions
+              task={task}
+              extras={extras}
+              steps={subtasks.subtasks}
+              onRemoved={onRemoved}
+              onClose={onClose}
+            />
           )}
 
           {/* Atalhos para sair do dia e ir ao lugar da tarefa. */}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronRight, Circle, Plus, Trash2 } from "lucide-react";
 
-import { confirmAction, ErrorNote, IconButton, InlineEdit } from "@/components/ui";
+import { ErrorNote, IconButton, InlineEdit } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
   stageTemplateName,
@@ -203,15 +203,10 @@ export function StagedSteps({
                 <IconButton
                   title="Apagar passo"
                   aria-label={`Apagar passo ${step.title}`}
-                  onClick={async () => {
-                    const confirmed = await confirmAction({
-                      title: "Apagar este passo?",
-                      description: `"${step.title}" sai da lista.`,
-                      confirmLabel: "Apagar",
-                      destructive: true,
-                    });
-                    if (confirmed) onRemove(step.id);
-                  }}
+                  // A confirmação mora em `useSubtasks.remove`: perguntar aqui
+                  // também fazia o mesmo aviso aparecer duas vezes. Passo de
+                  // tarefa ainda não salva sai direto, sem nada a perder.
+                  onClick={() => onRemove(step.id)}
                   tone="danger"
                   revealOnHover
                 >

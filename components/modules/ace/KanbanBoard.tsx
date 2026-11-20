@@ -7,7 +7,8 @@ import { AttentionBadge, Card } from "@/components/ui";
 import { cn, formatDateBR } from "@/lib/utils";
 import { KANBAN_COLUMNS } from "@/lib/ace-shared";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
-import { ProductionTaskModal, type TaskRecord } from "./ProductionTaskModal";
+import type { TaskRecord } from "./ProductionTaskModal";
+import { ProductionTaskPanel } from "./ProductionTaskPanel";
 
 export type KanbanItem = {
   id: string;
@@ -188,11 +189,8 @@ export function KanbanBoard({
         />
       )}
       {editing && editing.kind === "task" && (
-        <ProductionTaskModal
-          businessId={businessId}
-          clients={clients}
-          projects={projects}
-          task={editing.record as TaskRecord}
+        <ProductionTaskPanel
+          taskId={(editing.record as TaskRecord).id}
           onClose={() => setEditing(null)}
         />
       )}
