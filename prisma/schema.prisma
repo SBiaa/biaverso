@@ -1949,6 +1949,7 @@ model Pillar {
   businesses      Business[]
   moodboardItems  MoodboardItem[]
   desires         Desire[]
+  brainstormItems BrainstormItem[]
   principles      Principle[]
 }
 
@@ -2014,6 +2015,8 @@ model MeasuredGoal {
   closedAt     DateTime?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
+  // Item do despejo do ano que virou esta meta, se houver.
+  brainstormItem BrainstormItem?
 
   businessId String?
   business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
@@ -2065,6 +2068,8 @@ model Desire {
 
   pillarId String?
   pillar   Pillar? @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  // Item do despejo do ano que virou este desejo, se houver.
+  brainstormItem BrainstormItem?
 
   @@index([pillarId])
 }
@@ -2664,6 +2669,42 @@ model YearPlan {
   budgetNotes   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+/// Despejo do planejamento do ano: tudo o que está na cabeça, um item por
+/// linha, separado depois em Foco (vira meta), Desejo, Depois ou Soltar.
+model BrainstormItem {
+  id        String              @id @default(cuid())
+  year      Int
+  text      String
+  // Nulo = ainda não separado.
+  decision  BrainstormDecision?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  pillarId String?
+  pillar   Pillar? @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+
+  // O que o item virou. Apagar a meta/desejo só desfaz o vínculo.
+  measuredGoalId String?       @unique
+  measuredGoal   MeasuredGoal? @relation(fields: [measuredGoalId], references: [id], onDelete: SetNull)
+  desireId       String?       @unique
+  desire         Desire?       @relation(fields: [desireId], references: [id], onDelete: SetNull)
+
+  // Item "Depois" de um ano trazido para o despejo do ano seguinte.
+  carriedFromId String?         @unique
+  carriedFrom   BrainstormItem? @relation("BrainstormCarry", fields: [carriedFromId], references: [id], onDelete: SetNull)
+  carriedTo     BrainstormItem? @relation("BrainstormCarry")
+
+  @@index([year])
+  @@index([pillarId])
+}
+
+enum BrainstormDecision {
+  FOCO
+  DESEJO
+  DEPOIS
+  SOLTAR
 }
 
 /// Registro de uso do próprio biaVerso: que tela ela abriu e o que salvou.

@@ -6,6 +6,12 @@ import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { Card, notify, SaveStatus, useSaveStatus, fieldClass } from "@/components/ui";
 import { PlanejarTabs } from "@/components/modules/planejar/PlanejarTabs";
 import { api, errorMessage } from "@/lib/client-api";
+import {
+  BrainstormSection,
+  type BrainstormItemDTO,
+  type CarryCandidate,
+} from "./BrainstormSection";
+import type { ConceptualChoice } from "./BrainstormGoalModal";
 
 export type YearPlanData = {
   word: string;
@@ -43,10 +49,16 @@ export function YearPlanner({
   year,
   initial,
   pillars,
+  brainstorm,
 }: {
   year: number;
   initial: YearPlanData;
   pillars: PillarInfo[];
+  brainstorm: {
+    items: BrainstormItemDTO[];
+    carryCandidates: CarryCandidate[];
+    conceptualGoals: ConceptualChoice[];
+  };
 }) {
   const [plan, setPlan] = useState(initial);
   const { state: saveState, track } = useSaveStatus();
@@ -135,6 +147,15 @@ export function YearPlanner({
           ))}
         </div>
       </Card>
+
+      {/* Despejo: entre olhar pra trás e escrever o que quer em cada pilar. */}
+      <BrainstormSection
+        year={year}
+        initialItems={brainstorm.items}
+        carryCandidates={brainstorm.carryCandidates}
+        pillars={pillars.map(({ id, name, color }) => ({ id, name, color }))}
+        conceptualGoals={brainstorm.conceptualGoals}
+      />
 
       {/* Por pilar */}
       <section className="space-y-3">

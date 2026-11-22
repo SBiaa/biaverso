@@ -1521,3 +1521,36 @@ export const yearPlanSchema = z
     budgetNotes: z.string().max(10000).nullable(),
   })
   .partial();
+
+// ---------------------------------------------------------- despejo do ano
+const planYear = z.coerce.number().int().min(2000).max(2100);
+
+/** Cria itens do despejo: vários textos de uma vez, ou um item "Depois" trazido do ano anterior. */
+export const brainstormCreateSchema = z
+  .object({
+    year: planYear,
+    texts: z.array(z.string().trim().max(500)).max(200).optional(),
+    carriedFromId: id.optional(),
+  })
+  .refine((v) => v.carriedFromId || v.texts?.some((t) => t), "escreva pelo menos um item");
+
+export const brainstormPatchSchema = z.object({
+  text: text.optional(),
+  pillarId: optionalId,
+  decision: z.enum(E.BrainstormDecision).nullish(),
+});
+
+/** "Virar meta": num objetivo conceitual existente ou num novo, criado no pilar do item. */
+export const brainstormGoalSchema = z
+  .object({
+    title: text,
+    conceptualGoalId: id.optional(),
+    newConceptualTitle: z.string().trim().max(300).optional(),
+    targetValue: goalAmount.nullish(),
+    unit: optionalText,
+    deadline: dateOnly.nullish(),
+  })
+  .refine(
+    (v) => v.conceptualGoalId || v.newConceptualTitle,
+    "escolha um objetivo conceitual ou dê nome a um novo",
+  );
