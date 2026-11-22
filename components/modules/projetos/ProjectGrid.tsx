@@ -162,6 +162,12 @@ export function ProjectGrid({
                         {formatDateBR(new Date(project.nextDeadline))}
                       </span>
                     )}
+                    {/* Projeto concluído, pausado ou cancelado não cobra o que ficou para trás. */}
+                    {project.missedItems > 0 && project.status === "EM_ANDAMENTO" && (
+                      <span className="text-xs text-text-secondary">
+                        {project.missedItems} com prazo perdido
+                      </span>
+                    )}
                   </div>
                 </Card>
               );

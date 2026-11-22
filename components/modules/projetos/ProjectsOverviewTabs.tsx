@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, FileText, FolderKanban, LayoutGrid, ListTodo } from "lucide-react";
 import { cn, formatDateBR, todayInputValue } from "@/lib/utils";
 import { ProjectCalendar, type ProjectItem } from "./ProjectCalendar";
@@ -25,7 +25,20 @@ export function ProjectsOverviewTabs({
   grid: ReactNode;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<View>("calendario");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // A página se chama Projetos: abre nos cards. O calendário fica a um clique
+  // e a escolha vai para o endereço (?view=calendario), então voltar para a
+  // página ou recarregar mantém a aba em que ela estava.
+  const view: View = searchParams.get("view") === "calendario" ? "calendario" : "projetos";
+
+  function setView(next: View) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "calendario") params.set("view", next);
+    else params.delete("view");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
   // Guarda só a chave: o item vem da lista atual, que o servidor renova após editar.
   const [openKey, setOpenKey] = useState<string | null>(null);
   const openItem = openKey ? (items.find((i) => i.key === openKey) ?? null) : null;
@@ -58,8 +71,8 @@ export function ProjectsOverviewTabs({
       <div className="flex overflow-hidden self-start rounded-md border border-border">
         {(
           [
-            { id: "calendario", label: "Calendário", icon: CalendarDays },
             { id: "projetos", label: "Projetos", icon: LayoutGrid },
+            { id: "calendario", label: "Calendário", icon: CalendarDays },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button

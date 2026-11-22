@@ -77,6 +77,17 @@ export default async function ProjetosPage({
           />
         </div>
 
+        {/* Fora das contas acima de propósito: são itens que passaram do prazo
+            há mais de uma semana. Contados como atrasados, deixavam todos os
+            projetos vermelhos para sempre. */}
+        {summary.missedItems > 0 && (
+          <p className="text-sm text-text-secondary">
+            Fora da conta: {summary.missedItems}{" "}
+            {summary.missedItems === 1 ? "item está" : "itens estão"} com prazo perdido. Abra o
+            projeto para remarcar o que ainda vale fazer ou cancelar o resto.
+          </p>
+        )}
+
         <ProjectFilterBar businesses={businesses} />
 
         <ProjectsOverviewTabs

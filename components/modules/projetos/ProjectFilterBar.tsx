@@ -82,17 +82,22 @@ export function ProjectFilterBar({
         ))}
       </select>
 
-      <select
-        value={searchParams.get("sort") ?? "prazo"}
-        onChange={(e) => setParam("sort", e.target.value)}
-        className={selectClass}
-      >
-        {projectSortOptions.map((s) => (
-          <option key={s} value={s}>
-            {sortLabels[s]}
-          </option>
-        ))}
-      </select>
+      {/* A ordem só vale para os cards: no calendário cada item já está no
+          próprio dia, e o select ficava ali sem fazer nada. */}
+      {searchParams.get("view") !== "calendario" && (
+        <select
+          value={searchParams.get("sort") ?? "prazo"}
+          onChange={(e) => setParam("sort", e.target.value)}
+          aria-label="Ordenar projetos"
+          className={selectClass}
+        >
+          {projectSortOptions.map((s) => (
+            <option key={s} value={s}>
+              {sortLabels[s]}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }

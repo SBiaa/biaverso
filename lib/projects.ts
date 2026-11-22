@@ -54,6 +54,7 @@ export async function getProjectsOverview(
 
   let pendingTasks = 0;
   let dueThisWeek = 0;
+  let missedItems = 0;
 
   const cards: ProjectCard[] = projects.map((project) => {
     // Posts e tarefas de produção contam junto: é o que a tela do projeto lista.
@@ -61,16 +62,25 @@ export async function getProjectsOverview(
       ...project.productionTasks.map((t) => ({
         date: t.dueDate,
         done: doneTaskStatuses.includes(t.status),
+        missed: t.status === "PRAZO_PERDIDO",
       })),
       ...project.contentPosts.map((p) => ({
         date: p.publishDate,
         done: donePostStatuses.includes(p.status),
+        missed: p.status === "PRAZO_PERDIDO",
       })),
     ];
 
     const total = items.length;
     const doneCount = items.filter((i) => i.done).length;
-    const open = items.filter((i) => !i.done);
+    // "Prazo perdido" fica de fora do que está pendente e do que está
+    // atrasado: é um story que passou há mais de uma semana e quase nunca vai
+    // ser feito. Contado junto, um único item esquecido deixava o projeto
+    // "atrasado" para sempre — chegou a 17 de 17 projetos ativos. Ele ganha a
+    // contagem própria (`missedItems`) para ela decidir o que fazer com eles.
+    const open = items.filter((i) => !i.done && !i.missed);
+    const missed = items.filter((i) => !i.done && i.missed).length;
+    const active = project.status === "EM_ANDAMENTO";
 
     const openDates = open
       .map((i) => i.date)
@@ -78,9 +88,11 @@ export async function getProjectsOverview(
       .sort((a, b) => a.getTime() - b.getTime());
 
     const nextDeadline = openDates[0] ?? null;
-    const overdue = openDates.some((d) => d.getTime() < today.getTime());
+    // Concluído, pausado ou cancelado não está "atrasado", mesmo com item velho.
+    const overdue = active && openDates.some((d) => d.getTime() < today.getTime());
 
     pendingTasks += open.length;
+    if (active) missedItems += missed;
     dueThisWeek += openDates.filter(
       (d) => d.getTime() >= weekStart.getTime() && d.getTime() < weekEnd.getTime(),
     ).length;
@@ -104,6 +116,7 @@ export async function getProjectsOverview(
       progress: total === 0 ? 0 : Math.round((doneCount / total) * 100),
       nextDeadline: nextDeadline ? nextDeadline.toISOString() : null,
       overdue,
+      missedItems: missed,
     };
   });
 
@@ -114,6 +127,7 @@ export async function getProjectsOverview(
       pendingTasks,
       dueThisWeek,
       overdueProjects: cards.filter((p) => p.overdue).length,
+      missedItems,
     },
   };
 }

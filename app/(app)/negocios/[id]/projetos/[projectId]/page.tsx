@@ -11,6 +11,7 @@ import { CredentialsPanel } from "@/components/modules/senhas/CredentialsPanel";
 import { ProjectPriceTable } from "@/components/modules/projetos/ProjectPriceTable";
 import { ProjectItems } from "@/components/modules/projetos/ProjectItems";
 import { ProjectActions } from "@/components/modules/projetos/ProjectActions";
+import { OptionalSections } from "@/components/modules/projetos/OptionalSections";
 import {
   postRecordSelect,
   taskRecordSelect,
@@ -19,7 +20,8 @@ import {
 } from "@/lib/ace";
 import { projectStatusColors } from "@/lib/projects-shared";
 import { projectStatusLabels } from "@/lib/labels";
-import { formatDateBR, hexToRgba, toDateInputValue } from "@/lib/utils";
+import { formatDateBR, hexToRgba, toDateInputValue, todayUtc } from "@/lib/utils";
+import { donePostStatuses, doneTaskStatuses } from "@/lib/ace-shared";
 import { cardColumns, pageContainer } from "@/components/layout/page-width";
 
 export const dynamic = "force-dynamic";
@@ -117,6 +119,29 @@ export default async function ProjectDetailPage({
 
   const statusColor = projectStatusColors[project.status] ?? "#6B7280";
 
+  // Em que pé o projeto está, com a mesma regra dos cards de /projetos: prazo
+  // perdido não conta como pendente nem define o próximo prazo.
+  const items = [
+    ...project.productionTasks.map((t) => ({
+      date: t.dueDate,
+      done: doneTaskStatuses.includes(t.status),
+      missed: t.status === "PRAZO_PERDIDO",
+    })),
+    ...project.contentPosts.map((p) => ({
+      date: p.publishDate,
+      done: donePostStatuses.includes(p.status),
+      missed: p.status === "PRAZO_PERDIDO",
+    })),
+  ];
+  const doneCount = items.filter((i) => i.done).length;
+  const progress = items.length === 0 ? 0 : Math.round((doneCount / items.length) * 100);
+  const today = todayUtc().getTime();
+  const nextOpen = items
+    .filter((i) => !i.done && !i.missed && i.date)
+    .map((i) => i.date!)
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+  const nextLate = nextOpen ? nextOpen.getTime() < today : false;
+
   return (
     <>
       <Topbar
@@ -130,11 +155,14 @@ export default async function ProjectDetailPage({
           leva ao mesmo lugar e não empurra o conteúdo para baixo. */}
       <main className={`${pageContainer("wide")} flex-1 space-y-4 py-5 md:space-y-6 md:py-8`}>
         <Card className="flex flex-col gap-3">
+          {/* O nome já está no topo da página; aqui o que importa é em que pé
+              o projeto está. */}
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-text-primary">{project.name}</h2>
-              {project.description && (
-                <p className="mt-1 text-sm text-text-secondary">{project.description}</p>
+            <div className="min-w-0 flex-1">
+              {project.description ? (
+                <p className="text-sm text-text-secondary">{project.description}</p>
+              ) : (
+                <h2 className="text-lg font-semibold text-text-primary">{project.name}</h2>
               )}
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -192,6 +220,34 @@ export default async function ProjectDetailPage({
               </span>
             </span>
           </div>
+
+          {items.length > 0 && (
+            <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+                <span className="text-text-primary">
+                  <span className="font-semibold">{doneCount}</span> de {items.length} concluídos
+                </span>
+                {nextOpen ? (
+                  <span className={nextLate ? "font-medium text-danger" : "text-text-secondary"}>
+                    {nextLate ? "Atrasado desde " : "Próximo prazo: "}
+                    {formatDateBR(nextOpen)}
+                  </span>
+                ) : (
+                  <span className="text-text-secondary">Nada pendente com data</span>
+                )}
+              </div>
+              <div
+                className="h-2 w-full overflow-hidden rounded-full bg-border"
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Progresso do projeto"
+              >
+                <div className="h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* O que ela abre o projeto para ver vem primeiro; o material de apoio
@@ -211,14 +267,6 @@ export default async function ProjectDetailPage({
           />
         </Card>
 
-        <Card>
-          <CardTitle className="mb-3">Diário de desenvolvimento</CardTitle>
-          <ProjectDevLog
-            projectId={project.id}
-            initialEntries={project.devLog.map((e) => ({ ...e, date: e.date.toISOString() }))}
-          />
-        </Card>
-
         <div className={cardColumns}>
           <Card>
             <CardTitle className="mb-3">Documentação</CardTitle>
@@ -229,23 +277,48 @@ export default async function ProjectDetailPage({
             <CardTitle className="mb-3">Documentos</CardTitle>
             <ProjectDocuments projectId={project.id} initialDocuments={project.documents} />
           </Card>
-
-          <Card>
-            <CardTitle className="mb-3">Credenciais</CardTitle>
-            <CredentialsPanel
-              endpoint={`/api/projects/${project.id}/credentials`}
-              initialCredentials={decryptCredentialLinks(project.credentials)}
-              passwordOptions={passwordOptions}
-              emptyLabel="Nenhuma credencial vinculada a este projeto."
-              unlinkLabel="Desvincular do projeto"
-            />
-          </Card>
-
-          <Card>
-            <CardTitle className="mb-3">Tabela de preços</CardTitle>
-            <ProjectPriceTable projectId={project.id} initialItems={project.priceTable} />
-          </Card>
         </div>
+
+        {/* Diário, credenciais e preços são de alguns projetos (sistemas,
+            orçamentos), não de todos: aparecem quando têm conteúdo ou quando
+            ela adiciona. */}
+        <OptionalSections
+          sections={[
+            {
+              key: "diario",
+              title: "Diário de desenvolvimento",
+              hasContent: project.devLog.length > 0,
+              children: (
+                <ProjectDevLog
+                  projectId={project.id}
+                  initialEntries={project.devLog.map((e) => ({ ...e, date: e.date.toISOString() }))}
+                />
+              ),
+            },
+            {
+              key: "credenciais",
+              title: "Credenciais",
+              hasContent: project.credentials.length > 0,
+              children: (
+                <CredentialsPanel
+                  endpoint={`/api/projects/${project.id}/credentials`}
+                  initialCredentials={decryptCredentialLinks(project.credentials)}
+                  passwordOptions={passwordOptions}
+                  emptyLabel="Nenhuma credencial vinculada a este projeto."
+                  unlinkLabel="Desvincular do projeto"
+                />
+              ),
+            },
+            {
+              key: "precos",
+              title: "Tabela de preços",
+              hasContent: project.priceTable.length > 0,
+              children: (
+                <ProjectPriceTable projectId={project.id} initialItems={project.priceTable} />
+              ),
+            },
+          ]}
+        />
       </main>
     </>
   );

@@ -175,7 +175,11 @@ function ItemChip({ item, onOpen }: { item: ProjectItem; onOpen: () => void }) {
       className={cn(
         "flex touch-none items-start gap-1 rounded px-1.5 py-1 text-left text-[11px] leading-tight",
         item.kind === "project" ? "cursor-pointer" : "cursor-grab active:cursor-grabbing",
-        item.statusColor,
+        // Prazo perdido sai do vermelho: com dezenas deles o calendário
+        // inteiro ficava em alerta e o que está atrasado de verdade sumia.
+        item.missed && !item.done
+          ? "bg-border/50 text-text-secondary line-through decoration-text-secondary/50"
+          : item.statusColor,
         item.done && "opacity-60",
         isDragging && "relative z-20 opacity-70 shadow-md",
       )}
@@ -199,6 +203,9 @@ function ItemChip({ item, onOpen }: { item: ProjectItem; onOpen: () => void }) {
   );
 }
 
+/** Quantos itens cada dia mostra antes do "+N". */
+const DAY_LIMIT = 3;
+
 function DayCell({
   date,
   day,
@@ -219,6 +226,16 @@ function DayCell({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: date });
   const [menu, setMenu] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  // Até 3 por dia; o resto fica atrás do "+N". Com 6 a 8 etiquetas cortadas por
+  // dia, nenhuma dava para ler. Primeiro o que ainda está por fazer, depois o
+  // feito, e por último o prazo perdido.
+  const rank = (i: ProjectItem) => (i.done ? 1 : i.missed ? 2 : 0);
+  const sorted = [...items].sort((a, b) => rank(a) - rank(b));
+  const all = [...sorted.map((item) => ({ item, finishing: false })), ...finishing.map((item) => ({ item, finishing: true }))];
+  const shown = expanded ? all : all.slice(0, DAY_LIMIT);
+  const hidden = all.length - shown.length;
 
   return (
     <div
@@ -271,21 +288,32 @@ function DayCell({
       </div>
 
       <div className="flex flex-col gap-1">
-        {items.map((item) => (
-          <ItemChip key={item.key} item={item} onOpen={() => onOpen(item)} />
-        ))}
-        {finishing.map((item) => (
+        {shown.map(({ item, finishing: isFinishing }) =>
+          isFinishing ? (
+            <button
+              key={`fin-${item.key}`}
+              type="button"
+              onClick={() => onOpen(item)}
+              title={`Finalizar até este dia: ${item.title}`}
+              className="flex items-start gap-1 rounded border border-dashed border-border px-1.5 py-1 text-left text-[11px] leading-tight text-text-secondary hover:bg-hover"
+            >
+              <span className="shrink-0 font-semibold uppercase">Finalizar</span>
+              <span className="line-clamp-2">{item.title}</span>
+            </button>
+          ) : (
+            <ItemChip key={item.key} item={item} onOpen={() => onOpen(item)} />
+          ),
+        )}
+        {(hidden > 0 || expanded) && all.length > DAY_LIMIT && (
           <button
-            key={`fin-${item.key}`}
             type="button"
-            onClick={() => onOpen(item)}
-            title={`Finalizar até este dia: ${item.title}`}
-            className="flex items-start gap-1 rounded border border-dashed border-border px-1.5 py-1 text-left text-[11px] leading-tight text-text-secondary hover:bg-hover"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className="rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-text-secondary hover:bg-hover hover:text-text-primary"
           >
-            <span className="shrink-0 font-semibold uppercase">Finalizar</span>
-            <span className="line-clamp-2">{item.title}</span>
+            {expanded ? "Mostrar menos" : `+${hidden} ${hidden === 1 ? "item" : "itens"}`}
           </button>
-        ))}
+        )}
       </div>
     </div>
   );

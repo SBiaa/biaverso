@@ -22,7 +22,10 @@ export type ProjectCard = {
   /** 0–100. Projeto sem itens vale 0. */
   progress: number;
   nextDeadline: string | null;
+  /** Tem item que ainda dá para fazer com prazo vencido (e o projeto está em andamento). */
   overdue: boolean;
+  /** Itens abertos marcados como "Prazo perdido" — fora do "atrasado". */
+  missedItems: number;
 };
 
 export type ProjectsOverview = {
@@ -32,6 +35,8 @@ export type ProjectsOverview = {
     pendingTasks: number;
     dueThisWeek: number;
     overdueProjects: number;
+    /** Itens com prazo perdido nos projetos em andamento. */
+    missedItems: number;
   };
 };
 
