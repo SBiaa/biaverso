@@ -22,7 +22,7 @@ export default async function InsumosPage() {
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Link
           href="/produtos"
-          className="text-xs font-medium text-text-secondary hover:text-accent"
+          className="text-xs font-medium text-text-secondary hover:text-accent-ink"
         >
           ← Central de produtos
         </Link>

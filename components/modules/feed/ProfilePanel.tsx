@@ -88,7 +88,7 @@ export function ProfilePanel({
           )}
         </button>
         <div className="text-xs text-text-secondary">
-          <button type="button" onClick={() => fileRef.current?.click()} className="font-medium text-accent">
+          <button type="button" onClick={() => fileRef.current?.click()} className="font-medium text-accent-ink">
             Trocar foto
           </button>
           {values.photo ? (

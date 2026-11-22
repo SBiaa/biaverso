@@ -188,7 +188,7 @@ export function ProductGrid({
               className={cn(
                 "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                 status === filter.key
-                  ? "bg-accent/10 text-accent"
+                  ? "bg-accent/10 text-accent-ink"
                   : "text-text-secondary hover:bg-hover",
               )}
             >

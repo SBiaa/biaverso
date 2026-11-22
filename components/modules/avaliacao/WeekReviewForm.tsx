@@ -32,22 +32,27 @@ function ButtonGroup({
   options,
   value,
   onChange,
+  label,
 }: {
   options: Record<string, string>;
   value: string | null;
   onChange: (value: string) => void;
+  /** O nome do grupo para quem não vê o título acima dele. */
+  label?: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2" role="group" aria-label={label}>
       {Object.entries(options).map(([optionValue, label]) => (
         <button
           key={optionValue}
           type="button"
           onClick={() => onChange(optionValue)}
+          // Diz qual está marcada: antes só a cor mostrava.
+          aria-pressed={value === optionValue}
           className={cn(
             "rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
             value === optionValue
-              ? "border-accent bg-accent/10 text-accent"
+              ? "border-accent bg-accent/10 text-accent-ink"
               : "border-border text-text-secondary hover:bg-hover",
           )}
         >
@@ -109,6 +114,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
           <StarRating
             value={form.effectiveness ? starsValues.indexOf(form.effectiveness) + 1 : 0}
             onChange={(n) => save({ effectiveness: starsValues[n - 1] })}
+            label="Efetividade"
           />
         </div>
 
@@ -118,6 +124,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
             options={energyLabels}
             value={form.energy}
             onChange={(value) => save({ energy: value })}
+            label="Energia"
           />
         </div>
 
@@ -129,6 +136,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
             options={blockLabels}
             value={form.biggestBlock}
             onChange={(value) => save({ biggestBlock: value })}
+            label="Maior trava"
           />
         </div>
 
@@ -140,6 +148,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
             options={executionLabels}
             value={form.executedPlan}
             onChange={(value) => save({ executedPlan: value })}
+            label="Executei o planejado"
           />
         </div>
 
@@ -151,6 +160,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
             options={qualityLabels}
             value={form.foodHydration}
             onChange={(value) => save({ foodHydration: value })}
+            label="Alimentação e hidratação"
           />
         </div>
 
@@ -196,7 +206,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
           placeholder="Reflita sobre o que você priorizou nesta semana..."
           className="min-h-[100px] resize-none rounded-lg border border-border p-3 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
-        <Link href="/visao" className="self-start text-xs font-medium text-accent">
+        <Link href="/visao" className="self-start text-xs font-medium text-accent-ink">
           Ver Central de Visão
         </Link>
       </Card>

@@ -51,7 +51,7 @@ export default async function AvaliacaoTrimestrePage({
                 <li key={m.id}>
                   <Link
                     href={`/avaliacao/mes?month=${m.month}&year=${m.year}`}
-                    className="text-sm text-accent hover:underline"
+                    className="text-sm text-accent-ink hover:underline"
                   >
                     {formatMonthYearBR(m.month, m.year)}
                   </Link>

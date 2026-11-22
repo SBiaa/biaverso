@@ -195,7 +195,7 @@ export default async function FinanceiroPage() {
                 </CardTitle>
                 <Link
                   href="/financeiro/transacoes"
-                  className="-my-2 py-2 text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent-ink"
                 >
                   Ver todas
                 </Link>
@@ -215,7 +215,7 @@ export default async function FinanceiroPage() {
                 </CardTitle>
                 <Link
                   href="/financeiro/contas-fixas"
-                  className="-my-2 py-2 text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent-ink"
                 >
                   Ver todas
                 </Link>
@@ -273,7 +273,7 @@ export default async function FinanceiroPage() {
                 </CardTitle>
                 <Link
                   href="/financeiro/cartao"
-                  className="-my-2 py-2 text-xs font-medium text-accent"
+                  className="-my-2 py-2 text-xs font-medium text-accent-ink"
                 >
                   Ver todos
                 </Link>

@@ -35,10 +35,10 @@ export function HomeTaskList({ items: serverItems }: { items: TaskItem[] }) {
               key={task.id}
               type="button"
               onClick={() => toggle(task.id)}
-              className="flex items-center gap-2 pl-1 text-sm"
+              className="flex min-h-11 items-center gap-2 pl-1 text-left text-sm md:min-h-0"
             >
               {task.done ? (
-                <CheckCircle2 size={16} className="text-accent" />
+                <CheckCircle2 size={16} className="text-accent-ink" />
               ) : (
                 <Circle size={16} className="text-text-secondary" />
               )}

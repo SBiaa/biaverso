@@ -138,7 +138,7 @@ function Sparkline({ s, labels }: { s: TrendSeries; labels: string[] }) {
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
-      className={`h-14 w-full ${s.color ? "" : "text-accent"}`}
+      className={`h-14 w-full ${s.color ? "" : "text-accent-ink"}`}
       style={s.color ? { color: s.color } : undefined}
       role="img"
       aria-label={`${s.name}, período a período.`}

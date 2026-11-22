@@ -60,7 +60,7 @@ export default async function RodaDoAnoPage() {
                       <p
                         className={cn(
                           "text-sm font-semibold",
-                          isNext ? "text-accent" : "text-text-primary",
+                          isNext ? "text-accent-ink" : "text-text-primary",
                         )}
                       >
                         {sabbat.name}

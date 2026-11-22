@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Clock } from "lucide-react";
-import { AttentionBadge, attentionFromDueDate, Card, StatCard } from "@/components/ui";
+import { AttentionBadge, attentionFromDueDate, ClickableCard, StatCard } from "@/components/ui";
 import { ClientAvatar } from "@/components/modules/clientes/ClientAvatar";
 import { ProspectModal } from "./ProspectModal";
 import { NewProspectForm } from "./NewProspectForm";
@@ -59,10 +59,11 @@ export function ProspectsBoard({
                         ? attentionFromDueDate(p.nextFollowUpAt, today)
                         : "neutro";
                       return (
-                        <Card
+                        <ClickableCard
                           key={p.linkId}
-                          className="flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-hover"
-                          onClick={() => setEditing(p)}
+                          className="flex flex-col gap-1.5 p-3"
+                          onActivate={() => setEditing(p)}
+                          label={`Abrir ${p.name}`}
                         >
                           <div className="flex items-center gap-2">
                             <ClientAvatar client={p} size="md" />
@@ -98,7 +99,7 @@ export function ProspectsBoard({
                               )}
                             </div>
                           )}
-                        </Card>
+                        </ClickableCard>
                       );
                     })
                   )}

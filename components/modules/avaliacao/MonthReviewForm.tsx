@@ -62,6 +62,7 @@ export function MonthReviewForm({ review }: { review: MonthReviewData }) {
         <StarRating
           value={form.effectiveness ? starsValues.indexOf(form.effectiveness) + 1 : 0}
           onChange={(n) => save({ effectiveness: starsValues[n - 1] })}
+          label="Efetividade do mês"
         />
       </Card>
 

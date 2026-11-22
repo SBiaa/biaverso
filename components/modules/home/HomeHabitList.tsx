@@ -28,10 +28,10 @@ export function HomeHabitList({ items: serverItems }: { items: HabitItem[] }) {
             <button
               type="button"
               onClick={() => toggle(h.id)}
-              className="flex items-center gap-2 text-sm"
+              className="flex min-h-11 items-center gap-2 text-left text-sm md:min-h-0"
             >
               {h.done ? (
-                <CheckCircle2 size={16} className="text-accent" />
+                <CheckCircle2 size={16} className="text-accent-ink" />
               ) : (
                 <Circle size={16} className="text-text-secondary" />
               )}

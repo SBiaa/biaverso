@@ -7,6 +7,7 @@ import { Button, ErrorNote, notify } from "@/components/ui";
 import {
   ACCENT_PRESETS,
   accentContrast,
+  accentInk,
   normalizeAccent,
   parseHex,
 } from "@/lib/accent";
@@ -37,6 +38,10 @@ export function AccentColorPicker({ initialColor }: { initialColor: string }) {
     const root = document.documentElement;
     root.style.setProperty("--accent", next);
     root.style.setProperty("--accent-contrast", accentContrast(next));
+    // O estilo inline vale para os dois temas, então a versão "texto" sai do
+    // tema que está na tela agora.
+    const theme = root.dataset.theme === "dark" ? "dark" : "light";
+    root.style.setProperty("--accent-ink", accentInk(next, theme));
   }
 
   function reset() {
@@ -45,6 +50,7 @@ export function AccentColorPicker({ initialColor }: { initialColor: string }) {
     // Devolve o controle ao <style> que o servidor injetou.
     root.style.removeProperty("--accent");
     root.style.removeProperty("--accent-contrast");
+    root.style.removeProperty("--accent-ink");
   }
 
   async function save() {

@@ -23,7 +23,7 @@ export function SabbatCard({
     <Card className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <CardTitle>Próximo sabbath</CardTitle>
-        <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+        <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent-ink">
           {countdown}
         </span>
       </div>
@@ -59,7 +59,7 @@ export function SabbatCard({
 
       <Link
         href="/espiritual/roda"
-        className="w-fit text-xs font-medium text-accent"
+        className="w-fit text-xs font-medium text-accent-ink"
       >
         Ver a roda inteira
       </Link>

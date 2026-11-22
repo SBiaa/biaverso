@@ -315,10 +315,10 @@ export function ProspectPanel({ link }: { link: ProspectLink }) {
                         ? `Reabrir ${step.title}`
                         : `Concluir ${step.title}`
                     }
-                    className="shrink-0"
+                    className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     {step.done ? (
-                      <CheckCircle2 size={18} className="text-accent" />
+                      <CheckCircle2 size={18} className="text-accent-ink" />
                     ) : (
                       <Circle size={18} className="text-text-secondary" />
                     )}

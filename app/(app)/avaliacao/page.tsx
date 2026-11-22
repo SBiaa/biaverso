@@ -79,7 +79,7 @@ export default async function AvaliacaoDashboardPage() {
               </h2>
               <Link
                 href={`/avaliacao/mes?month=${month}&year=${year}`}
-                className="-my-2 py-2 text-xs font-medium text-accent"
+                className="-my-2 py-2 text-xs font-medium text-accent-ink"
               >
                 Editar mês
               </Link>

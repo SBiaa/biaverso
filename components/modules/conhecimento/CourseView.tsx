@@ -216,7 +216,7 @@ export function CourseView({
                   href={course.link}
                   target="_blank"
                   rel="noreferrer"
-                  className="-my-2 inline-flex w-fit items-center gap-1 py-2 text-xs font-medium text-accent"
+                  className="-my-2 inline-flex w-fit items-center gap-1 py-2 text-xs font-medium text-accent-ink"
                 >
                   Abrir curso <ExternalLink size={12} />
                 </a>
@@ -428,7 +428,7 @@ function LessonPage({
           className={cn(
             "inline-flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors",
             lesson.done
-              ? "bg-accent/10 text-accent hover:bg-accent/20"
+              ? "bg-accent/10 text-accent-ink hover:bg-accent/20"
               : "bg-accent text-accent-contrast hover:bg-accent/90",
           )}
         >
@@ -487,7 +487,7 @@ function LessonPage({
             href={lesson.link}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-medium text-accent"
+            className="inline-flex items-center gap-1 text-xs font-medium text-accent-ink"
           >
             Abrir <ExternalLink size={12} />
           </a>
@@ -616,7 +616,7 @@ function ScheduleButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="-my-2 inline-flex items-center gap-1 py-2 text-xs font-medium text-accent"
+        className="-my-2 inline-flex items-center gap-1 py-2 text-xs font-medium text-accent-ink"
       >
         <CalendarClock size={13} /> Uma por dia
       </button>
@@ -719,7 +719,7 @@ function AddLessons({
           <button
             type="button"
             onClick={() => setBulk(true)}
-            className="-my-2 w-fit py-2 text-xs font-medium text-accent"
+            className="-my-2 w-fit py-2 text-xs font-medium text-accent-ink"
           >
             Colar várias de uma vez
           </button>

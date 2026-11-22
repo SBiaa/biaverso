@@ -275,11 +275,11 @@ function TaskRow({
             <button
               type="button"
               onClick={() => onToggle(task)}
-              className="mt-0.5 shrink-0"
+              className="-mx-3.5 -mb-3.5 -mt-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-label={task.done ? `Reabrir ${task.title}` : `Concluir ${task.title}`}
             >
               {task.done ? (
-                <CheckCircle2 size={16} className="text-accent" />
+                <CheckCircle2 size={16} className="text-accent-ink" />
               ) : (
                 <Circle size={16} className="text-text-secondary" />
               )}
@@ -328,7 +328,7 @@ function TaskRow({
                       <Link
                         href={task.project.href}
                         title="Ir para o projeto"
-                        className="inline-flex items-center gap-1 font-medium text-text-primary/80 hover:text-accent hover:underline"
+                        className="inline-flex items-center gap-1 font-medium text-text-primary/80 hover:text-accent-ink hover:underline"
                       >
                         <FolderOpen size={12} className="shrink-0" aria-hidden />
                         {task.project.name}

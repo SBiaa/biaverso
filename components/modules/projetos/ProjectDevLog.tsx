@@ -245,7 +245,7 @@ export function ProjectDevLog({
                     href={entry.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+                    className="mt-1 inline-flex items-center gap-1 text-xs text-accent-ink hover:underline"
                   >
                     Abrir link
                     <ExternalLink size={12} />

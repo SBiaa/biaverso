@@ -48,7 +48,7 @@ export default async function AvaliacaoMesPage({
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <MonthPicker month={month} year={year} />
-          <Link href={quarterHref} className="-my-2 py-2 text-xs font-medium text-accent">
+          <Link href={quarterHref} className="-my-2 py-2 text-xs font-medium text-accent-ink">
             Ver trimestre
           </Link>
         </div>
@@ -78,7 +78,7 @@ export default async function AvaliacaoMesPage({
                 <li key={week.id}>
                   <Link
                     href={`/avaliacao/semana?week=${week.weekStart.toISOString().slice(0, 10)}`}
-                    className="flex items-center justify-between text-sm text-accent hover:underline"
+                    className="flex items-center justify-between text-sm text-accent-ink hover:underline"
                   >
                     <span>
                       {formatDateBR(week.weekStart)} – {formatDateBR(week.weekEnd)}

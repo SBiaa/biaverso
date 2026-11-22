@@ -285,7 +285,7 @@ export function FixedBillList({ items: initialItems }: { items: BillItem[] }) {
               const content = (
                 <>
                   {item.status === "PAGO" ? (
-                    <CheckCircle2 size={18} className="text-accent" />
+                    <CheckCircle2 size={18} className="text-accent-ink" />
                   ) : (
                     <Circle size={18} className="text-text-secondary" />
                   )}

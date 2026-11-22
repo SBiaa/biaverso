@@ -59,7 +59,7 @@ export function QuickCaptureForm({
       {/* `flex-wrap` + largura mínima no campo: numa tela de 375px os três
           controles em linha deixavam o input com uns 90px de escrita. */}
       <div className="flex flex-wrap items-center gap-2">
-        <Lightbulb size={20} className="shrink-0 text-accent" />
+        <Lightbulb size={20} className="shrink-0 text-accent-ink" />
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -92,7 +92,7 @@ export function QuickCaptureForm({
       {standalone && saved && (
         <p role="status" className="text-xs text-text-secondary">
           Guardada.{" "}
-          <Link href="/ideias" className="font-medium text-accent hover:underline">
+          <Link href="/ideias" className="font-medium text-accent-ink hover:underline">
             Ver em Ideias
           </Link>
         </p>

@@ -41,7 +41,7 @@ export function WaterTracker({ dayId, initialCount, settings }: WaterTrackerProp
             >
               <Droplets
                 size={22}
-                className={i < count ? "text-accent" : "text-border"}
+                className={i < count ? "text-accent-ink" : "text-border"}
                 fill={i < count ? "currentColor" : "none"}
               />
             </button>

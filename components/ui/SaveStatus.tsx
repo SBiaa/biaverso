@@ -48,7 +48,7 @@ export function SaveStatus({ state, className }: { state: SaveState; className?:
       aria-live="polite"
       className={cn(
         "inline-flex min-h-4 items-center gap-1 text-xs",
-        state === "saved" ? "text-accent" : "text-text-secondary",
+        state === "saved" ? "text-accent-ink" : "text-text-secondary",
         className,
       )}
     >

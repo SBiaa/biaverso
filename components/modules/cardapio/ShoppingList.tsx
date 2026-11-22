@@ -46,7 +46,7 @@ export function ShoppingList({
             <span className="ml-2 font-normal text-text-secondary">{pending}</span>
           )}
         </CardTitle>
-        <Link href="/cardapio/despensa" className="text-xs font-medium text-accent hover:underline">
+        <Link href="/cardapio/despensa" className="text-xs font-medium text-accent-ink hover:underline">
           ver despensa
         </Link>
       </div>

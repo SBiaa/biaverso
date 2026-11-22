@@ -96,7 +96,7 @@ export function AltarItemCard({ item }: { item: AltarItemView }) {
           <button
             type="button"
             onClick={toggleRunningLow}
-            className="-my-1 py-1 text-xs font-medium text-accent"
+            className="-my-1 py-1 text-xs font-medium text-accent-ink"
           >
             {runningLow ? "Repus" : "Está acabando"}
           </button>

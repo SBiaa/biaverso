@@ -126,7 +126,7 @@ export function KnowledgeCard({
           href={item.link}
           target="_blank"
           rel="noreferrer"
-          className="-my-2 py-2 text-xs font-medium text-accent"
+          className="-my-2 py-2 text-xs font-medium text-accent-ink"
         >
           Abrir link
         </a>

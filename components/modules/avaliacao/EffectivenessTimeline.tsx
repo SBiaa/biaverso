@@ -40,7 +40,7 @@ export function EffectivenessTimeline({ weeks }: { weeks: WeekPoint[] }) {
                 <Star
                   key={i}
                   size={11}
-                  className={i < stars ? "text-accent" : "text-border"}
+                  className={i < stars ? "text-accent-ink" : "text-border"}
                   fill={i < stars ? "currentColor" : "none"}
                 />
               ))}

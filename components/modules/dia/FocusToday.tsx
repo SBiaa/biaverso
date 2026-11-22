@@ -74,10 +74,10 @@ export function FocusToday({ dayId, items: serverItems }: { dayId: string; items
                   update(item.id, { done: !item.done }, () => doneRequest(item, !item.done))
                 }
                 aria-label={item.done ? `Reabrir ${item.title}` : `Concluir ${item.title}`}
-                className="shrink-0"
+                className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 {item.done ? (
-                  <CheckCircle2 size={18} className="text-accent" />
+                  <CheckCircle2 size={18} className="text-accent-ink" />
                 ) : (
                   <Circle size={18} className="text-text-secondary" />
                 )}

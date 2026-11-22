@@ -45,7 +45,7 @@ export function CalendarNav({
         <button
           type="button"
           onClick={() => push({ data: null })}
-          className="text-sm font-semibold text-text-primary hover:text-accent"
+          className="text-sm font-semibold text-text-primary hover:text-accent-ink"
         >
           {formatDateRangeBR(new Date(rangeStart), daysForView(view))}
         </button>

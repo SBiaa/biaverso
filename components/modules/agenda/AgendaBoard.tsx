@@ -342,7 +342,7 @@ function ListView({
           <h2
             className={cn(
               "mb-2 text-sm font-semibold",
-              group.date === today ? "text-accent" : "text-text-primary",
+              group.date === today ? "text-accent-ink" : "text-text-primary",
             )}
           >
             {formatDateLongBR(parseDateOnly(group.date)!)}
@@ -464,7 +464,7 @@ export function AgendaBoard({ initialEvents }: { initialEvents: AgendaEvent[] })
                 className={cn(
                   "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                   view === key
-                    ? "bg-accent/10 text-accent"
+                    ? "bg-accent/10 text-accent-ink"
                     : "text-text-secondary hover:bg-hover hover:text-text-primary",
                 )}
               >

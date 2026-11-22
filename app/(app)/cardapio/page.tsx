@@ -72,7 +72,7 @@ export default async function CardapioPage({
         action={
           <Link
             href="/cardapio/despensa"
-            className="text-sm font-medium text-accent hover:underline"
+            className="text-sm font-medium text-accent-ink hover:underline"
           >
             Despensa
           </Link>

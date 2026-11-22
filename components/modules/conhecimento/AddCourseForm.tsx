@@ -41,7 +41,7 @@ export function AddCourseForm({ subjectId }: { subjectId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="-my-2 w-fit py-2 text-xs font-medium text-accent"
+        className="-my-2 w-fit py-2 text-xs font-medium text-accent-ink"
       >
         + Adicionar curso
       </button>

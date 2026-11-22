@@ -102,7 +102,7 @@ export function ThemeToggle({ className }: { className?: string }) {
               "inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
               isActive
-                ? "bg-accent/10 text-accent"
+                ? "bg-accent/10 text-accent-ink"
                 : "text-text-secondary hover:bg-hover",
             )}
           >

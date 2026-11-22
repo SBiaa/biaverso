@@ -43,7 +43,7 @@ function Donut({ done, total }: { done: number; total: number }) {
 function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
     <div className="flex items-center gap-3 rounded-lg bg-hover/60 px-3 py-2.5">
-      <span className="text-accent">{icon}</span>
+      <span className="text-accent-ink">{icon}</span>
       <div>
         <p className="text-lg font-semibold leading-tight tabular-nums text-text-primary">{value}</p>
         <p className="text-xs text-text-secondary">{label}</p>

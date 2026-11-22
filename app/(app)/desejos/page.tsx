@@ -83,7 +83,7 @@ export default async function DesejosPage({
           <StatCard
             label="Custa realizar a lista"
             value={formatCurrencyBRL(totalDesejado)}
-            icon={<Sparkles size={16} className="text-accent" />}
+            icon={<Sparkles size={16} className="text-accent-ink" />}
           />
           <StatCard
             label="Só os essenciais"

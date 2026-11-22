@@ -85,7 +85,7 @@ export default async function HorasPage({
         <Card>
           <div className="mb-3 flex items-center justify-between gap-2">
             <CardTitle>Blocos planejados</CardTitle>
-            <Link href="/horas/calendario" className="text-xs font-medium text-accent hover:underline">
+            <Link href="/horas/calendario" className="text-xs font-medium text-accent-ink hover:underline">
               Ver calendário
             </Link>
           </div>

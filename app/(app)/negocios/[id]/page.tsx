@@ -590,7 +590,7 @@ async function BusinessTabContent({
         <Card className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <CardTitle>Últimas transações</CardTitle>
-            <Link href="/financeiro/transacoes" className="-my-2 py-2 text-xs font-medium text-accent">
+            <Link href="/financeiro/transacoes" className="-my-2 py-2 text-xs font-medium text-accent-ink">
               Ver todas
             </Link>
           </div>
@@ -631,7 +631,7 @@ async function BusinessTabContent({
     content ?? (
       <p className="text-sm text-text-secondary">
         Nenhum módulo ligado neste negócio.{" "}
-        <Link href={`/negocios/${id}/configuracoes`} className="font-medium text-accent">
+        <Link href={`/negocios/${id}/configuracoes`} className="font-medium text-accent-ink">
           Escolher os módulos
         </Link>
         .

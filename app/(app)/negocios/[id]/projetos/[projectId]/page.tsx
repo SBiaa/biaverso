@@ -171,7 +171,7 @@ export default async function ProjectDetailPage({
               {project.client ? (
                 <Link
                   href={`/negocios/${businessId}/clientes/${project.client.id}`}
-                  className="font-medium text-accent hover:underline"
+                  className="font-medium text-accent-ink hover:underline"
                 >
                   {project.client.name}
                 </Link>

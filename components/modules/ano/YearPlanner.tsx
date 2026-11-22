@@ -111,7 +111,7 @@ export function YearPlanner({
           onBlur={() => save()}
           placeholder="Ex.: constância"
           aria-label="Palavra do ano"
-          className="mt-1 w-full bg-transparent text-center text-3xl font-semibold text-accent outline-none placeholder:text-text-secondary/40"
+          className="mt-1 w-full bg-transparent text-center text-3xl font-semibold text-accent-ink outline-none placeholder:text-text-secondary/40"
         />
       </Card>
 
@@ -144,7 +144,7 @@ export function YearPlanner({
         {pillars.length === 0 && (
           <Card className="text-sm text-text-secondary">
             Nenhum pilar ativo ainda. Crie seus pilares na{" "}
-            <Link href="/visao" className="text-accent underline">
+            <Link href="/visao" className="text-accent-ink underline">
               Central de Visão
             </Link>
             .
@@ -253,7 +253,7 @@ export function YearPlanner({
                 dates: [...plan.dates, { id: crypto.randomUUID(), date: `${year}-01-01`, title: "" }],
               })
             }
-            className="flex items-center gap-1.5 text-sm font-medium text-accent"
+            className="flex items-center gap-1.5 text-sm font-medium text-accent-ink"
           >
             <Plus size={16} /> Adicionar data
           </button>

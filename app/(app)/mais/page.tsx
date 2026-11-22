@@ -20,7 +20,7 @@ function DestinationLink({ item }: { item: NavItem }) {
       href={item.href}
       className="flex min-h-[52px] items-center gap-3 rounded-xl border border-border bg-surface px-3 shadow-elevation transition-colors hover:bg-hover"
     >
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent/10 text-accent">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent/10 text-accent-ink">
         <Icon size={16} />
       </span>
       <span className="min-w-0 truncate text-sm font-medium text-text-primary">

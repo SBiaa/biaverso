@@ -74,7 +74,7 @@ export default async function ProdutoDetailPage({
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Link
           href="/produtos"
-          className="text-xs font-medium text-text-secondary hover:text-accent"
+          className="text-xs font-medium text-text-secondary hover:text-accent-ink"
         >
           ← Central de produtos
         </Link>
@@ -160,7 +160,7 @@ export default async function ProdutoDetailPage({
                   <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
                     <Link
                       href={`/negocios/${item.collection.businessId}/colecoes/${item.collection.id}`}
-                      className="min-w-0 hover:text-accent"
+                      className="min-w-0 hover:text-accent-ink"
                     >
                       <span className="text-text-primary">{item.name ?? product.name}</span>
                       <span className="text-text-secondary"> · {item.collection.name}</span>

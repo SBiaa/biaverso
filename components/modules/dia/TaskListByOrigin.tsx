@@ -80,7 +80,7 @@ function TaskRow({
           className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover"
         >
           {task.done ? (
-            <CheckCircle2 size={16} className="text-accent" />
+            <CheckCircle2 size={16} className="text-accent-ink" />
           ) : (
             <Circle size={16} className="text-text-secondary" />
           )}

@@ -90,7 +90,7 @@ export function TimeGridCalendar({
                 href={`/horas?date=${day.date}`}
                 className={cn(
                   "border-b border-border py-2 text-center text-sm font-semibold hover:underline",
-                  isToday ? "text-accent" : "text-text-primary",
+                  isToday ? "text-accent-ink" : "text-text-primary",
                 )}
               >
                 {WEEKDAY_LABELS[wd]}{" "}

@@ -160,7 +160,7 @@ export function SubjectBlock({ subject, handle }: { subject: SubjectData; handle
                     href={m.link}
                     target="_blank"
                     rel="noreferrer"
-                    className="min-w-0 truncate text-text-primary hover:text-accent"
+                    className="min-w-0 truncate text-text-primary hover:text-accent-ink"
                   >
                     {m.title}
                   </a>

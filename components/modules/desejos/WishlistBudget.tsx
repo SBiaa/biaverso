@@ -83,7 +83,7 @@ export function WishlistBudget({
         </CardTitle>
         <Link
           href="/financeiro/planejamento"
-          className="-my-2 py-2 text-xs font-medium text-accent"
+          className="-my-2 py-2 text-xs font-medium text-accent-ink"
         >
           Ver planejamento
         </Link>

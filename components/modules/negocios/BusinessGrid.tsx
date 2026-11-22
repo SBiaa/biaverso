@@ -101,10 +101,10 @@ export function BusinessGrid({ businesses }: { businesses: BusinessItem[] }) {
                   }
                 >
                   {/* A cor vai no ícone, não no botão: `cn` aqui é um join
-                      simples, então `text-accent` e o `text-text-secondary`
+                      simples, então `text-accent-ink` e o `text-text-secondary`
                       do IconButton brigariam pela ordem do CSS. */}
                   {business.showInNav ? (
-                    <Pin size={15} className="text-accent" />
+                    <Pin size={15} className="text-accent-ink" />
                   ) : (
                     <PinOff size={15} />
                   )}

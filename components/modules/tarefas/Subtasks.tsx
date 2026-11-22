@@ -168,7 +168,7 @@ export function SubtaskList({
               className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover"
             >
               {subtask.done ? (
-                <CheckCircle2 size={14} className="text-accent" />
+                <CheckCircle2 size={14} className="text-accent-ink" />
               ) : (
                 <Circle size={14} className="text-text-secondary" />
               )}
@@ -253,7 +253,7 @@ export function SubtaskToggle({
     >
       <ListPlus size={13} />
       {total > 0 && (
-        <span className={cn(doneCount === total && "text-accent")}>
+        <span className={cn(doneCount === total && "text-accent-ink")}>
           {doneCount}/{total}
         </span>
       )}

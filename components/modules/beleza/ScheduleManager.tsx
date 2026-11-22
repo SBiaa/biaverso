@@ -86,7 +86,7 @@ function SortableCycleStep({
         <p className="truncate text-sm text-text-primary">
           {step.title}
           {isCurrent && (
-            <span className="ml-2 text-xs font-medium text-accent">etapa da vez</span>
+            <span className="ml-2 text-xs font-medium text-accent-ink">etapa da vez</span>
           )}
         </p>
         <p className="truncate text-xs text-text-secondary">

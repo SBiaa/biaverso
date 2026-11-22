@@ -73,7 +73,7 @@ export function MoodboardItemModal({
             className={cn(
               "flex-1 rounded-md border px-2 py-1.5 text-xs font-medium",
               form.type === type
-                ? "border-accent bg-accent/10 text-accent"
+                ? "border-accent bg-accent/10 text-accent-ink"
                 : "border-border text-text-secondary",
             )}
           >

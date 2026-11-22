@@ -93,11 +93,11 @@ function SortableTask({
       <button
         type="button"
         onClick={() => onToggle(task.id)}
-        className="mt-0.5 shrink-0"
+        className="-mx-3.5 -mb-3.5 -mt-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         aria-label={task.done ? `Reabrir ${task.title}` : `Concluir ${task.title}`}
       >
         {task.done ? (
-          <CheckCircle2 size={16} className="text-accent" />
+          <CheckCircle2 size={16} className="text-accent-ink" />
         ) : (
           <Circle size={16} className="text-text-secondary" />
         )}

@@ -186,7 +186,7 @@ function ImportedContentDetails({ post }: { post: PostInitial }) {
       {(post.pilar || post.objective) && (
         <div className="flex flex-wrap gap-1.5">
           {post.pilar && (
-            <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+            <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent-ink">
               {contentPilarLabels[post.pilar] ?? post.pilar}
             </span>
           )}
@@ -242,7 +242,7 @@ function ImportedContentDetails({ post }: { post: PostInitial }) {
           <ul className="flex flex-col gap-1.5">
             {roteiro.map((r, i) => (
               <li key={i} className="rounded-md border border-border bg-surface p-2">
-                <span className="text-xs font-medium text-accent">{r.tempo}</span>
+                <span className="text-xs font-medium text-accent-ink">{r.tempo}</span>
                 <p className="leading-relaxed">{r.acao}</p>
                 {r.fala && (
                   <p className="mt-0.5 italic text-text-secondary">&ldquo;{r.fala}&rdquo;</p>
@@ -280,7 +280,7 @@ function ImportedContentDetails({ post }: { post: PostInitial }) {
       {hasHashtags && (
         <div className="flex flex-wrap gap-1">
           {post.hashtags!.map((h) => (
-            <span key={h} className="rounded bg-accent/10 px-1.5 py-0.5 text-xs text-accent">
+            <span key={h} className="rounded bg-accent/10 px-1.5 py-0.5 text-xs text-accent-ink">
               #{h}
             </span>
           ))}
@@ -712,7 +712,7 @@ export function ContentPostModal({
                   duplicateDays.size === 7 ? new Set() : new Set([0, 1, 2, 3, 4, 5, 6]),
                 )
               }
-              className="text-xs text-accent hover:underline"
+              className="text-xs text-accent-ink hover:underline"
             >
               {duplicateDays.size === 7 ? "Limpar" : "Todo dia"}
             </button>

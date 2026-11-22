@@ -129,7 +129,7 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
               className={cn(
                 "rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors",
                 pillarIds.includes(p.id)
-                  ? "border-accent bg-accent/10 text-accent"
+                  ? "border-accent bg-accent/10 text-accent-ink"
                   : "text-text-secondary hover:bg-hover",
               )}
             >
@@ -170,7 +170,7 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
               onClick={() => setForm((prev) => ({ ...prev, icon: name }))}
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-md border border-border",
-                form.icon === name && "border-accent bg-accent/10 text-accent",
+                form.icon === name && "border-accent bg-accent/10 text-accent-ink",
               )}
             >
               <Icon size={16} />
@@ -192,7 +192,7 @@ export function BusinessFormModal({ mode, initial, onClose }: BusinessFormModalP
               className={cn(
                 "rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors",
                 modules.includes(module)
-                  ? "border-accent bg-accent/10 text-accent"
+                  ? "border-accent bg-accent/10 text-accent-ink"
                   : "text-text-secondary hover:bg-hover",
               )}
             >

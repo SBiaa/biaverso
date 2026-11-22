@@ -64,7 +64,7 @@ export function CollectionsGrid({
                   <span className="rounded-full bg-border px-2 py-0.5 text-xs font-medium text-text-secondary">
                     {productCount} produto(s)
                   </span>
-                  <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                  <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent-ink">
                     {orderCount} pedido(s) · {formatCurrencyBRL(ordersTotal)}
                   </span>
                 </div>

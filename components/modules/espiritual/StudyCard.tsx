@@ -171,7 +171,7 @@ export function StudyCard({
             href={study.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex w-fit items-center gap-1 text-xs font-medium text-accent"
+            className="inline-flex w-fit items-center gap-1 text-xs font-medium text-accent-ink"
           >
             <ExternalLink size={12} />
             Abrir link

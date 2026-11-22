@@ -47,7 +47,7 @@ export default async function AvaliacaoSemanaPage({
             weekStart={weekStart.toISOString()}
             weekEnd={weekEnd.toISOString()}
           />
-          <Link href={monthHref} className="-my-2 py-2 text-xs font-medium text-accent">
+          <Link href={monthHref} className="-my-2 py-2 text-xs font-medium text-accent-ink">
             Ver mês
           </Link>
         </div>

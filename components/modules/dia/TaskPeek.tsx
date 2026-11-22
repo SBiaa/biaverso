@@ -263,11 +263,11 @@ export function TaskPeek({
             <button
               type="button"
               onClick={() => onToggle(task)}
-              className="mt-1.5 shrink-0"
+              className="-mx-3 -mb-3 -mt-1.5 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-label={task.done ? `Reabrir ${task.title}` : `Concluir ${task.title}`}
             >
               {task.done ? (
-                <CheckCircle2 size={20} className="text-accent" />
+                <CheckCircle2 size={20} className="text-accent-ink" />
               ) : (
                 <Circle size={20} className="text-text-secondary" />
               )}
@@ -345,7 +345,7 @@ export function TaskPeek({
               ) : task.project ? (
                 <Link
                   href={task.project.href}
-                  className="inline-flex items-center gap-1 px-1.5 py-1 font-medium text-text-primary hover:text-accent hover:underline"
+                  className="inline-flex items-center gap-1 px-1.5 py-1 font-medium text-text-primary hover:text-accent-ink hover:underline"
                 >
                   <FolderOpen size={14} aria-hidden />
                   {task.project.name}

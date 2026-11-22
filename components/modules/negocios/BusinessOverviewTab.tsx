@@ -235,7 +235,7 @@ export function BusinessOverviewTab({
             </CardTitle>
             <Link
               href={`/negocios/${businessId}?tab=financeiro`}
-              className="-my-2 py-2 text-xs font-medium text-accent hover:underline"
+              className="-my-2 py-2 text-xs font-medium text-accent-ink hover:underline"
             >
               Ver financeiro
             </Link>

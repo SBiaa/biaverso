@@ -201,7 +201,7 @@ export function ProjectsSection({
                     inválido e o clique no link seria engolido pelo toggle. */}
                 <Link
                   href={`/negocios/${businessId}/projetos/${project.id}`}
-                  className="inline-flex items-center gap-1 self-start text-xs font-medium text-accent hover:underline"
+                  className="inline-flex items-center gap-1 self-start text-xs font-medium text-accent-ink hover:underline"
                 >
                   Abrir projeto
                   <ArrowRight size={13} />

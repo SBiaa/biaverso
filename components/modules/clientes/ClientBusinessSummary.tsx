@@ -43,7 +43,7 @@ export function ClientBusinessSummary({ summary }: { summary: BusinessSummary })
         </div>
         <Link
           href={href}
-          className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-accent-ink hover:underline"
         >
           Abrir no negócio
           <ArrowRight size={13} />
@@ -107,7 +107,7 @@ export function ClientBusinessSummary({ summary }: { summary: BusinessSummary })
             </ul>
           )}
           {summary.pending.length > MAX_PENDING && (
-            <Link href={href} className="text-xs font-medium text-accent hover:underline">
+            <Link href={href} className="text-xs font-medium text-accent-ink hover:underline">
               Ver os outros {summary.pending.length - MAX_PENDING}
             </Link>
           )}

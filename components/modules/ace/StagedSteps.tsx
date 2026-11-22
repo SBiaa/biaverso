@@ -163,7 +163,7 @@ export function StagedSteps({
             )}
           </div>
           {checkable && groupSteps.length > 0 && (
-            <span className={cn("text-xs text-text-secondary", complete && "text-accent")}>
+            <span className={cn("text-xs text-text-secondary", complete && "text-accent-ink")}>
               {done}/{groupSteps.length}
             </span>
           )}
@@ -181,7 +181,7 @@ export function StagedSteps({
                     className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover"
                   >
                     {step.done ? (
-                      <CheckCircle2 size={14} className="text-accent" />
+                      <CheckCircle2 size={14} className="text-accent-ink" />
                     ) : (
                       <Circle size={14} className="text-text-secondary" />
                     )}

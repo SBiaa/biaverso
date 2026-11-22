@@ -94,11 +94,61 @@ export function accentContrast(color: string): string {
   return ratio(l, WHITE_LUMINANCE) >= ratio(l, DARK_LUMINANCE) ? "#ffffff" : DARK;
 }
 
+/** Mistura `color` com `target` (0 = só a cor, 1 = só o alvo). */
+function mix(color: string, target: string, t: number): string {
+  const a = parseHex(color) ?? parseHex(DEFAULT_ACCENT)!;
+  const b = parseHex(target)!;
+  const channels = a.map((c, i) => Math.round(c + (b[i] - c) * t));
+  return `#${channels.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/**
+ * Fundos sobre os quais o acento aparece como texto, em cada tema. Vale o
+ * pior caso: no claro o branco dos cards (mais claro que o fundo #fafafa), no
+ * escuro o cinza dos cards (#18181b, mais claro que o fundo #0f0f0f).
+ */
+const TEXT_SURFACE = { light: "#ffffff", dark: "#18181b" } as const;
+
+/**
+ * Margem acima do mínimo de 4,5:1 da WCAG: o texto do acento muitas vezes
+ * senta em cima de `bg-accent/10` (aba selecionada), que é um pouco mais
+ * escuro/claro que o card puro.
+ */
+const TEXT_MIN_RATIO = 4.8;
+
+/**
+ * O acento como TEXTO, ajustado para ser legível em cada tema.
+ *
+ * O índigo padrão sobre branco dá 4,47:1 — abaixo do mínimo para letra
+ * pequena — e sobre o cinza do escuro, uns 3,9:1. Tons mais claros (âmbar,
+ * turquesa) ficavam muito piores. Aqui o tom escolhido escurece (no claro) ou
+ * clareia (no escuro) só o necessário até passar. Botões e fundos continuam
+ * usando o acento puro: este ajuste é só para `text-accent-ink`.
+ */
+export function accentInk(color: string | null | undefined, theme: "light" | "dark"): string {
+  const accent = normalizeAccent(color);
+  const surface = luminance(TEXT_SURFACE[theme]);
+  const toward = theme === "light" ? "#000000" : "#ffffff";
+  for (let step = 0; step <= 20; step++) {
+    const candidate = mix(accent, toward, step / 20);
+    if (ratio(luminance(candidate), surface) >= TEXT_MIN_RATIO) return candidate;
+  }
+  return toward;
+}
+
 /**
  * O bloco de CSS que o layout injeta. Sai do servidor já com a cor certa,
  * então não existe lampejo de roxo antes da preferência ser aplicada.
+ *
+ * `:root:root[data-theme=dark]`: especificidade maior que a regra do tema
+ * escuro no globals.css, que também define `--accent-ink` — assim a ordem em
+ * que o navegador carrega os dois não decide quem ganha.
  */
 export function accentStyle(color: string | null | undefined): string {
   const accent = normalizeAccent(color);
-  return `:root{--accent:${accent};--accent-contrast:${accentContrast(accent)}}`;
+  return (
+    `:root{--accent:${accent};--accent-contrast:${accentContrast(accent)};` +
+    `--accent-ink:${accentInk(accent, "light")}}` +
+    `:root:root[data-theme="dark"]{--accent-ink:${accentInk(accent, "dark")}}`
+  );
 }

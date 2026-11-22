@@ -117,7 +117,7 @@ export function ProjectCard({ project }: { project: Project }) {
                   >
                     <span className="flex items-center gap-2">
                       {task.done ? (
-                        <CheckCircle2 size={16} className="text-accent" />
+                        <CheckCircle2 size={16} className="text-accent-ink" />
                       ) : (
                         <Circle size={16} className="text-text-secondary" />
                       )}

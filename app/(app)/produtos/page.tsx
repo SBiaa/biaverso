@@ -99,7 +99,7 @@ export default async function ProdutosPage({
           <StatCard
             label="Produtos"
             value={String(products.length)}
-            icon={<Package size={16} className="text-accent" />}
+            icon={<Package size={16} className="text-accent-ink" />}
           />
           <StatCard
             label="Sem custo cadastrado"
@@ -124,7 +124,7 @@ export default async function ProdutosPage({
           <div className="flex items-center gap-3">
             <Link
               href="/produtos/insumos"
-              className="text-xs font-medium text-text-secondary hover:text-accent"
+              className="text-xs font-medium text-text-secondary hover:text-accent-ink"
             >
               Insumos{materialCount > 0 && ` (${materialCount})`} →
             </Link>

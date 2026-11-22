@@ -145,7 +145,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
               <button
                 type="button"
                 onClick={submitTotal}
-                className="-my-2 py-2 text-xs font-medium text-accent"
+                className="-my-2 py-2 text-xs font-medium text-accent-ink"
               >
                 Salvar
               </button>
@@ -161,7 +161,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
             <button
               type="button"
               onClick={() => setEditingTotal(true)}
-              className="w-fit text-xs font-medium text-accent"
+              className="w-fit text-xs font-medium text-accent-ink"
             >
               + Definir total de páginas
             </button>
@@ -181,7 +181,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
               <button
                 type="button"
                 onClick={submitPage}
-                className="-my-2 py-2 text-xs font-medium text-accent"
+                className="-my-2 py-2 text-xs font-medium text-accent-ink"
               >
                 Salvar
               </button>
@@ -197,7 +197,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
             <button
               type="button"
               onClick={() => setEditingPage(true)}
-              className="w-fit text-xs font-medium text-accent"
+              className="w-fit text-xs font-medium text-accent-ink"
             >
               + Atualizar página
             </button>
@@ -209,6 +209,7 @@ export function BookCard({ book: initialBook }: { book: Book }) {
         <StarRating
           value={book.rating ?? 0}
           onChange={(n) => save({ rating: n })}
+          label={`Nota de ${book.title}`}
         />
       )}
 

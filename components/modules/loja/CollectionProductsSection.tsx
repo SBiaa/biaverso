@@ -110,7 +110,7 @@ function ProductPicker({
         {filtered.length === 0 ? (
           <p className="py-4 text-sm text-text-secondary">
             Nenhum produto encontrado.{" "}
-            <Link href="/produtos" className="font-medium text-accent">
+            <Link href="/produtos" className="font-medium text-accent-ink">
               Cadastrar na central
             </Link>
           </p>
@@ -148,7 +148,7 @@ function ProductPicker({
         )}
       </div>
 
-      <Link href="/produtos" className="-my-2 py-2 text-xs font-medium text-accent">
+      <Link href="/produtos" className="-my-2 py-2 text-xs font-medium text-accent-ink">
         Cadastrar um produto novo na central →
       </Link>
     </Modal>
@@ -258,7 +258,7 @@ function ItemModal({
         </div>
         <Link
           href={`/produtos/${product.id}`}
-          className="shrink-0 text-xs font-medium text-accent"
+          className="shrink-0 text-xs font-medium text-accent-ink"
         >
           Ver custos
         </Link>
@@ -412,7 +412,7 @@ export function CollectionProductsSection({
       {items.length === 0 ? (
         <p className="text-sm text-text-secondary">
           Nenhum produto nesta coleção ainda. Escolha da{" "}
-          <Link href="/produtos" className="font-medium text-accent">
+          <Link href="/produtos" className="font-medium text-accent-ink">
             central de produtos
           </Link>{" "}
           e dê a arte desta temporada.

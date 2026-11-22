@@ -49,7 +49,7 @@ export function SubNav({
               "flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-lg px-3",
               "text-sm font-medium transition-colors md:min-h-0 md:py-1.5",
               isActive
-                ? "bg-accent/10 text-accent"
+                ? "bg-accent/10 text-accent-ink"
                 : "text-text-secondary hover:bg-hover",
             )}
           >

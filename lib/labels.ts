@@ -103,6 +103,18 @@ export const starsValues = ["UM", "DOIS", "TRES", "QUATRO", "CINCO"];
  */
 export const moodScale = ["😔", "😕", "😐", "🙂", "😄"] as const;
 
+/**
+ * O nome de cada humor, na mesma ordem. O emoji sozinho não é lido por leitor
+ * de tela de um jeito útil ("rosto pensativo"?) e nem todo mundo lê igual.
+ */
+export const moodLabels: Record<(typeof moodScale)[number], string> = {
+  "😔": "Mal",
+  "😕": "Meio pra baixo",
+  "😐": "Neutra",
+  "🙂": "Bem",
+  "😄": "Ótima",
+};
+
 export const dayTypeLabels: Record<string, string> = {
   NORMAL: "Dia normal",
   FAXINA: "Dia de faxina",

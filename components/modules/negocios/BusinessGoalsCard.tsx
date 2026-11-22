@@ -153,7 +153,7 @@ export function BusinessGoalsCard({
           </ul>
           <Link
             href={mainPillar ? `/visao/${mainPillar.id}` : "/visao"}
-            className="w-fit text-xs font-medium text-accent hover:underline"
+            className="w-fit text-xs font-medium text-accent-ink hover:underline"
           >
             Preencher na Central de Visão
           </Link>
@@ -166,7 +166,7 @@ export function BusinessGoalsCard({
             <p className="text-xs font-medium text-text-secondary">Projetos em andamento</p>
             <Link
               href={`/negocios/${businessId}?tab=interno`}
-              className="-my-2 py-2 text-xs font-medium text-accent hover:underline"
+              className="-my-2 py-2 text-xs font-medium text-accent-ink hover:underline"
             >
               Ver todos
             </Link>

@@ -297,7 +297,7 @@ export function ProjectItems({
                 title="Passos feitos"
                 className={cn(
                   "mt-px shrink-0 text-xs tabular-nums text-text-secondary",
-                  item.steps.done === item.steps.total && "text-accent",
+                  item.steps.done === item.steps.total && "text-accent-ink",
                 )}
               >
                 {item.steps.done}/{item.steps.total}

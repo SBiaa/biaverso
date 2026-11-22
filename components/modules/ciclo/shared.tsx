@@ -6,7 +6,7 @@ import type { CalendarDayKind, CyclePhase } from "@/lib/ciclo-shared";
 
 export const phasePillClass: Record<CyclePhase, string> = {
   MENSTRUAL: "bg-danger-soft-bg text-danger-soft-text",
-  FOLICULAR: "bg-accent/10 text-accent",
+  FOLICULAR: "bg-accent/10 text-accent-ink",
   OVULATORIA: "bg-warning-soft-bg text-warning-soft-text",
   LUTEA: "bg-border text-text-secondary",
 };
@@ -15,7 +15,7 @@ export const calendarDayClass: Record<CalendarDayKind, string> = {
   PERIODO: "bg-danger-solid-bg text-danger-solid-text",
   PERIODO_PREVISTO: "bg-danger-soft-bg text-danger-soft-text",
   OVULACAO_PREVISTA: "bg-warning-soft-bg text-warning-soft-text",
-  FERTIL_PREVISTO: "bg-accent/10 text-accent",
+  FERTIL_PREVISTO: "bg-accent/10 text-accent-ink",
   NENHUM: "text-text-primary",
 };
 

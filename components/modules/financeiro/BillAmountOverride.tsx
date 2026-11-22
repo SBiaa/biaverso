@@ -54,8 +54,8 @@ export function BillAmountOverride({
           setOpen(true);
         }}
         className={cn(
-          "flex items-center gap-1 font-medium text-text-primary hover:text-accent",
-          amountOverride !== null && "text-accent",
+          "flex items-center gap-1 font-medium text-text-primary hover:text-accent-ink",
+          amountOverride !== null && "text-accent-ink",
         )}
       >
         {formatCurrencyBRL(amount)}

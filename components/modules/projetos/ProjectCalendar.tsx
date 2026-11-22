@@ -97,7 +97,7 @@ function MonthList({
             <h3
               className={cn(
                 "text-xs font-medium uppercase tracking-wide",
-                date === today ? "text-accent" : "text-text-secondary",
+                date === today ? "text-accent-ink" : "text-text-secondary",
               )}
             >
               {weekday}, {pad2(day)}
@@ -233,7 +233,7 @@ function DayCell({
         <span
           className={cn(
             "text-xs",
-            isToday ? "font-semibold text-accent" : "text-text-secondary",
+            isToday ? "font-semibold text-accent-ink" : "text-text-secondary",
           )}
         >
           {day}

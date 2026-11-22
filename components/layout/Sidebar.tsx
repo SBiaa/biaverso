@@ -31,7 +31,7 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
         "group flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
         "[[data-sidebar='fechada']_&]:justify-center [[data-sidebar='fechada']_&]:px-0",
         isActive
-          ? "bg-surface font-semibold text-accent shadow-elevation"
+          ? "bg-surface font-semibold text-accent-ink shadow-elevation"
           : "font-medium text-text-secondary hover:bg-hover-strong hover:text-text-primary",
       )}
     >
@@ -41,7 +41,7 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
         size={16}
         className={cn(
           "shrink-0 transition-colors",
-          isActive ? "text-accent" : "text-text-secondary/70 group-hover:text-text-primary",
+          isActive ? "text-accent-ink" : "text-text-secondary/70 group-hover:text-text-primary",
         )}
       />
       <span className="truncate [[data-sidebar='fechada']_&]:hidden">

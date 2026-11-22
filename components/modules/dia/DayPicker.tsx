@@ -34,7 +34,7 @@ export function DayPicker({ date }: DayPickerProps) {
       <button
         type="button"
         onClick={goToday}
-        className="text-xl font-semibold text-text-primary hover:text-accent"
+        className="text-xl font-semibold text-text-primary hover:text-accent-ink"
       >
         {formatDateLongBR(new Date(date))}
       </button>

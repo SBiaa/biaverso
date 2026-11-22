@@ -47,7 +47,7 @@ export function HabitChecklist({ items: serverItems }: HabitChecklistProps) {
               className="flex items-center gap-2 text-sm"
             >
               {item.done ? (
-                <CheckCircle2 size={16} className="text-accent" />
+                <CheckCircle2 size={16} className="text-accent-ink" />
               ) : (
                 <Circle size={16} className="text-text-secondary" />
               )}

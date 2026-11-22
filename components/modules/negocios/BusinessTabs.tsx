@@ -49,7 +49,7 @@ export function BusinessTabs({
         className={cn(
           "ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
           active === "configuracoes"
-            ? "bg-accent/10 text-accent"
+            ? "bg-accent/10 text-accent-ink"
             : "text-text-secondary hover:bg-hover",
         )}
       >
@@ -72,7 +72,7 @@ function TabPill({ label, active }: { label: string; active: boolean }) {
       className={cn(
         "block rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
         active || pending
-          ? "bg-accent/10 text-accent"
+          ? "bg-accent/10 text-accent-ink"
           : "text-text-secondary hover:bg-hover",
         pending && "animate-pulse",
       )}

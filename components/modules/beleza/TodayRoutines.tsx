@@ -95,7 +95,7 @@ export function TodayRoutines({
                 className="flex flex-1 items-center gap-3 text-left"
               >
                 {routine.done ? (
-                  <CheckCircle2 size={18} className="shrink-0 text-accent" />
+                  <CheckCircle2 size={18} className="shrink-0 text-accent-ink" />
                 ) : (
                   <Circle size={18} className="shrink-0 text-text-secondary" />
                 )}
@@ -144,7 +144,7 @@ export function TodayRoutines({
                         {step.done ? (
                           <CheckCircle2
                             size={15}
-                            className="mt-0.5 shrink-0 text-accent"
+                            className="mt-0.5 shrink-0 text-accent-ink"
                           />
                         ) : (
                           <Circle

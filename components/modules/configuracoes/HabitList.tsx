@@ -151,7 +151,7 @@ export function HabitList({ initialItems }: { initialItems: HabitItem[] }) {
               <IconButton
                 onClick={() => toggleActive(item.id, true)}
                 title="Reativar hábito"
-                className="hover:text-accent"
+                className="hover:text-accent-ink"
               >
                 <RotateCcw size={15} />
               </IconButton>

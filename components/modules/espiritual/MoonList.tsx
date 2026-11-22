@@ -35,7 +35,7 @@ export function MoonList({
               <p className="text-sm text-text-primary">
                 {event.kind === "NOVA" ? "Lua nova" : "Lua cheia"}
                 {isToday && (
-                  <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                  <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent-ink">
                     hoje
                   </span>
                 )}

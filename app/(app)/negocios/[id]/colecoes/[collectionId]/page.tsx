@@ -100,7 +100,7 @@ export default async function CollectionDetailPage({
       <main className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <Link
           href={`/negocios/${businessId}/colecoes`}
-          className="text-xs font-medium text-text-secondary hover:text-accent"
+          className="text-xs font-medium text-text-secondary hover:text-accent-ink"
         >
           ← Todas as coleções
         </Link>
@@ -210,7 +210,7 @@ export default async function CollectionDetailPage({
             </CardTitle>
             <Link
               href={`/negocios/${businessId}/pedidos`}
-              className="-my-2 py-2 text-xs font-medium text-accent"
+              className="-my-2 py-2 text-xs font-medium text-accent-ink"
             >
               Ver kanban
             </Link>

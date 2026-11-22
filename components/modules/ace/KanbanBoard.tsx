@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { useStoredPreference } from "@/hooks/useStoredPreference";
 import { ChevronRight } from "lucide-react";
-import { AttentionBadge, Card } from "@/components/ui";
+import { AttentionBadge, ClickableCard } from "@/components/ui";
 import { cn, formatDateBR } from "@/lib/utils";
 import { KANBAN_COLUMNS } from "@/lib/ace-shared";
 import { ContentPostModal, type ClientOption, type ProjectOption, type PostRecord } from "./ContentPostModal";
@@ -34,7 +34,7 @@ function ClientPill({ name, color }: { name: string | null; color: string | null
     <span
       className={cn(
         "rounded-full px-2 py-0.5 text-xs font-medium",
-        !name && "bg-accent/10 text-accent",
+        !name && "bg-accent/10 text-accent-ink",
       )}
       style={
         color
@@ -148,10 +148,11 @@ export function KanbanBoard({
                   <p className="text-xs text-text-secondary">Nada por aqui.</p>
                 ) : (
                   columnItems.map((item) => (
-                    <Card
+                    <ClickableCard
                       key={`${item.kind}-${item.id}`}
-                      className="flex cursor-pointer flex-col gap-1.5 p-3 transition-colors hover:bg-hover"
-                      onClick={() => setEditing(item)}
+                      className="flex flex-col gap-1.5 p-3"
+                      onActivate={() => setEditing(item)}
+                      label={`Abrir ${item.title}`}
                     >
                       <p className="text-sm font-medium text-text-primary">{item.title}</p>
                       <div className="flex flex-wrap items-center gap-1">
@@ -170,7 +171,7 @@ export function KanbanBoard({
                           {formatDateBR(new Date(item.date))}
                         </span>
                       )}
-                    </Card>
+                    </ClickableCard>
                   ))
                 )}
               </div>

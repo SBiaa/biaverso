@@ -100,7 +100,7 @@ export function ProjectDocuments({
                   href={doc.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex min-w-0 items-center gap-1 text-sm font-medium text-accent hover:underline"
+                  className="flex min-w-0 items-center gap-1 text-sm font-medium text-accent-ink hover:underline"
                 >
                   <span className="truncate">{doc.title}</span>
                   <ExternalLink size={13} className="shrink-0" />

@@ -142,7 +142,7 @@ export function WeeklyMealGrid({
                 <p
                   className={cn(
                     "text-sm font-semibold md:text-center",
-                    isToday ? "text-accent" : "text-text-primary",
+                    isToday ? "text-accent-ink" : "text-text-primary",
                   )}
                 >
                   {label}{" "}

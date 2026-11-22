@@ -188,7 +188,7 @@ export function CategoryManager({ initialItems }: { initialItems: ActivityCatego
               <IconButton
                 onClick={() => toggleActive(item.id, true)}
                 title="Reativar categoria"
-                className="hover:text-accent"
+                className="hover:text-accent-ink"
               >
                 <RotateCcw size={15} />
               </IconButton>

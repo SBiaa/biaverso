@@ -119,7 +119,7 @@ export function ProspectModal({
     <Modal title={prospect.name} size="md" onClose={onClose} onSubmit={handleSubmit}>
       <Link
         href={`/clientes/${prospect.clientId}`}
-        className="-mt-1 self-start text-xs font-medium text-accent"
+        className="-mt-1 self-start text-xs font-medium text-accent-ink"
       >
         Ver cadastro do cliente
       </Link>

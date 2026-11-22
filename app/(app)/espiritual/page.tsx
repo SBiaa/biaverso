@@ -48,7 +48,7 @@ export default async function EspiritualPage() {
           <Card className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
               <CardTitle>Próximos encontros</CardTitle>
-              <Link href="/espiritual/coven" className="text-xs font-medium text-accent">
+              <Link href="/espiritual/coven" className="text-xs font-medium text-accent-ink">
                 ver todos
               </Link>
             </div>
@@ -92,7 +92,7 @@ export default async function EspiritualPage() {
               <CardTitle>Textos e exercícios em aberto</CardTitle>
               <Link
                 href="/espiritual/estudos"
-                className="text-xs font-medium text-accent"
+                className="text-xs font-medium text-accent-ink"
               >
                 ver todos
               </Link>
@@ -183,7 +183,7 @@ export default async function EspiritualPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 border-t border-border/60 pt-3 text-xs font-medium text-accent">
+            <div className="flex flex-wrap gap-3 border-t border-border/60 pt-3 text-xs font-medium text-accent-ink">
               <Link href="/espiritual/rituais">Registrar ritual</Link>
               <Link href="/espiritual/tiragens">Registrar tiragem</Link>
               <Link href="/espiritual/altar">Ver o altar</Link>

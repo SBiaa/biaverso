@@ -139,7 +139,7 @@ export function PillarFormModal({ mode, initial, onClose }: PillarFormModalProps
               onClick={() => setForm((prev) => ({ ...prev, icon: name }))}
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-md border border-border",
-                form.icon === name && "border-accent bg-accent/10 text-accent",
+                form.icon === name && "border-accent bg-accent/10 text-accent-ink",
               )}
             >
               <Icon size={16} />

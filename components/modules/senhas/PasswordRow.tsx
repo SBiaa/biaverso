@@ -118,7 +118,7 @@ export function PasswordRow({ id, name, login, password, url, category }: Passwo
                 href={url}
                 target="_blank"
                 rel="noreferrer"
-                className="-my-2 py-2 text-xs font-medium text-accent"
+                className="-my-2 py-2 text-xs font-medium text-accent-ink"
               >
                 {url}
               </a>

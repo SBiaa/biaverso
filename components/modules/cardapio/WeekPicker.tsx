@@ -51,7 +51,7 @@ export function WeekPicker({
         <button
           type="button"
           onClick={() => push(null)}
-          className="text-sm font-semibold text-text-primary hover:text-accent"
+          className="text-sm font-semibold text-text-primary hover:text-accent-ink"
         >
           Semana de {formatWeekRange(new Date(weekStart))}
         </button>
@@ -72,7 +72,7 @@ export function WeekPicker({
         <button
           type="button"
           onClick={() => push(null)}
-          className="-my-2 py-2 text-xs font-medium text-accent hover:underline"
+          className="-my-2 py-2 text-xs font-medium text-accent-ink hover:underline"
         >
           voltar para esta semana
         </button>
