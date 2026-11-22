@@ -1,5 +1,5 @@
 import { Users } from "lucide-react";
-import { Badge, Card } from "@/components/ui";
+import { Badge, Card, CardTitle } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { formatWaiting, waitingTier, type WaitingTier } from "@/lib/whatsapp-shared";
 import type { WaitingChat } from "@/lib/whatsapp";
@@ -60,13 +60,13 @@ export function WaitingList({
 }) {
   return (
     <Card>
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
+      <CardTitle className="mb-3 flex items-center gap-2">
         {group ? <Users size={16} className="text-text-secondary" /> : null}
         {title}
         <span className="text-xs font-normal text-text-secondary">
           {chats.length}
         </span>
-      </h2>
+      </CardTitle>
       {chats.length === 0 ? (
         <p className="text-sm text-text-secondary">Nada esperando aqui.</p>
       ) : (

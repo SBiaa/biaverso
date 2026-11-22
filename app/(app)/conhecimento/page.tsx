@@ -62,7 +62,7 @@ export default async function ConhecimentoPage({
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-text-primary">Cadernos por área</h2>
+            <h2 className="text-base font-semibold text-text-primary">Cadernos por área</h2>
             <AddAreaForm />
           </div>
 
@@ -92,7 +92,7 @@ export default async function ConhecimentoPage({
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text-primary">Materiais soltos</h2>
+          <h2 className="text-base font-semibold text-text-primary">Materiais soltos</h2>
           <p className="text-xs text-text-secondary">
             Vídeos, artigos, podcasts e posts que não são um curso com aulas.
           </p>

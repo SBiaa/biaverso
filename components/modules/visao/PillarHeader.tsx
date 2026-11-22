@@ -33,7 +33,7 @@ export function PillarHeader({ pillar }: { pillar: PillarHeaderData }) {
         <Icon size={26} />
       </div>
       <div className="flex-1">
-        <h1 className="text-lg font-semibold text-text-primary">{pillar.name}</h1>
+        <h2 className="text-lg font-semibold tracking-tight text-text-primary">{pillar.name}</h2>
         {pillar.description && (
           <p className="text-sm text-text-secondary">{pillar.description}</p>
         )}
