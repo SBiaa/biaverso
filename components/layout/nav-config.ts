@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BookOpen,
   Building2,
   CalendarCheck,
@@ -101,6 +102,9 @@ export const navGroups: NavGroup[] = [
     title: "Sistema",
     items: [
       { href: "/senhas", label: "Senhas", icon: KeyRound },
+      // Página à parte, e não aba da Avaliação, para não encher o que já existe:
+      // é sobre o app, não sobre a vida dela.
+      { href: "/uso", label: "Uso do app", icon: Activity },
       { href: "/configuracoes", label: "Configurações", icon: Settings },
     ],
   },

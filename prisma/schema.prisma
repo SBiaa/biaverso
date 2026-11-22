@@ -2657,3 +2657,28 @@ model YearPlan {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+/// Registro de uso do próprio biaVerso: que tela ela abriu e o que salvou.
+/// Serve para a página "Uso do app" (/uso) dizer o que está parado, o que dá
+/// cliques demais e o que merece atalho. Guarda só o *lugar* (caminho com os
+/// ids trocados por ":id") e nunca o conteúdo: nada de valor, texto ou senha.
+model UsageEvent {
+  id        String   @id @default(cuid())
+  /// "view" (abriu uma tela) ou "action" (salvou, editou ou apagou algo).
+  kind      String
+  /// Tela ("/financeiro/transacoes") ou rota da API ("/api/transactions/:id").
+  path      String
+  /// POST, PATCH, PUT ou DELETE nas ações; nulo nas visitas.
+  method    String?
+  /// "mobile" ou "desktop".
+  device    String
+  /// Como ela chegou na tela: "barra", "menu", "busca", "link" ou "direto".
+  source    String?
+  /// Sessão da aba do navegador: liga as visitas em sequência para medir o
+  /// caminho até cada tela. Nulo nas ações.
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+}

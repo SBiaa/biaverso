@@ -85,6 +85,7 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
     // A largura vem de uma variável CSS que o script do `<head>` já resolveu:
     // fechada ou aberta, a primeira pintura sai certa e a página não pula.
     <aside
+      data-nav-source="menu"
       style={{ width: "var(--sidebar-w)" }}
       className={cn(
         "sticky top-0 hidden h-screen shrink-0 flex-col transition-[width]",

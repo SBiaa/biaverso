@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { markNavSource } from "@/components/layout/UsageTracker";
 import {
   BookOpen,
   FolderKanban,
@@ -214,6 +215,7 @@ export function CommandPalette({ businesses }: { businesses: Business[] }) {
   function go(href: string) {
     setOpen(false);
     setQuery("");
+    markNavSource("busca");
     router.push(href);
   }
 

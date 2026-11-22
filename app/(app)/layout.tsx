@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { CalendarSyncPoller } from "@/components/modules/agenda/CalendarSyncPoller";
+import { UsageTracker } from "@/components/layout/UsageTracker";
 import { prisma } from "@/lib/prisma";
 
 // A lista de negócios é o único dado de runtime do layout. Enquanto ela era
@@ -33,6 +34,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen w-full">
       <CalendarSyncPoller />
+      <UsageTracker />
       {/* O fallback é a própria sidebar sem os negócios: os links fixos já
           aparecem no lugar certo e nada salta quando a lista chega. */}
       <Suspense fallback={<Sidebar businesses={[]} />}>
