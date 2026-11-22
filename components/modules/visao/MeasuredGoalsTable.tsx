@@ -1,14 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button, ErrorNote, IconButton, InlineEdit, confirmAction } from "@/components/ui";
 import { cn, hexToRgba } from "@/lib/utils";
-import { goalTermLabels, measuredGoalStatusLabels } from "@/lib/labels";
+import {
+  closedMeasuredGoalStatuses,
+  goalTermLabels,
+  measuredGoalStatusLabels,
+} from "@/lib/labels";
 import { VISION_TONES } from "@/lib/vision-visuals";
 import { goalProgress } from "@/lib/vision-shared";
 import { AmountCell, DateCell, PillSelect, ProgressBar, type PillOption } from "./cells";
 import { useRows } from "./useRows";
+import { RenewGoalModal, type RenewResult } from "./RenewGoalModal";
 
 export type MeasuredRow = {
   id: string;
@@ -25,6 +30,8 @@ export type MeasuredRow = {
   progress: number;
   conceptualGoalId: string;
   businessId: string | null;
+  /** O que ficou de lição ao encerrar. */
+  lesson: string | null;
 };
 
 export type ConceptualOption = {
@@ -61,13 +68,22 @@ export function MeasuredGoalsTable({
   conceptualGoals: ConceptualOption[];
   businesses: BusinessOptionRow[];
 }) {
-  const { rows, error, patch, add, remove } = useRows(
+  const { rows, setRows, error, patch, add, remove } = useRows(
     initialRows,
     "/api/vision/goals/measured",
   );
   const [filter, setFilter] = useState<string>("");
   const [newTitle, setNewTitle] = useState("");
   const [newConceptualId, setNewConceptualId] = useState(conceptualGoals[0]?.id ?? "");
+  const [renewing, setRenewing] = useState<MeasuredRow | null>(null);
+
+  /** Troca a linha encerrada pelo que o servidor gravou e acrescenta a nova. */
+  function applyRenew({ closed, created }: RenewResult<MeasuredRow>) {
+    setRows((prev) => [
+      ...prev.map((r) => (r.id === closed.id ? { ...r, ...closed } : r)),
+      { ...created, lesson: created.lesson ?? null },
+    ]);
+  }
 
   const conceptualById = useMemo(
     () => new Map(conceptualGoals.map((g) => [g.id, g])),
@@ -161,7 +177,7 @@ export function MeasuredGoalsTable({
               <th scope="col" className={th}>Progresso</th>
               <th scope="col" className={th}>Objetivo conceitual</th>
               <th scope="col" className={th}>Empresa</th>
-              <th scope="col" className="pb-2"><span className="sr-only">Excluir</span></th>
+              <th scope="col" className="pb-2"><span className="sr-only">Ações</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border max-md:flex max-md:flex-col max-md:gap-3 max-md:divide-y-0">
@@ -175,7 +191,7 @@ export function MeasuredGoalsTable({
                 >
                   <td
                     data-label="Objetivo"
-                    className={cn("py-2 pr-3 align-top", cell, "max-md:col-span-2 max-md:pr-10 max-md:before:hidden")}
+                    className={cn("py-2 pr-3 align-top", cell, "max-md:col-span-2 max-md:pr-20 max-md:before:hidden")}
                   >
                     <InlineEdit
                       value={row.title}
@@ -184,6 +200,12 @@ export function MeasuredGoalsTable({
                     />
                     {!hasTarget && row.target && (
                       <p className="text-xs text-text-secondary">Meta: {row.target}</p>
+                    )}
+                    {row.lesson && (
+                      <p className="max-w-[22rem] whitespace-pre-line text-xs text-text-secondary">
+                        <span className="font-medium text-text-primary">Aprendizado: </span>
+                        {row.lesson}
+                      </p>
                     )}
                   </td>
                   <td
@@ -302,13 +324,24 @@ export function MeasuredGoalsTable({
                     />
                   </td>
                   <td className="py-2 align-top max-md:absolute max-md:right-1.5 max-md:top-1.5 max-md:p-0">
-                    <IconButton
-                      onClick={() => handleRemove(row)}
-                      aria-label={`Excluir ${row.title}`}
-                      tone="danger"
-                    >
-                      <Trash2 size={14} />
-                    </IconButton>
+                    <div className="flex gap-1">
+                      {!closedMeasuredGoalStatuses.includes(row.status) && (
+                        <IconButton
+                          onClick={() => setRenewing(row)}
+                          aria-label={`Renovar ${row.title}`}
+                          title="Encerrar e criar a próxima meta"
+                        >
+                          <RefreshCw size={14} />
+                        </IconButton>
+                      )}
+                      <IconButton
+                        onClick={() => handleRemove(row)}
+                        aria-label={`Excluir ${row.title}`}
+                        tone="danger"
+                      >
+                        <Trash2 size={14} />
+                      </IconButton>
+                    </div>
                   </td>
                 </tr>
               );
@@ -357,6 +390,14 @@ export function MeasuredGoalsTable({
       )}
 
       <ErrorNote message={error} />
+
+      {renewing && (
+        <RenewGoalModal<MeasuredRow>
+          goal={renewing}
+          onClose={() => setRenewing(null)}
+          onRenewed={applyRenew}
+        />
+      )}
     </div>
   );
 }

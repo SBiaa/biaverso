@@ -306,10 +306,14 @@ export const passwordCategoryLabels: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+/** Status em que a meta saiu do ciclo e vira histórico. */
+export const closedMeasuredGoalStatuses = ["CONCLUIDO", "NAO_ATINGIDO", "CANCELADO"];
+
 export const measuredGoalStatusLabels: Record<string, string> = {
   NAO_INICIADO: "Não iniciado",
   EM_ANDAMENTO: "Em andamento",
   CONCLUIDO: "Concluído",
+  NAO_ATINGIDO: "Não atingido",
   PAUSADO: "Pausado",
   CANCELADO: "Cancelado",
 };

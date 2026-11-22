@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { getMonthSummary, getOrCreateMonthReview, getQuarter } from "@/lib/avaliacao";
+import {
+  getClosedMeasuredGoals,
+  getMonthSummary,
+  getOrCreateMonthReview,
+  getQuarter,
+} from "@/lib/avaliacao";
 import { prisma } from "@/lib/prisma";
 import { getBusinessPeriodSummary } from "@/lib/avaliacao-negocios";
 import { getTrends, monthlyBuckets } from "@/lib/avaliacao-tendencias";
@@ -11,6 +16,7 @@ import { MonthReviewForm } from "@/components/modules/avaliacao/MonthReviewForm"
 import { MonthSummaryCards } from "@/components/modules/avaliacao/MonthSummaryCards";
 import { BusinessPeriodSummaryCard } from "@/components/modules/avaliacao/BusinessPeriodSummary";
 import { TrendsPanel } from "@/components/modules/avaliacao/TrendsPanel";
+import { ClosedGoalsCard } from "@/components/modules/avaliacao/ClosedGoalsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +34,7 @@ export default async function AvaliacaoMesPage({
 
   const review = await getOrCreateMonthReview(month, year);
   const monthRange = getMonthRange(new Date(Date.UTC(year, month - 1, 1)));
-  const [weeks, summary, businesses, trends] = await Promise.all([
+  const [weeks, summary, businesses, trends, closedGoals] = await Promise.all([
     prisma.weekReview.findMany({
       where: { monthReviewId: review.id },
       orderBy: { weekStart: "asc" },
@@ -36,6 +42,7 @@ export default async function AvaliacaoMesPage({
     getMonthSummary(month, year),
     getBusinessPeriodSummary(monthRange.start, monthRange.end),
     getTrends(monthlyBuckets(month, year)),
+    getClosedMeasuredGoals(monthRange.start, monthRange.end),
   ]);
 
   const quarterHref = `/avaliacao/trimestre?quarter=${getQuarter(month)}&year=${year}`;
@@ -57,6 +64,8 @@ export default async function AvaliacaoMesPage({
             para escrever destaques e melhorias sem depender de memória. */}
         <MonthSummaryCards summary={summary} />
         <BusinessPeriodSummaryCard title="Negócios no mês" businesses={businesses} />
+
+        <ClosedGoalsCard goals={closedGoals} period="no mês" />
 
         <TrendsPanel
           trends={trends}

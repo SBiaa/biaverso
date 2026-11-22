@@ -2007,6 +2007,11 @@ model MeasuredGoal {
   currentValue Float              @default(0)
   // R$, seguidores, palavras...
   unit         String?
+  // O que ficou de lição ao encerrar — principalmente quando não foi atingido.
+  lesson       String?
+  // Dia (fuso do app, meia-noite UTC) em que saiu do ciclo: Concluído, Não
+  // atingido ou Cancelado. É o que põe a meta na avaliação do mês/trimestre.
+  closedAt     DateTime?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
@@ -2020,6 +2025,7 @@ model MeasuredGoal {
   @@index([conceptualGoalId])
   @@index([status])
   @@index([businessId])
+  @@index([closedAt])
 }
 
 enum PillarStatus {
@@ -2043,6 +2049,8 @@ enum MeasuredGoalStatus {
   NAO_INICIADO
   EM_ANDAMENTO
   CONCLUIDO
+  // Prazo acabou sem bater a meta. Diferente de CANCELADO (desistiu no meio).
+  NAO_ATINGIDO
   PAUSADO
   CANCELADO
 }

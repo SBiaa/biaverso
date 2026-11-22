@@ -51,6 +51,7 @@ export const VISION_TONES: Record<string, string> = {
   EM_ANDAMENTO: "#16A34A",
   PAUSADO: "#DC2626",
   CONCLUIDO: "#2563EB",
+  NAO_ATINGIDO: "#EA580C",
   CANCELADO: "#78716C",
   // Status do pilar.
   ATIVO: "#16A34A",

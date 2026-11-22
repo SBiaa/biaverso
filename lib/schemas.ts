@@ -1035,6 +1035,7 @@ export const measuredGoalCreateSchema = z.object({
   targetValue: goalAmount.nullish(),
   currentValue: goalAmount.default(0),
   unit: optionalText,
+  lesson: optionalText,
   businessId: optionalId,
   conceptualGoalId: id,
 });
@@ -1050,8 +1051,30 @@ export const measuredGoalPatchSchema = z.object({
   targetValue: goalAmount.nullish(),
   currentValue: goalAmount.optional(),
   unit: optionalTextPatch,
+  lesson: optionalTextPatch,
   businessId: optionalId,
   conceptualGoalId: id.optional(),
+});
+
+/**
+ * Renovar = encerrar a meta atual com o resultado real e abrir a próxima no
+ * mesmo objetivo conceitual. A antiga fica como histórico, nunca é editada
+ * para virar a nova. Termo, unidade e empresa vêm da antiga.
+ */
+export const measuredGoalRenewSchema = z.object({
+  close: z.object({
+    status: z.enum(["CONCLUIDO", "NAO_ATINGIDO"]),
+    // Com meta numérica o resultado é o valor completado; sem ela, o percentual.
+    currentValue: goalAmount.optional(),
+    progress: z.coerce.number().int().min(0).max(100).optional(),
+    lesson: optionalText,
+  }),
+  next: z.object({
+    title: text,
+    target: optionalText,
+    targetValue: goalAmount.nullish(),
+    deadline: dateOnly.nullish(),
+  }),
 });
 
 export const moodboardCreateSchema = z.object({
