@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CalendarDays, Droplets, ListChecks, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
+import { pageContainer } from "@/components/layout/page-width";
 import {
   Card,
   CardTitle,
@@ -21,6 +22,7 @@ import { getOrCreateDay } from "@/lib/day";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
 import { getUserSettings } from "@/lib/settings";
 import {
+  cn,
   dayOfYear,
   formatCurrencyBRL,
   formatDateBR,
@@ -166,12 +168,18 @@ export default async function HomePage() {
     <>
       <Topbar title="Home" />
 
-      {/* Desktop */}
-      <main className="mx-auto hidden w-full max-w-[1800px] flex-1 flex-col gap-6 px-4 py-5 md:px-8 md:py-8 md:flex">
-        {/* A frase do dia existia só no mobile, e era o único lugar do desktop
-            com alguma voz — sem ela a home abria direto em quatro números. */}
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="font-serif text-xl italic text-text-secondary">
+      {/* Uma marcação só para celular e computador. Antes eram duas `<main>`
+          inteiras (uma `hidden md:flex`, outra `md:hidden`), e cada mudança
+          precisava ser feita duas vezes — as duas já tinham divergido em
+          título, cards e ordem. */}
+      <main
+        className={cn(
+          pageContainer("wide"),
+          "flex flex-1 flex-col gap-4 py-5 md:gap-6 md:py-8",
+        )}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="font-serif text-lg italic text-text-secondary md:text-xl">
             {phrase}
           </p>
           <span className="text-sm text-text-secondary">
@@ -188,9 +196,13 @@ export default async function HomePage() {
           <RadarHomeNote />
         </Suspense>
 
-        {/* 4 colunas fixas espremiam "R$ 1.234,56" em ~115px entre 768 e
+        {/* Só a partir do tablet: no celular hábitos e água já aparecem nos
+            cards logo abaixo, e quatro números antes do conteúdo empurravam a
+            agenda para fora da primeira tela.
+
+            4 colunas fixas espremiam "R$ 1.234,56" em ~115px entre 768 e
             1280px. Duas até lá, quatro quando há espaço de verdade. */}
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className="hidden grid-cols-2 gap-4 md:grid xl:grid-cols-4">
           <StatCard
             label="Eventos hoje"
             value={events.length}
@@ -214,20 +226,17 @@ export default async function HomePage() {
           />
         </div>
 
-        {/* Agenda e Tarefas saem de uma coluna compartilhada para uma cada:
-            num container de 1600px, duas colunas davam cards de 780px com uma
-            lista de três linhas dentro.
+        {/* No desktop são três colunas: curto com curto (agenda e cardápio) de
+            um lado, a lista longa no meio, hábitos e pilar do outro.
 
-            O Cardápio desceu para a coluna da Agenda: num dia sem evento a
-            Agenda é um card de duas linhas, e sozinha na coluna ela deixava
-            meia tela em branco enquanto a terceira coluna tinha três cards
-            empilhados. Curto com curto de um lado, a lista longa no meio. */}
-        <div className="grid flex-1 grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-6 xl:grid-cols-3">
-          <div className="flex flex-col gap-4 lg:gap-6">
-            <Card>
-              <CardTitle className="mb-3">
-                Agenda de hoje
-              </CardTitle>
+            Abaixo de `lg` as colunas viram `contents` — somem como caixa e os
+            cards passam a ser filhos diretos desta pilha — e o `order-*` põe
+            primeiro o que se faz no dia (agenda, hábitos, tarefas) e por último
+            o que só se consulta. O `lg:order-none` desliga isso nas colunas. */}
+        <div className="flex flex-1 flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 xl:grid-cols-3">
+          <div className="contents lg:flex lg:flex-col lg:gap-6">
+            <Card className="order-1 lg:order-none">
+              <CardTitle className="mb-3">Agenda de hoje</CardTitle>
               {events.length === 0 ? (
                 <p className="text-sm text-text-secondary">
                   Nenhum evento para hoje.
@@ -235,10 +244,7 @@ export default async function HomePage() {
               ) : (
                 <ul className="flex flex-col gap-2">
                   {events.map((event) => (
-                    <li
-                      key={event.id}
-                      className="flex items-center gap-3 text-sm"
-                    >
+                    <li key={event.id} className="flex items-center gap-3 text-sm">
                       <span className="w-12 shrink-0 text-text-secondary">
                         {event.time ?? "—"}
                       </span>
@@ -250,37 +256,41 @@ export default async function HomePage() {
               )}
             </Card>
 
-            <Card>
-              <CardTitle className="mb-3">
-                Cardápio de hoje
-              </CardTitle>
-              <div className="grid grid-cols-3 gap-3">
+            <Card className="order-5 lg:order-none">
+              <CardTitle className="mb-3">Cardápio de hoje</CardTitle>
+              {/* Lista no celular (rótulo à esquerda, prato à direita), três
+                  colunas quando a largura deixa o nome do prato respirar. */}
+              <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
                 {meals.map((meal) => (
-                  <div key={meal.type} className="flex flex-col gap-1">
-                    <span className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+                  <div
+                    key={meal.type}
+                    className="flex items-center justify-between gap-1 text-sm sm:flex-col sm:items-start sm:justify-start"
+                  >
+                    <span className="text-text-secondary sm:text-xs sm:font-medium sm:uppercase sm:tracking-wide">
                       {mealTypeLabels[meal.type]}
                     </span>
-                    <span className="text-sm text-text-primary">{meal.title}</span>
+                    <span className="text-text-primary">{meal.title}</span>
                   </div>
                 ))}
               </div>
             </Card>
           </div>
 
-          <div className="flex flex-col gap-4 lg:gap-6">
-            <Card>
-              <CardTitle className="mb-3">
-                Tarefas de hoje
-              </CardTitle>
+          <div className="contents lg:flex lg:flex-col lg:gap-6">
+            <Card className="order-3 lg:order-none">
+              <CardTitle className="mb-3">Tarefas de hoje</CardTitle>
               <HomeTaskList items={tasks} />
             </Card>
           </div>
 
-          <div className="flex flex-col gap-4 lg:col-span-2 lg:gap-6 xl:col-span-1">
-            <Card>
-              <CardTitle className="mb-3">
-                Hábitos do dia
-              </CardTitle>
+          <div className="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-6 xl:col-span-1">
+            <Card className="order-2 lg:order-none">
+              <div className="mb-3 flex items-center justify-between">
+                <CardTitle>Hábitos do dia</CardTitle>
+                <span className="text-sm text-text-secondary">
+                  {habitsDone}/{habits.length}
+                </span>
+              </div>
               <div className="mb-4">
                 <HomeHabitList items={habits} />
               </div>
@@ -291,94 +301,20 @@ export default async function HomePage() {
               />
             </Card>
 
-            <PillarHighlightCard pillar={pillarHighlight} />
+            <div className="order-6 lg:order-none">
+              <PillarHighlightCard pillar={pillarHighlight} />
+            </div>
           </div>
+
+          {/* No celular o resto do dia (refeições, humor, notas) fica numa
+              tela à parte; no desktop a sidebar já está à vista. */}
+          <Link
+            href="/dia"
+            className="order-4 inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-4 py-2 text-center text-sm font-medium text-accent-contrast lg:hidden"
+          >
+            Ver dia completo
+          </Link>
         </div>
-      </main>
-
-      {/* Mobile */}
-      <main className="flex flex-1 flex-col gap-4 p-4 md:hidden">
-        <p className="font-serif text-lg italic text-text-secondary">
-          {phrase}
-        </p>
-
-        <QuickCaptureForm businesses={businesses} standalone />
-
-        <Suspense fallback={null}>
-          <RadarHomeNote />
-        </Suspense>
-
-        <Card>
-          <CardTitle className="mb-1">
-            Hoje, {formatDateBR(date)}
-          </CardTitle>
-          {events.length === 0 ? (
-            <p className="text-sm text-text-secondary">
-              Nenhum evento para hoje.
-            </p>
-          ) : (
-            <ul className="mt-2 flex flex-col gap-2">
-              {events.map((event) => (
-                <li key={event.id} className="flex items-center gap-3 text-sm">
-                  <span className="w-12 shrink-0 text-text-secondary">
-                    {event.time ?? "—"}
-                  </span>
-                  <SyncStatusIcon status={event.syncStatus} />
-                  <span className="text-text-primary">{event.title}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
-        <Card>
-          <div className="mb-3 flex items-center justify-between">
-            <CardTitle>Hábitos</CardTitle>
-            <span className="text-sm text-text-secondary">
-              {habitsDone}/{habits.length}
-            </span>
-          </div>
-          <HomeHabitList items={habits} />
-        </Card>
-
-        <Card>
-          <CardTitle className="mb-3">
-            Tarefas de hoje
-          </CardTitle>
-          <HomeTaskList items={tasks} />
-        </Card>
-
-        <Card>
-          <CardTitle className="mb-3">Água</CardTitle>
-          <WaterTracker
-            dayId={day.id}
-            initialCount={waterCount}
-            settings={settings}
-          />
-        </Card>
-
-        <Link
-          href="/dia"
-          className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-center text-sm font-medium text-accent-contrast"
-        >
-          Ver dia completo
-        </Link>
-
-        <Card>
-          <CardTitle className="mb-3">
-            Cardápio de hoje
-          </CardTitle>
-          <div className="flex flex-col gap-2">
-            {meals.map((meal) => (
-              <div key={meal.type} className="flex items-center justify-between text-sm">
-                <span className="text-text-secondary">{mealTypeLabels[meal.type]}</span>
-                <span className="text-text-primary">{meal.title}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <PillarHighlightCard pillar={pillarHighlight} />
       </main>
     </>
   );
