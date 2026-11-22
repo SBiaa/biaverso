@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Fora da varredura de classes: em .claude/worktrees moram cópias inteiras do
+   projeto (com build e dependências) abertas por outras sessões. Com elas o
+   Tailwind levava quase 3 minutos e o `next dev` estourava o tempo do postcss,
+   derrubando todas as páginas com erro 500. */
+@source not "../.claude";
+
 :root {
   --background: #fafafa;
   --surface: #ffffff;

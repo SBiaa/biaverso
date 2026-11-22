@@ -176,6 +176,15 @@ function patchUrl(task: WorkTask) {
 }
 
 
+/**
+ * No celular a tabela vira um cartão por tarefa: o título ocupa a linha toda e
+ * as colunas viram etiquetas embaixo dele, cada uma com o próprio rótulo
+ * (vindo do `data-label`). Antes a tabela tinha 54rem e rolava de lado.
+ */
+const mobileCell =
+  "max-md:inline-flex max-md:items-center max-md:gap-1.5 max-md:py-0 max-md:pr-0 " +
+  "max-md:before:text-xs max-md:before:text-text-secondary max-md:before:content-[attr(data-label)]";
+
 function TaskRow({
   task,
   dayId,
@@ -244,10 +253,10 @@ function TaskRow({
         position: "relative",
         zIndex: isDragging ? 1 : undefined,
       }}
-      className="border-t border-border bg-surface first-of-type:border-t-0"
+      className="border-t border-border bg-surface first-of-type:border-t-0 max-md:block max-md:py-2"
     >
-      <tr>
-        <td className="py-2 pr-3 align-top">
+      <tr className="max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-1.5">
+        <td className="py-2 pr-3 align-top max-md:block max-md:w-full max-md:py-0 max-md:pr-0">
           <div className="flex items-start gap-1.5">
             {canDrag ? (
               <button
@@ -350,7 +359,10 @@ function TaskRow({
             />
           )}
         </td>
-        <td className="py-2 pr-3 align-top">
+        <td
+          data-label="Status"
+          className={cn("py-2 pr-3 align-top", mobileCell, task.progress === null && "max-md:hidden")}
+        >
           {task.progress === null ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
@@ -361,7 +373,14 @@ function TaskRow({
             />
           )}
         </td>
-        <td className="py-2 pr-3 align-top">
+        <td
+          data-label="Prioridade"
+          className={cn(
+            "py-2 pr-3 align-top",
+            mobileCell,
+            (task.kind === "study" || task.kind === "task") && "max-md:hidden",
+          )}
+        >
           {task.kind === "study" || task.kind === "task" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
@@ -372,7 +391,14 @@ function TaskRow({
             />
           )}
         </td>
-        <td className="py-2 pr-3 align-top">
+        <td
+          data-label="Tempo"
+          className={cn(
+            "py-2 pr-3 align-top",
+            mobileCell,
+            (task.kind === "study" || task.kind === "task") && "max-md:hidden",
+          )}
+        >
           {task.kind === "study" || task.kind === "task" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
@@ -385,7 +411,7 @@ function TaskRow({
             />
           )}
         </td>
-        <td className="py-2 pr-3 align-top">
+        <td className="py-2 pr-3 align-top max-md:py-0 max-md:pr-0">
           {task.originHref ? (
             <Link
               href={task.originHref}
@@ -409,7 +435,10 @@ function TaskRow({
             </span>
           )}
         </td>
-        <td className="whitespace-nowrap py-2 pr-3 align-top">
+        <td
+          data-label="Fazer em"
+          className={cn("whitespace-nowrap py-2 pr-3 align-top", mobileCell)}
+        >
           {task.done ? (
             task.scheduledDate ? (
               <span className="text-text-secondary">
@@ -427,7 +456,10 @@ function TaskRow({
             />
           )}
         </td>
-        <td className="whitespace-nowrap py-2 align-top">
+        <td
+          data-label={showCompleted ? "Concluída em" : "Prazo"}
+          className={cn("whitespace-nowrap py-2 align-top", mobileCell)}
+        >
           {!showCompleted && !task.done ? (
             <span className="inline-flex items-center">
               {/* Atalho: prazo = dia da realização. Só aparece quando há o que copiar. */}
@@ -477,8 +509,8 @@ function TaskRow({
         </td>
       </tr>
       {open && task.kind !== "prospect" && !plain && (
-        <tr>
-          <td colSpan={7} className="pb-3 pl-6">
+        <tr className="max-md:block">
+          <td colSpan={7} className="pb-3 pl-6 max-md:block max-md:pb-0 max-md:pt-2">
             <SubtaskList {...subtasks} />
           </td>
         </tr>
@@ -849,7 +881,7 @@ export function WorkTasksToday({
         </p>
       </div>
 
-      <div className="mb-3 flex gap-1.5" role="group" aria-label="Período">
+      <div className="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Período">
         {RANGES.map((r) => (
           <button
             key={r.id}
@@ -939,8 +971,8 @@ export function WorkTasksToday({
                   collisionDetection={closestCenter}
                   onDragEnd={(event) => reorder(g.id, event)}
                 >
-                  <table className="w-full min-w-[54rem] border-collapse text-sm">
-                    <thead>
+                  <table className="w-full border-collapse text-sm max-md:block md:min-w-[54rem]">
+                    <thead className="max-md:hidden">
                       <tr className="text-left text-xs font-medium text-text-secondary">
                         <th scope="col" className="py-2 pr-3 font-medium">
                           Tarefa

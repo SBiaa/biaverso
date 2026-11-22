@@ -47,6 +47,11 @@ const STATUS_ORDER = Object.keys(measuredGoalStatusLabels);
 
 const th = "pb-2 pr-3 font-medium";
 
+/** Célula no celular: o rótulo (do `data-label`) em cima do valor. */
+const cell =
+  "max-md:flex max-md:min-w-0 max-md:flex-col max-md:gap-0.5 max-md:p-0 " +
+  "max-md:before:text-xs max-md:before:text-text-secondary max-md:before:content-[attr(data-label)]";
+
 export function MeasuredGoalsTable({
   initialRows,
   conceptualGoals,
@@ -140,8 +145,11 @@ export function MeasuredGoalsTable({
       </div>
 
       <div className="-mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[78rem] border-collapse text-sm">
-          <thead>
+        {/* No celular, 11 colunas (78rem) viravam uma tabela que rolava de lado
+            sem fim: lá cada objetivo vira um cartão, com o rótulo de cada
+            campo vindo do `data-label`. */}
+        <table className="w-full border-collapse text-sm max-md:block md:min-w-[78rem]">
+          <thead className="max-md:hidden">
             <tr className="text-left text-xs text-text-secondary">
               <th scope="col" className={th}>Objetivo</th>
               <th scope="col" className={th}>Status</th>
@@ -156,13 +164,19 @@ export function MeasuredGoalsTable({
               <th scope="col" className="pb-2"><span className="sr-only">Excluir</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border max-md:flex max-md:flex-col max-md:gap-3 max-md:divide-y-0">
             {visible.map((row) => {
               const conceptual = conceptualById.get(row.conceptualGoalId);
               const hasTarget = row.targetValue !== null && row.targetValue > 0;
               return (
-                <tr key={row.id}>
-                  <td className="py-2 pr-3 align-top">
+                <tr
+                  key={row.id}
+                  className="max-md:relative max-md:grid max-md:grid-cols-2 max-md:gap-x-3 max-md:gap-y-2.5 max-md:rounded-lg max-md:border max-md:border-border max-md:p-3"
+                >
+                  <td
+                    data-label="Objetivo"
+                    className={cn("py-2 pr-3 align-top", cell, "max-md:col-span-2 max-md:pr-10 max-md:before:hidden")}
+                  >
                     <InlineEdit
                       value={row.title}
                       ariaLabel="Título do objetivo"
@@ -172,7 +186,10 @@ export function MeasuredGoalsTable({
                       <p className="text-xs text-text-secondary">Meta: {row.target}</p>
                     )}
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Status"
+                    className={cn("py-2 pr-3 align-top", cell)}
+                  >
                     <PillSelect
                       value={row.status}
                       options={statusOptions}
@@ -180,7 +197,10 @@ export function MeasuredGoalsTable({
                       onChange={(status) => patch(row.id, { status })}
                     />
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Termo"
+                    className={cn("py-2 pr-3 align-top", cell)}
+                  >
                     <PillSelect
                       value={row.term ?? ""}
                       options={termOptions}
@@ -189,21 +209,30 @@ export function MeasuredGoalsTable({
                       onChange={(term) => patch(row.id, { term: term || null })}
                     />
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Prazo final"
+                    className={cn("py-2 pr-3 align-top", cell)}
+                  >
                     <DateCell
                       value={row.deadline}
                       ariaLabel="Prazo final"
                       onChange={(deadline) => patch(row.id, { deadline })}
                     />
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Meta"
+                    className={cn("py-2 pr-3 align-top", cell)}
+                  >
                     <AmountCell
                       value={row.targetValue}
                       ariaLabel="Meta"
                       onCommit={(targetValue) => patch(row.id, { targetValue })}
                     />
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Completado"
+                    className={cn("py-2 pr-3 align-top", cell)}
+                  >
                     <AmountCell
                       value={row.currentValue}
                       ariaLabel="Completado"
@@ -211,7 +240,10 @@ export function MeasuredGoalsTable({
                       onCommit={(currentValue) => patch(row.id, { currentValue: currentValue ?? 0 })}
                     />
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Unidade"
+                    className={cn("py-2 pr-3 align-top", cell)}
+                  >
                     <InlineEdit
                       value={row.unit ?? ""}
                       placeholder="—"
@@ -219,12 +251,18 @@ export function MeasuredGoalsTable({
                       onSave={(unit) => patch(row.id, { unit: unit.trim() || null })}
                     />
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Progresso"
+                    className={cn("py-2 pr-3 align-top", cell, "max-md:col-span-2")}
+                  >
                     <div className="pt-1.5">
                       <ProgressBar percent={goalProgress(row)} />
                     </div>
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Objetivo conceitual"
+                    className={cn("py-2 pr-3 align-top", cell, "max-md:col-span-2")}
+                  >
                     <select
                       value={row.conceptualGoalId}
                       onChange={(e) =>
@@ -251,7 +289,10 @@ export function MeasuredGoalsTable({
                       </span>
                     )}
                   </td>
-                  <td className="py-2 pr-3 align-top">
+                  <td
+                    data-label="Empresa"
+                    className={cn("py-2 pr-3 align-top", cell)}
+                  >
                     <PillSelect
                       value={row.businessId ?? ""}
                       options={businessOptions}
@@ -260,7 +301,7 @@ export function MeasuredGoalsTable({
                       onChange={(id) => patch(row.id, { businessId: id || null })}
                     />
                   </td>
-                  <td className="py-2 align-top">
+                  <td className="py-2 align-top max-md:absolute max-md:right-1.5 max-md:top-1.5 max-md:p-0">
                     <IconButton
                       onClick={() => handleRemove(row)}
                       aria-label={`Excluir ${row.title}`}

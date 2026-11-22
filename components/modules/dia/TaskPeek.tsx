@@ -154,8 +154,11 @@ export function TaskPeek({
     panelRef.current?.focus();
     function onKey(e: KeyboardEvent) {
       // Esc dentro de um campo já cancela a edição dele; não fecha o painel junto.
-      const target = e.target as HTMLElement;
-      if (e.key !== "Escape" || target.matches("input, textarea, select")) return;
+      // `instanceof Element`: com o foco na própria página o alvo é o
+      // `document`, que não tem `matches` — o Esc quebrava em vez de fechar.
+      const target = e.target;
+      if (e.key !== "Escape") return;
+      if (target instanceof Element && target.matches("input, textarea, select")) return;
       onCloseRef.current();
     }
     document.addEventListener("keydown", onKey);

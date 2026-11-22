@@ -68,12 +68,12 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  function isItemActive(href: string) {
+  function isItemActive(item: NavItem) {
+    const { href } = item;
     // "/negocios" é a lista de todos; sem o match exato ela ficaria acesa
     // junto com o negócio aberto, dois itens marcados ao mesmo tempo.
-    return href === "/" || href === "/negocios"
-      ? pathname === href
-      : pathname.startsWith(href);
+    if (href === "/" || href === "/negocios") return pathname === href;
+    return [href, ...(item.alsoActiveOn ?? [])].some((h) => pathname.startsWith(h));
   }
 
   return (
@@ -149,7 +149,7 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
 
           // Fechar um grupo não pode esconder a tela em que você está: seria
           // perder a única marcação de "você está aqui" da barra.
-          const hasActive = items.some((item) => isItemActive(item.href));
+          const hasActive = items.some((item) => isItemActive(item));
           const hidden = isClosed && !hasActive;
 
           return (
@@ -190,7 +190,7 @@ export function Sidebar({ businesses }: { businesses: Business[] }) {
                   <NavLink
                     key={item.href}
                     item={item}
-                    isActive={isItemActive(item.href)}
+                    isActive={isItemActive(item)}
                   />
                 ))}
             </div>

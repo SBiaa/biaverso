@@ -31,6 +31,8 @@ export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Outras rotas em que o item também fica aceso ("Planejar" cobre três telas). */
+  alsoActiveOn?: string[];
 };
 
 export type NavGroup = {
@@ -70,8 +72,9 @@ export const navGroups: NavGroup[] = [
   {
     title: "Vida",
     items: [
-      { href: "/visao", label: "Central de Visão", icon: Compass },
-      { href: "/ano", label: "Planejamento do ano", icon: CalendarRange },
+      // Visão, Ano e Avaliação se sobrepunham (orçamento, retrospectiva...):
+      // agora são um item só, com uma barra no topo para trocar entre elas.
+      { href: "/visao", label: "Planejar", icon: Compass, alsoActiveOn: ["/ano", "/avaliacao"] },
       { href: "/financeiro", label: "Financeiro", icon: Wallet },
       // Fica colada no financeiro porque é dinheiro: a lista soma preço e
       // compara com o que sobra do mês. Na Biblioteca era só uma lista.
@@ -82,7 +85,6 @@ export const navGroups: NavGroup[] = [
       // Coven, roda do ano, estudos e diário. Fica na Vida, e não na
       // Biblioteca, porque tem calendário e prazo — é rotina, não acervo.
       { href: "/espiritual", label: "Espiritual", icon: Moon },
-      { href: "/avaliacao", label: "Avaliação", icon: LineChart },
     ],
   },
   {
@@ -112,3 +114,46 @@ export const bottomNavItems: NavItem[] = [
 ];
 
 export const allNavItems: NavItem[] = navGroups.flatMap((group) => group.items);
+
+/** Uma tela que não está no menu, mas que a busca (Ctrl+K) precisa achar. */
+export type SearchPage = NavItem & {
+  group: string;
+  /** Outras palavras que levam até ela ("orçamento" → Planejamento). */
+  keywords?: string[];
+};
+
+/**
+ * As abas internas de cada módulo. Sem isto, "Dívidas", "Despensa" ou
+ * "Tiragens" não davam resultado na busca, porque só os itens do menu eram
+ * procurados — e com mais de vinte módulos a busca é o atalho que mais rende.
+ */
+export const searchPages: SearchPage[] = [
+  // As três telas de "Planejar" continuam acháveis pelo nome antigo.
+  { href: "/visao", label: "Central de Visão", icon: Compass, group: "Planejar", keywords: ["pilar", "propósito", "metas", "objetivos"] },
+  { href: "/ano", label: "Planejamento do ano", icon: CalendarRange, group: "Planejar", keywords: ["palavra do ano", "ano"] },
+  { href: "/avaliacao", label: "Avaliação", icon: LineChart, group: "Planejar", keywords: ["revisão", "retrospectiva"] },
+  { href: "/financeiro/planejamento", label: "Planejamento financeiro", icon: Wallet, group: "Financeiro", keywords: ["orçamento", "previsão", "entrada prevista"] },
+  { href: "/financeiro/transacoes", label: "Transações", icon: Wallet, group: "Financeiro", keywords: ["gasto", "entrada", "saída", "extrato"] },
+  { href: "/financeiro/contas-fixas", label: "Contas fixas", icon: Wallet, group: "Financeiro", keywords: ["boleto", "assinatura", "aluguel"] },
+  { href: "/financeiro/cartao", label: "Cartão de crédito", icon: Wallet, group: "Financeiro", keywords: ["fatura", "parcela"] },
+  { href: "/financeiro/dividas", label: "Dívidas", icon: Wallet, group: "Financeiro" },
+  { href: "/financeiro/investimentos", label: "Investimentos", icon: Wallet, group: "Financeiro", keywords: ["aporte", "reserva"] },
+  { href: "/cardapio/receitas", label: "Receitas", icon: UtensilsCrossed, group: "Cardápio" },
+  { href: "/cardapio/despensa", label: "Despensa", icon: UtensilsCrossed, group: "Cardápio", keywords: ["estoque", "mercado", "lista de compras"] },
+  { href: "/beleza/rotinas", label: "Rotinas de beleza", icon: Sparkles, group: "Beleza", keywords: ["skincare"] },
+  { href: "/beleza/cronogramas", label: "Cronogramas", icon: Sparkles, group: "Beleza", keywords: ["cronograma capilar", "cabelo"] },
+  { href: "/beleza/cuidados", label: "Cuidados", icon: Sparkles, group: "Beleza", keywords: ["unha", "sobrancelha", "salão"] },
+  { href: "/beleza/produtos", label: "Produtos de beleza", icon: Sparkles, group: "Beleza" },
+  { href: "/espiritual/roda", label: "Roda do ano", icon: Moon, group: "Espiritual", keywords: ["sabbat"] },
+  { href: "/espiritual/coven", label: "Coven", icon: Moon, group: "Espiritual", keywords: ["encontro"] },
+  { href: "/espiritual/estudos", label: "Textos e exercícios", icon: Moon, group: "Espiritual", keywords: ["estudo"] },
+  { href: "/espiritual/rituais", label: "Diário de rituais", icon: Moon, group: "Espiritual", keywords: ["ritual"] },
+  { href: "/espiritual/tiragens", label: "Tiragens", icon: Moon, group: "Espiritual", keywords: ["tarot", "oráculo"] },
+  { href: "/espiritual/altar", label: "Altar", icon: Moon, group: "Espiritual", keywords: ["erva", "cristal", "vela"] },
+  { href: "/avaliacao/semana", label: "Avaliação da semana", icon: LineChart, group: "Avaliação", keywords: ["revisão semanal"] },
+  { href: "/avaliacao/mes", label: "Avaliação do mês", icon: LineChart, group: "Avaliação" },
+  { href: "/avaliacao/trimestre", label: "Avaliação do trimestre", icon: LineChart, group: "Avaliação", keywords: ["retrospectiva"] },
+  { href: "/horas/calendario", label: "Calendário de horas", icon: Clock, group: "Controle de horas" },
+  { href: "/produtos/insumos", label: "Insumos", icon: Package, group: "Produtos", keywords: ["material", "custo"] },
+  { href: "/clientes?kind=prospect", label: "Prospects", icon: Users, group: "Clientes", keywords: ["prospecção", "lead"] },
+];

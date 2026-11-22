@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { Card, notify, SaveStatus, useSaveStatus, fieldClass } from "@/components/ui";
+import { PlanejarTabs } from "@/components/modules/planejar/PlanejarTabs";
 import { api, errorMessage } from "@/lib/client-api";
 
 export type YearPlanData = {
@@ -77,6 +78,7 @@ export function YearPlanner({
 
   return (
     <main className="mx-auto w-full max-w-[1200px] flex-1 space-y-4 px-4 py-5 md:space-y-6 md:px-8 md:py-8">
+      <PlanejarTabs />
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <Link
