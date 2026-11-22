@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { planningYear } from "@/lib/year-plan";
 import { Topbar } from "@/components/layout/Topbar";
 import { YearPlanner, type YearPlanData } from "@/components/modules/ano/YearPlanner";
 import type { BrainstormItemDTO } from "@/components/modules/ano/BrainstormSection";
@@ -11,9 +12,7 @@ export default async function AnoPage({
   searchParams: Promise<{ ano?: string }>;
 }) {
   const { ano } = await searchParams;
-  // De outubro em diante o que interessa é o ano que vem.
-  const now = new Date();
-  const fallback = now.getMonth() >= 9 ? now.getFullYear() + 1 : now.getFullYear();
+  const fallback = planningYear();
   const parsed = Number(ano);
   const year = Number.isInteger(parsed) && parsed > 2000 && parsed < 2100 ? parsed : fallback;
 
@@ -48,6 +47,7 @@ export default async function AnoPage({
       orderBy: { createdAt: "asc" },
       select: {
         id: true,
+        year: true,
         text: true,
         decision: true,
         pillarId: true,

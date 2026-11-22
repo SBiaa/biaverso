@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button, ErrorNote, Field, Modal, ModalActions, fieldClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { parseGoalAmount } from "@/lib/vision-shared";
-import type { BrainstormItemDTO } from "./BrainstormSection";
+import type { BrainstormItemDTO } from "./brainstorm-shared";
 
 export type ConceptualChoice = { id: string; title: string; pillarId: string; pillarName: string };
 
