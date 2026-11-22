@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { mealTitle } from "@/lib/pratos";
 import { prisma } from "@/lib/prisma";
 import {
   getOrCreateDay,
@@ -634,7 +635,11 @@ export default async function DiaPage({
     getFocusItems(day.id, day.tasks),
     prisma.mealPlan.findMany({
       where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
-      select: { mealType: true, recipe: { select: { title: true } } },
+      select: {
+        mealType: true,
+        recipe: { select: { title: true } },
+        optionIngredient: { select: { name: true } },
+      },
     }),
   ]);
 
@@ -645,7 +650,7 @@ export default async function DiaPage({
       return {
         mealType,
         label: mealTypeLabels[mealType],
-        recipeTitle: log?.recipe?.title ?? plan?.recipe?.title ?? null,
+        recipeTitle: log?.recipe?.title ?? mealTitle(plan?.recipe?.title, plan?.optionIngredient?.name) ?? null,
         logId: log?.id ?? null,
         eaten: log?.eaten ?? false,
       };

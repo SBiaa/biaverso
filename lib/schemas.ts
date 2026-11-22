@@ -136,6 +136,9 @@ export const routinePatchSchema = z.object({
 export const recipeItemSchema = z.object({
   name: text,
   quantity: optionalText,
+  role: z.enum(E.IngredientRole).default("PRECISA"),
+  /** Só vale quando o ingrediente é criado agora; um existente mantém o tipo. */
+  kind: z.enum(E.IngredientKind).optional(),
 });
 
 export const recipeSchema = z.object({
@@ -144,18 +147,22 @@ export const recipeSchema = z.object({
   description: optionalText,
   ingredientsText: optionalText,
   items: z.array(recipeItemSchema).default([]),
-  steps: text,
+  steps: optionalText,
   prepTime: z.coerce.number().int().positive().nullish(),
 });
 
 export const ingredientCreateSchema = z.object({
   name: text,
   inStock: z.boolean().default(false),
+  kind: z.enum(E.IngredientKind).default("OUTRO"),
+  alwaysHave: z.boolean().default(false),
   notes: optionalText,
 });
 export const ingredientPatchSchema = z.object({
   name: text.optional(),
   inStock: z.boolean().optional(),
+  kind: z.enum(E.IngredientKind).optional(),
+  alwaysHave: z.boolean().optional(),
   notes: z.string().trim().nullable().optional(),
 });
 
@@ -164,6 +171,12 @@ export const mealPlanSchema = z.object({
   dayOfWeek: z.coerce.number().int().min(0).max(6),
   mealType: z.enum(E.MealType),
   recipeId: optionalId,
+  optionIngredientId: optionalId,
+});
+
+/** "Preencher a semana": vários horários gravados de uma vez. */
+export const mealPlanBatchSchema = z.object({
+  plans: z.array(mealPlanSchema).min(1).max(21),
 });
 
 export const mealLogCreateSchema = z.object({

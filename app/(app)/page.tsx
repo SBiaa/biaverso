@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { mealTitle } from "@/lib/pratos";
 import Link from "next/link";
 import { CalendarDays, Droplets, ListChecks, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -82,7 +83,11 @@ async function getDashboardData() {
     }),
     prisma.mealPlan.findMany({
       where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
-      select: { mealType: true, recipe: { select: { title: true } } },
+      select: {
+        mealType: true,
+        recipe: { select: { title: true } },
+        optionIngredient: { select: { name: true } },
+      },
     }),
     prisma.transaction.aggregate({
       _sum: { amount: true },
@@ -157,7 +162,7 @@ export default async function HomePage() {
     const plan = mealPlans.find((p) => p.mealType === type);
     return {
       type,
-      title: log?.recipe?.title ?? plan?.recipe?.title ?? "—",
+      title: log?.recipe?.title ?? mealTitle(plan?.recipe?.title, plan?.optionIngredient?.name) ?? "—",
     };
   });
 

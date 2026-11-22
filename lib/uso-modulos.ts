@@ -145,7 +145,12 @@ export const usageModules: UsageModule[] = [
     href: "/cardapio",
     screens: ["/cardapio"],
     apis: ["recipes", "ingredients", "meal-plans", "meal-logs"],
-    records: [{ table: "Recipe" }, { table: "MealPlan" }, { table: "MealLog", viaDay: true }],
+    records: [
+      { table: "Recipe" },
+      { table: "Ingredient" },
+      { table: "MealPlan" },
+      { table: "MealLog", viaDay: true },
+    ],
   },
   {
     key: "beleza",

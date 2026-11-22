@@ -14,6 +14,8 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
   const data: Prisma.IngredientUpdateInput = {};
   if (body.name !== undefined) data.name = body.name;
   if (body.inStock !== undefined) data.inStock = body.inStock;
+  if (body.kind !== undefined) data.kind = body.kind;
+  if (body.alwaysHave !== undefined) data.alwaysHave = body.alwaysHave;
   if (body.notes !== undefined) data.notes = body.notes || null;
 
   return NextResponse.json(await prisma.ingredient.update({ where: { id }, data }));

@@ -24,18 +24,18 @@ model User {
 
 // DIA A DIA
 model Day {
-  id        String   @id @default(cuid())
-  date      DateTime @unique
-  type      DayType  @default(NORMAL)
-  mood      String?
-  energy    Energy?
-  notes     String?
+  id         String    @id @default(cuid())
+  date       DateTime  @unique
+  type       DayType   @default(NORMAL)
+  mood       String?
+  energy     Energy?
+  notes      String?
   // Quando ela confirmou que o dia está preenchido. Até lá, "não marcado"
   // pode ser só esquecimento: hábitos e rotina da casa deste dia ficam fora
   // das avaliações em vez de contar como não feitos.
   reviewedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   habits      HabitLog[]
   waterLogs   WaterLog[]
@@ -399,7 +399,8 @@ model Recipe {
   // Texto livre que existia antes dos itens ligados à despensa. Fica opcional
   // para as receitas antigas continuarem legíveis até serem convertidas.
   ingredientsText String?
-  steps           String
+  // Opcional: "frango frito" não precisa de passo a passo para existir.
+  steps           String?
   prepTime        Int?
   imageUrl        String?
   createdAt       DateTime           @default(now())
@@ -414,25 +415,49 @@ model Recipe {
 // que permite marcar "tem em casa" num lugar e ver, em cada receita e na
 // semana planejada, o que falta comprar.
 model Ingredient {
-  id        String             @id @default(cuid())
-  name      String             @unique
-  inStock   Boolean            @default(false)
-  notes     String?
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  recipes   RecipeIngredient[]
+  id         String             @id @default(cuid())
+  name       String             @unique
+  inStock    Boolean            @default(false)
+  // O tipo é o que diz ao sorteio o que é proteína (frango, carne, ovo...).
+  kind       IngredientKind     @default(OUTRO)
+  // Básico que sempre tem (sal, óleo, alho): nunca conta como faltando.
+  alwaysHave Boolean            @default(false)
+  notes      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  recipes    RecipeIngredient[]
+  mealPlans  MealPlan[]
+}
+
+enum IngredientKind {
+  PROTEINA
+  CARBOIDRATO
+  LEGUME_VERDURA
+  LATICINIO
+  TEMPERO_BASICO
+  OUTRO
+}
+
+// Papel do ingrediente no prato. PRECISA bloqueia; OPCAO forma o grupo
+// "escolha um" (macarrão com carne moída OU frango OU atum: basta um em casa);
+// OPCIONAL é o "se tiver", que nunca impede de fazer.
+enum IngredientRole {
+  PRECISA
+  OPCAO
+  OPCIONAL
 }
 
 model RecipeIngredient {
-  id           String     @id @default(cuid())
+  id           String         @id @default(cuid())
   recipeId     String
-  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipe       Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   ingredientId String
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient     @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
   // Texto livre ("2 xícaras", "a gosto"): quantidade estruturada não paga a
   // conversão de unidade que exigiria.
   quantity     String?
-  position     Int        @default(0)
+  role         IngredientRole @default(PRECISA)
+  position     Int            @default(0)
 
   @@unique([recipeId, ingredientId])
   @@index([ingredientId])
@@ -448,13 +473,16 @@ enum RecipeCategory {
 }
 
 model MealPlan {
-  id        String   @id @default(cuid())
-  weekStart DateTime
-  dayOfWeek Int
-  mealType  MealType
-  createdAt DateTime @default(now())
-  recipeId  String?
-  recipe    Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  id                 String      @id @default(cuid())
+  weekStart          DateTime
+  dayOfWeek          Int
+  mealType           MealType
+  createdAt          DateTime    @default(now())
+  recipeId           String?
+  recipe             Recipe?     @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  // Qual opção do "escolha um" ficou para este horário ("macarrão com frango").
+  optionIngredientId String?
+  optionIngredient   Ingredient? @relation(fields: [optionIngredientId], references: [id], onDelete: SetNull)
 
   @@unique([weekStart, dayOfWeek, mealType])
   @@index([recipeId])

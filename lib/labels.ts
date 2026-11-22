@@ -155,6 +155,31 @@ export const recipeCategoryLabels: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+export const ingredientKindLabels: Record<string, string> = {
+  PROTEINA: "Proteína",
+  CARBOIDRATO: "Carboidrato",
+  LEGUME_VERDURA: "Legume ou verdura",
+  LATICINIO: "Laticínio",
+  TEMPERO_BASICO: "Tempero e básico",
+  OUTRO: "Outro",
+};
+
+/** Plural, para os grupos da despensa. */
+export const ingredientKindGroupLabels: Record<string, string> = {
+  PROTEINA: "Proteínas",
+  CARBOIDRATO: "Carboidratos",
+  LEGUME_VERDURA: "Legumes e verduras",
+  LATICINIO: "Laticínios",
+  TEMPERO_BASICO: "Temperos e básicos",
+  OUTRO: "Sem tipo",
+};
+
+export const ingredientRoleLabels: Record<string, string> = {
+  PRECISA: "Precisa",
+  OPCAO: "Escolha um",
+  OPCIONAL: "Se tiver",
+};
+
 export const bookStatusLabels: Record<string, string> = {
   QUERO_LER: "Quero ler",
   LENDO: "Lendo",

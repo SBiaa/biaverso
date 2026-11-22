@@ -11,6 +11,8 @@ export default async function DespensaPage() {
       id: true,
       name: true,
       inStock: true,
+      kind: true,
+      alwaysHave: true,
       notes: true,
       recipes: { select: { recipe: { select: { title: true } } } },
     },
@@ -29,6 +31,8 @@ export default async function DespensaPage() {
             id: item.id,
             name: item.name,
             inStock: item.inStock,
+            kind: item.kind,
+            alwaysHave: item.alwaysHave,
             notes: item.notes,
             recipes: item.recipes.map((r) => r.recipe.title),
           }))}

@@ -3,6 +3,14 @@ import { prisma } from "./prisma";
 import { ApiError } from "./api";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { recipeSchema } from "./schemas";
+import {
+  missingCount,
+  recipeStatus,
+  type RecipeItemView,
+  type RecipeView,
+} from "./pratos";
+
+export type { RecipeItemView, RecipeView } from "./pratos";
 
 /**
  * Lado do servidor do cardápio: receita com itens da despensa e a lista de
@@ -16,11 +24,17 @@ type RecipeInput = z.output<typeof recipeSchema>;
  * Acha o ingrediente pelo nome sem ligar para maiúsculas, ou cria. É o que
  * impede "Ovo" e "ovo" de virarem dois itens e a despensa de ficar em dobro.
  */
-async function resolveIngredient(tx: Prisma.TransactionClient, name: string) {
+async function resolveIngredient(
+  tx: Prisma.TransactionClient,
+  name: string,
+  kind: RecipeInput["items"][number]["kind"],
+) {
   const existing = await tx.ingredient.findFirst({
     where: { name: { equals: name, mode: "insensitive" } },
   });
-  return existing ?? tx.ingredient.create({ data: { name } });
+  // O tipo escolhido no formulário só vale para quem nasce aqui: um ingrediente
+  // que já existe mantém o tipo que a despensa deu a ele.
+  return existing ?? tx.ingredient.create({ data: { name, ...(kind ? { kind } : {}) } });
 }
 
 /** Cria ou atualiza a receita e troca a lista de itens de uma vez. */
@@ -41,11 +55,12 @@ export async function saveRecipe(input: RecipeInput, id?: string) {
       const key = item.name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      const ingredient = await resolveIngredient(tx, item.name);
+      const ingredient = await resolveIngredient(tx, item.name, item.kind);
       rows.push({
         recipeId: recipe.id,
         ingredientId: ingredient.id,
         quantity: item.quantity ?? null,
+        role: item.role,
         position: rows.length,
       });
     }
@@ -60,11 +75,7 @@ export async function saveRecipe(input: RecipeInput, id?: string) {
 }
 
 /** Cria um ingrediente da despensa recusando nome repetido (em qualquer caixa). */
-export async function createIngredient(data: {
-  name: string;
-  inStock: boolean;
-  notes: string | null;
-}) {
+export async function createIngredient(data: Prisma.IngredientCreateInput) {
   const existing = await prisma.ingredient.findFirst({
     where: { name: { equals: data.name, mode: "insensitive" } },
   });
@@ -77,7 +88,10 @@ export const recipeLibraryInclude = {
     orderBy: { position: "asc" },
     select: {
       quantity: true,
-      ingredient: { select: { id: true, name: true, inStock: true } },
+      role: true,
+      ingredient: {
+        select: { id: true, name: true, inStock: true, kind: true, alwaysHave: true },
+      },
     },
   },
   _count: { select: { mealPlans: true } },
@@ -85,34 +99,17 @@ export const recipeLibraryInclude = {
 
 type RecipeRow = Prisma.RecipeGetPayload<{ include: typeof recipeLibraryInclude }>;
 
-export type RecipeItemView = {
-  ingredientId: string;
-  name: string;
-  quantity: string | null;
-  inStock: boolean;
-};
-
-export type RecipeView = {
-  id: string;
-  title: string;
-  description: string | null;
-  categories: string[];
-  ingredientsText: string | null;
-  steps: string;
-  prepTime: number | null;
-  mealPlansCount: number;
-  items: RecipeItemView[];
-  /** Quantos itens faltam em casa. Zero com itens = dá para fazer agora. */
-  missing: number;
-};
-
 export function toRecipeView(recipe: RecipeRow): RecipeView {
-  const items = recipe.items.map((item) => ({
+  const items: RecipeItemView[] = recipe.items.map((item) => ({
     ingredientId: item.ingredient.id,
     name: item.ingredient.name,
     quantity: item.quantity,
     inStock: item.ingredient.inStock,
+    kind: item.ingredient.kind,
+    alwaysHave: item.ingredient.alwaysHave,
+    role: item.role,
   }));
+  const status = recipeStatus(items);
   return {
     id: recipe.id,
     title: recipe.title,
@@ -123,7 +120,8 @@ export function toRecipeView(recipe: RecipeRow): RecipeView {
     prepTime: recipe.prepTime,
     mealPlansCount: recipe._count.mealPlans,
     items,
-    missing: items.filter((item) => !item.inStock).length,
+    status,
+    missing: missingCount(status),
   };
 }
 
@@ -156,13 +154,18 @@ export async function getShoppingList(weekStart: Date): Promise<{
     select: {
       dayOfWeek: true,
       mealType: true,
+      optionIngredientId: true,
       recipe: {
         select: {
           title: true,
           items: {
+            orderBy: { position: "asc" },
             select: {
               quantity: true,
-              ingredient: { select: { id: true, name: true, inStock: true } },
+              role: true,
+              ingredient: {
+                select: { id: true, name: true, inStock: true, alwaysHave: true },
+              },
             },
           },
         },
@@ -174,7 +177,18 @@ export async function getShoppingList(weekStart: Date): Promise<{
   const all = new Set<string>();
   for (const plan of plans) {
     if (!plan.recipe) continue;
-    for (const item of plan.recipe.items) {
+    // Do "escolha um" entra só a opção do horário. Sem escolha gravada, vale
+    // uma que já esteja em casa (nada a comprar) ou, faltando todas, a primeira.
+    const options = plan.recipe.items.filter((item) => item.role === "OPCAO");
+    const chosen =
+      options.find((item) => item.ingredient.id === plan.optionIngredientId) ??
+      options.find((item) => item.ingredient.inStock || item.ingredient.alwaysHave) ??
+      options[0];
+    const needed = plan.recipe.items.filter(
+      (item) => item.role === "PRECISA" || item === chosen,
+    );
+    for (const item of needed) {
+      if (item.ingredient.alwaysHave) continue;
       all.add(item.ingredient.id);
       if (item.ingredient.inStock) continue;
       const entry = byIngredient.get(item.ingredient.id) ?? {

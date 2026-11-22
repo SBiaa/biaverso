@@ -2,9 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getWeekStart } from "@/lib/cardapio";
 import { getShoppingList, recipeLibraryInclude, toRecipeView } from "@/lib/receitas";
-import { parseDateOnly, todayUtc } from "@/lib/utils";
+import { addUtcDays, parseDateOnly, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
-import { itemGrid } from "@/components/layout/page-width";
 import { WeekPicker } from "@/components/modules/cardapio/WeekPicker";
 import { WeeklyMealGrid } from "@/components/modules/cardapio/WeeklyMealGrid";
 import { RecipeFilters } from "@/components/modules/cardapio/RecipeFilters";
@@ -31,30 +30,43 @@ export default async function CardapioPage({
   // na virada; numa semana escolhida a mão, ela fica onde foi posta.
   const isCurrentWeek = weekStart.getTime() === getWeekStart(todayUtc()).getTime();
 
+  const planSelect = {
+    weekStart: true,
+    dayOfWeek: true,
+    mealType: true,
+    recipeId: true,
+    optionIngredientId: true,
+  } as const;
   const [recipeRows, mealPlans, pantry, shopping] = await Promise.all([
     prisma.recipe.findMany({
       orderBy: { title: "asc" },
       include: recipeLibraryInclude,
     }),
+    // A semana anterior entra só para o sorteio saber o que veio antes de segunda.
     prisma.mealPlan.findMany({
-      where: { weekStart },
-      include: { recipe: { select: { title: true } } },
+      where: { weekStart: { in: [weekStart, addUtcDays(weekStart, -7)] } },
+      select: planSelect,
     }),
     prisma.ingredient.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, inStock: true },
+      select: { id: true, name: true, inStock: true, kind: true, alwaysHave: true },
     }),
     getShoppingList(weekStart),
   ]);
 
   const recipes = recipeRows.map(toRecipeView);
 
-  const initialPlan = mealPlans.map((plan) => ({
+  const toEntry = (plan: (typeof mealPlans)[number]) => ({
     dayOfWeek: plan.dayOfWeek,
     mealType: plan.mealType,
     recipeId: plan.recipeId,
-    recipeTitle: plan.recipe?.title ?? null,
-  }));
+    optionIngredientId: plan.optionIngredientId,
+  });
+  const thisWeek = mealPlans.filter((p) => p.weekStart.getTime() === weekStart.getTime());
+  const initialPlan = thisWeek.map(toEntry);
+  const previousPlan = mealPlans
+    .filter((p) => p.weekStart.getTime() !== weekStart.getTime())
+    .map(toEntry);
 
   // O filtro é só da biblioteca: o seletor da grade continua oferecendo todas
   // as receitas, senão filtrar a lista de baixo tirava opções do planejamento.
@@ -89,13 +101,9 @@ export default async function CardapioPage({
             // estado antigo e a semana nova nasceria com a comida da anterior.
             key={weekStart.toISOString()}
             weekStart={weekStart.toISOString()}
-            recipes={recipes.map((r) => ({
-              id: r.id,
-              title: r.title,
-              categories: r.categories,
-              missing: r.items.length > 0 ? r.missing : -1,
-            }))}
+            recipes={recipes}
             initialPlan={initialPlan}
+            previousPlan={previousPlan}
             isCurrentWeek={isCurrentWeek}
           />
         </section>
@@ -106,7 +114,7 @@ export default async function CardapioPage({
           key={`compras-${weekStart.toISOString()}`}
           items={shopping.items}
           total={shopping.total}
-          hasPlans={mealPlans.some((plan) => plan.recipeId)}
+          hasPlans={thisWeek.some((plan) => plan.recipeId)}
         />
 
         {/* A biblioteca era outra página, atrás de um link no topo. Aqui
@@ -114,7 +122,7 @@ export default async function CardapioPage({
         <section id="receitas" className="space-y-4 border-t border-border pt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>
-              Biblioteca de receitas
+              Pratos
               <span className="ml-2 font-normal text-text-secondary">
                 {recipes.length}
               </span>
@@ -128,13 +136,13 @@ export default async function CardapioPage({
           {library.length === 0 ? (
             <p className="text-sm text-text-secondary">
               {recipes.length === 0
-                ? "Nenhuma receita cadastrada ainda."
+                ? "Nenhum prato cadastrado ainda. Comece pelos que você mais faz: o sorteio usa esta lista."
                 : onlyReady
-                  ? "Nenhuma receita dá pra fazer só com o que tem em casa."
-                  : "Nenhuma receita para essa refeição."}
+                  ? "Nenhum prato dá pra fazer só com o que tem em casa."
+                  : "Nenhum prato para essa refeição."}
             </p>
           ) : (
-            <div className={itemGrid}>
+            <div className="grid gap-3 sm:auto-rows-fr [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
               {library.map((recipe) => (
                 <RecipeCard key={recipe.id} recipe={recipe} pantry={pantry} />
               ))}
