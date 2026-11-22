@@ -8,7 +8,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const { mood, energy, notes, type } = await parseBody(request, dayPatchSchema);
+  const { mood, energy, notes, type, reviewed } = await parseBody(request, dayPatchSchema);
 
   const current = type
     ? await prisma.day.findUniqueOrThrow({ where: { id }, select: { type: true } })
@@ -16,7 +16,13 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
 
   const day = await prisma.day.update({
     where: { id },
-    data: { mood, energy, notes, type },
+    data: {
+      mood,
+      energy,
+      notes,
+      type,
+      reviewedAt: reviewed === undefined ? undefined : reviewed ? new Date() : null,
+    },
   });
 
   if (type && current && current.type !== type) {

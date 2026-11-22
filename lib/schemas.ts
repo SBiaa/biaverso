@@ -43,6 +43,8 @@ export const dayPatchSchema = z.object({
   energy: z.enum(E.Energy).nullish(),
   notes: z.string().nullish(),
   type: z.enum(E.DayType).optional(),
+  /** Ela confirma que preencheu o dia (true) ou desfaz (false). */
+  reviewed: z.boolean().optional(),
 });
 
 export const habitCreateSchema = z.object({ name: text });

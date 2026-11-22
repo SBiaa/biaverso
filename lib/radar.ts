@@ -76,7 +76,8 @@ async function getHabitSignals(windowDays: number): Promise<HabitSignal[]> {
       orderBy: { name: "asc" },
     }),
     prisma.habitLog.findMany({
-      where: { day: { date: { gte: since } } },
+      // Só dia conferido: desmarcado num dia não conferido pode ser esquecimento.
+      where: { day: { date: { gte: since }, reviewedAt: { not: null } } },
       select: { habitId: true, done: true, day: { select: { date: true } } },
     }),
   ]);
@@ -126,7 +127,7 @@ async function getRoutineSignals(windowDays: number): Promise<RoutineSignal[]> {
     prisma.task.findMany({
       where: {
         templateId: { not: null },
-        day: { date: { gte: since } },
+        day: { date: { gte: since }, reviewedAt: { not: null } },
       },
       select: { templateId: true, done: true },
     }),

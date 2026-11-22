@@ -11,6 +11,7 @@ import { Card, CardTitle, Skeleton } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
 import { MoodEnergySelector } from "@/components/modules/dia/MoodEnergySelector";
 import { DaySummary } from "@/components/modules/dia/DaySummary";
+import { DayReviewToggle } from "@/components/modules/dia/DayReviewToggle";
 import { FocusToday, type FocusItem } from "@/components/modules/dia/FocusToday";
 import { DayTypeToggle } from "@/components/modules/dia/DayTypeToggle";
 import { HabitChecklist } from "@/components/modules/dia/HabitChecklist";
@@ -64,6 +65,7 @@ async function getDay(date: Date) {
       energy: true,
       type: true,
       notes: true,
+      reviewedAt: true,
       habits: {
         select: { id: true, done: true, habit: { select: { name: true } } },
       },
@@ -657,9 +659,17 @@ export default async function DiaPage({
         key={day.id}
         className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:space-y-6 md:px-8 md:py-8"
       >
-        <div>
-          <DayPicker date={day.date.toISOString()} />
-          <p className="text-sm text-text-secondary">Como está o seu dia?</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <DayPicker date={day.date.toISOString()} />
+            <p className="text-sm text-text-secondary">Como está o seu dia?</p>
+          </div>
+          {/* Dia futuro não tem o que conferir. */}
+          {day.date.getTime() <= today.getTime() && (
+            <div className="max-w-xs">
+              <DayReviewToggle dayId={day.id} reviewed={day.reviewedAt !== null} />
+            </div>
+          )}
         </div>
 
         <DaySummary

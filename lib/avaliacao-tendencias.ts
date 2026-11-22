@@ -128,6 +128,7 @@ export async function getTrends(buckets: TrendBucket[]): Promise<Trends> {
         type: true,
         mood: true,
         energy: true,
+        reviewedAt: true,
         habits: { select: { habitId: true, done: true } },
         tasks: {
           where: { type: { in: ["ROTINA_NORMAL", "ROTINA_FAXINA"] } },
@@ -178,15 +179,17 @@ export async function getTrends(buckets: TrendBucket[]): Promise<Trends> {
 
   for (const day of days) {
     const b = bucketOf(day.date);
+    // Hábitos e casa só de dia conferido; humor e energia de qualquer dia.
+    const reviewed = day.reviewedAt !== null;
 
-    for (const log of day.habits) {
+    for (const log of reviewed ? day.habits : []) {
       const tracked = habitTracked.get(log.habitId);
       if (!tracked) continue;
       tracked[b] += 1;
       if (log.done) habitDone.get(log.habitId)![b] += 1;
     }
 
-    if (day.tasks.length > 0) {
+    if (reviewed && day.tasks.length > 0) {
       house[day.type].total[b] += day.tasks.length;
       house[day.type].done[b] += day.tasks.filter((t) => t.done).length;
     }

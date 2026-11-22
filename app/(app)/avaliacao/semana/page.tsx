@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { getWeekRange, getHabitWeekStats, getOrCreateWeekReview } from "@/lib/avaliacao";
+import {
+  getWeekRange,
+  getHabitWeekStats,
+  getOrCreateWeekReview,
+  getWeekGrid,
+} from "@/lib/avaliacao";
 import { getBusinessPeriodSummary } from "@/lib/avaliacao-negocios";
 import { getTrends, weeklyBuckets } from "@/lib/avaliacao-tendencias";
 import { nextUtcDay, parseDateOnly, todayUtc } from "@/lib/utils";
@@ -9,6 +14,7 @@ import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav"
 import { WeekPicker } from "@/components/modules/avaliacao/WeekPicker";
 import { WeekReviewForm } from "@/components/modules/avaliacao/WeekReviewForm";
 import { HabitProgressList } from "@/components/modules/avaliacao/HabitProgressList";
+import { WeekFillGrid } from "@/components/modules/avaliacao/WeekFillGrid";
 import { BusinessPeriodSummaryCard } from "@/components/modules/avaliacao/BusinessPeriodSummary";
 import { TrendsPanel } from "@/components/modules/avaliacao/TrendsPanel";
 
@@ -27,6 +33,8 @@ export default async function AvaliacaoSemanaPage({
     (params.week ? parseDateOnly(params.week) : null) ?? todayUtc();
   const { weekStart, weekEnd } = getWeekRange(referenceDate);
 
+  // A grade abre os dias que faltam antes das contas lerem o banco.
+  const grid = await getWeekGrid(weekStart);
   const [review, habitStats, businesses, trends] = await Promise.all([
     getOrCreateWeekReview(weekStart, weekEnd),
     getHabitWeekStats(weekStart, weekEnd),
@@ -53,9 +61,16 @@ export default async function AvaliacaoSemanaPage({
         </div>
 
         <Card>
-          <h2 className="mb-3 text-base font-semibold text-text-primary">
+          <WeekFillGrid days={grid.days} habits={grid.habits} house={grid.house} />
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 text-base font-semibold text-text-primary">
             Hábitos da semana
           </h2>
+          <p className="mb-3 text-sm text-text-secondary">
+            Só os dias conferidos entram na conta.
+          </p>
           <HabitProgressList items={habitStats} />
         </Card>
 

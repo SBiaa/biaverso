@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getWeekStart } from "@/lib/cardapio";
 import { addUtcDays, getMonthRange, todayUtc } from "@/lib/utils";
 import { blockLabels, moodScale } from "@/lib/labels";
+import { getOrCreateDay, materializeHabits, materializeRoutineTasks } from "@/lib/day";
 
 export function getWeekRange(date: Date) {
   const weekStart = getWeekStart(date);
@@ -48,24 +49,34 @@ export async function getOrCreateWeekReview(weekStart: Date, weekEnd: Date) {
   });
 }
 
+/**
+ * Hábitos da semana contados só nos dias conferidos. Um dia que ela não
+ * conferiu pode ter ficado sem marcar por esquecimento — entra como "sem
+ * dado", não como "não feito". O total de cada hábito é o número de dias
+ * conferidos, não 7.
+ */
 export async function getHabitWeekStats(weekStart: Date, weekEnd: Date) {
   const [habits, logs] = await Promise.all([
-    prisma.habit.findMany({ where: { active: true } }),
+    prisma.habit.findMany({ where: { active: true }, orderBy: { createdAt: "asc" } }),
     prisma.habitLog.findMany({
-      where: { done: true, day: { date: { gte: weekStart, lte: weekEnd } } },
-      select: { habitId: true },
+      where: {
+        day: { date: { gte: weekStart, lte: weekEnd }, reviewedAt: { not: null } },
+      },
+      select: { habitId: true, done: true },
     }),
   ]);
 
-  const counts = logs.reduce<Record<string, number>>((acc, log) => {
-    acc[log.habitId] = (acc[log.habitId] ?? 0) + 1;
-    return acc;
-  }, {});
+  const done = new Map<string, number>();
+  const tracked = new Map<string, number>();
+  for (const log of logs) {
+    tracked.set(log.habitId, (tracked.get(log.habitId) ?? 0) + 1);
+    if (log.done) done.set(log.habitId, (done.get(log.habitId) ?? 0) + 1);
+  }
 
   return habits.map((h) => ({
     name: h.name,
-    done: counts[h.id] ?? 0,
-    total: 7,
+    done: done.get(h.id) ?? 0,
+    total: tracked.get(h.id) ?? 0,
   }));
 }
 
@@ -151,6 +162,7 @@ export async function getMonthSummary(month: number, year: number) {
         type: true,
         mood: true,
         energy: true,
+        reviewedAt: true,
         habits: { select: { habitId: true, done: true } },
         tasks: {
           where: { type: { in: ["ROTINA_NORMAL", "ROTINA_FAXINA"] } },
@@ -165,9 +177,14 @@ export async function getMonthSummary(month: number, year: number) {
     }),
   ]);
 
+  // Hábitos e casa só dos dias conferidos: num dia não conferido, desmarcado
+  // pode ser esquecimento. Humor e energia valem sempre — ou foram escolhidos
+  // ou ficaram vazios, não há "não feito" para confundir.
+  const reviewed = days.filter((d) => d.reviewedAt !== null);
+
   // --- Hábitos -------------------------------------------------------------
   const habitDone = new Map<string, number>();
-  for (const day of days) {
+  for (const day of reviewed) {
     for (const log of day.habits) {
       if (log.done) habitDone.set(log.habitId, (habitDone.get(log.habitId) ?? 0) + 1);
     }
@@ -175,13 +192,13 @@ export async function getMonthSummary(month: number, year: number) {
   const habitStats = habits.map((h) => ({
     name: h.name,
     done: habitDone.get(h.id) ?? 0,
-    total: countedDays,
+    total: reviewed.length,
   }));
   const habitsDoneTotal = habitStats.reduce((sum, h) => sum + h.done, 0);
-  const habitsPossible = habits.length * countedDays;
+  const habitsPossible = habits.length * reviewed.length;
 
   // --- Casa ----------------------------------------------------------------
-  const house: MonthDayHouse[] = days
+  const house: MonthDayHouse[] = reviewed
     .filter((d) => d.tasks.length > 0)
     .map((d) => ({
       day: d.date.getUTCDate(),
@@ -230,6 +247,8 @@ export async function getMonthSummary(month: number, year: number) {
     countedDays,
     /** Dias em que o /dia foi aberto — os únicos com algo gravado. */
     loggedDays: days.length,
+    /** Dias que ela conferiu — os únicos que entram em hábitos e casa. */
+    reviewedDays: reviewed.length,
     habits: {
       items: habitStats,
       done: habitsDoneTotal,
@@ -239,4 +258,124 @@ export async function getMonthSummary(month: number, year: number) {
     mood: { days: moods, counts: moodCounts, average: moodAverage },
     energy: energyCounts,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Grade de completar a semana.
+//
+// Ela nem sempre volta ao /dia para marcar o que fez, e "não marcado" virava
+// "não feito". A grade põe os sete dias lado a lado — hábitos e rotina da
+// casa nas linhas — para marcar de uma vez no fim da semana e conferir cada
+// dia. Só dia conferido entra nas contas (ver `reviewedAt` no Day).
+// ---------------------------------------------------------------------------
+
+export type WeekGridDay = {
+  /** yyyy-mm-dd */
+  date: string;
+  dayId: string | null;
+  reviewed: boolean;
+  /** Ainda não aconteceu: não dá para marcar nem conferir. */
+  future: boolean;
+  type: "NORMAL" | "FAXINA";
+};
+
+export type WeekGridCell = { id: string; done: boolean } | null;
+
+export type WeekGridRow = {
+  key: string;
+  name: string;
+  /** "habit" marca HabitLog; "house" marca a tarefa de rotina do dia. */
+  kind: "habit" | "house";
+  /** Um por dia, segunda a domingo. null = o item não existe naquele dia. */
+  cells: WeekGridCell[];
+};
+
+export async function getWeekGrid(weekStart: Date) {
+  const today = todayUtc();
+  const dates = Array.from({ length: 7 }, (_, i) => addUtcDays(weekStart, i));
+
+  // Abre os dias que já aconteceram e copia hábitos e rotina, como o /dia faz.
+  // Sem isso, um dia em que ela não abriu o app não teria o que marcar.
+  for (const date of dates) {
+    if (date > today) continue;
+    const day = await getOrCreateDay(date);
+    await materializeRoutineTasks(day);
+    await materializeHabits(day);
+  }
+
+  const [days, habits, templates] = await Promise.all([
+    prisma.day.findMany({
+      where: { date: { gte: dates[0], lte: dates[6] } },
+      select: {
+        id: true,
+        date: true,
+        type: true,
+        reviewedAt: true,
+        habits: { select: { id: true, habitId: true, done: true } },
+        tasks: {
+          where: { type: { in: ["ROTINA_NORMAL", "ROTINA_FAXINA"] } },
+          select: { id: true, title: true, done: true, templateId: true, type: true, order: true },
+        },
+      },
+    }),
+    prisma.habit.findMany({
+      where: { active: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.task.findMany({
+      where: { dayId: null, type: { in: ["ROTINA_NORMAL", "ROTINA_FAXINA"] } },
+      select: { id: true, title: true },
+    }),
+  ]);
+
+  const byDate = new Map(days.map((d) => [d.date.getTime(), d]));
+  const columns = dates.map((date) => byDate.get(date.getTime()) ?? null);
+
+  const gridDays: WeekGridDay[] = dates.map((date, i) => ({
+    date: date.toISOString().slice(0, 10),
+    dayId: columns[i]?.id ?? null,
+    reviewed: Boolean(columns[i]?.reviewedAt),
+    future: date > today,
+    type: columns[i]?.type ?? "NORMAL",
+  }));
+
+  const habitRows: WeekGridRow[] = habits.map((h) => ({
+    key: `habit:${h.id}`,
+    name: h.name,
+    kind: "habit",
+    cells: columns.map((day) => {
+      const log = day?.habits.find((l) => l.habitId === h.id);
+      return log ? { id: log.id, done: log.done } : null;
+    }),
+  }));
+
+  // Uma linha por item da rotina, juntando os dias pelo template. O nome vem do
+  // template atual (ela pode ter renomeado); cópia antiga sem template vale pelo título.
+  const templateName = new Map(templates.map((t) => [t.id, t.title]));
+  const houseOrder: { key: string; name: string; rank: number }[] = [];
+  for (const day of columns) {
+    for (const t of day?.tasks ?? []) {
+      const key = `house:${t.templateId ?? t.title}`;
+      if (houseOrder.some((r) => r.key === key)) continue;
+      houseOrder.push({
+        key,
+        name: (t.templateId && templateName.get(t.templateId)) || t.title,
+        rank: (t.type === "ROTINA_FAXINA" ? 10_000 : 0) + t.order,
+      });
+    }
+  }
+  houseOrder.sort((a, b) => a.rank - b.rank);
+
+  const houseRows: WeekGridRow[] = houseOrder.map((r) => ({
+    key: r.key,
+    name: r.name,
+    kind: "house",
+    cells: columns.map((day) => {
+      const t = day?.tasks.find((x) => `house:${x.templateId ?? x.title}` === r.key);
+      return t ? { id: t.id, done: t.done } : null;
+    }),
+  }));
+
+  return { days: gridDays, habits: habitRows, house: houseRows };
 }

@@ -21,7 +21,7 @@ function plural(n: number, one: string, many: string) {
  * foi?" e só depois mostra o detalhe.
  */
 export function MonthSummaryCards({ summary }: { summary: Summary }) {
-  const { habits, house, mood, energy, daysInMonth, countedDays, loggedDays } = summary;
+  const { habits, house, mood, energy, daysInMonth, countedDays, reviewedDays } = summary;
 
   const habitPercent = percent(habits.done, habits.possible);
   const ranked = [...habits.items]
@@ -40,12 +40,12 @@ export function MonthSummaryCards({ summary }: { summary: Summary }) {
           <h2 className="text-base font-semibold text-text-primary">Hábitos</h2>
           {countedDays > 0 && (
             <span className="text-xs text-text-secondary">
-              {plural(loggedDays, "dia registrado", "dias registrados")} de {countedDays}
+              {plural(reviewedDays, "dia conferido", "dias conferidos")} de {countedDays}
             </span>
           )}
         </div>
-        {habits.items.length === 0 || countedDays === 0 ? (
-          <p className="text-sm text-text-secondary">Nenhum hábito registrado neste mês.</p>
+        {habits.items.length === 0 || reviewedDays === 0 ? (
+          <p className="text-sm text-text-secondary">Nenhum dia conferido neste mês.</p>
         ) : (
           <div className="flex flex-col gap-4">
             <div>
