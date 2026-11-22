@@ -884,6 +884,8 @@ model MeasuredGoal {
   deadline  DateTime?
   status    MeasuredGoalStatus @default(EM_ANDAMENTO)
   progress  Int                @default(0)
+  // O que ficou de lição ao encerrar — principalmente quando não foi atingido.
+  lesson    String?
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
@@ -898,6 +900,8 @@ model MeasuredGoal {
 enum MeasuredGoalStatus {
   EM_ANDAMENTO
   CONCLUIDO
+  // Prazo acabou sem bater a meta. Diferente de CANCELADO (desistiu no meio).
+  NAO_ATINGIDO
   PAUSADO
   CANCELADO
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Card, Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { measuredGoalStatusLabels } from "@/lib/labels";
 import { formatDateBR } from "@/lib/utils";
 import { ConceptualGoalFormModal } from "./ConceptualGoalFormModal";
 import { MeasuredGoalFormModal } from "./MeasuredGoalFormModal";
+import { RenewGoalModal } from "./RenewGoalModal";
 
 type MeasuredGoal = {
   id: string;
@@ -17,7 +18,11 @@ type MeasuredGoal = {
   deadline: string | null;
   status: string;
   progress: number;
+  lesson: string | null;
 };
+
+/** Metas que já saíram do ciclo — ficam como histórico, apagadas visualmente. */
+const closedStatuses = ["CONCLUIDO", "NAO_ATINGIDO", "CANCELADO"];
 
 type ConceptualGoal = {
   id: string;
@@ -34,21 +39,34 @@ function MeasuredGoalRow({
   goal,
   onChanged,
   onEdit,
+  onRenew,
   onDelete,
 }: {
   goal: MeasuredGoal;
   onChanged: (patch: Partial<MeasuredGoal>) => void;
   onEdit: () => void;
+  onRenew: () => void;
   onDelete: () => void;
 }) {
+  const closed = closedStatuses.includes(goal.status);
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+    <div className={cn("flex flex-col gap-2 rounded-md border border-border p-3", closed && "opacity-60")}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-text-primary">{goal.title}</p>
           {goal.target && <p className="text-xs text-text-secondary">{goal.target}</p>}
         </div>
         <div className="flex items-center gap-2">
+          {!closed && (
+            <button
+              type="button"
+              onClick={onRenew}
+              title="Encerrar e criar a próxima meta"
+              className="text-text-secondary hover:text-text-primary"
+            >
+              <RefreshCw size={14} />
+            </button>
+          )}
           <button type="button" onClick={onEdit} className="text-text-secondary hover:text-text-primary">
             <Pencil size={14} />
           </button>
@@ -84,6 +102,13 @@ function MeasuredGoalRow({
           ))}
         </select>
       </div>
+
+      {goal.lesson && (
+        <p className="whitespace-pre-line border-t border-border pt-2 text-xs text-text-secondary">
+          <span className="font-medium text-text-primary">Aprendizado: </span>
+          {goal.lesson}
+        </p>
+      )}
     </div>
   );
 }
@@ -105,6 +130,7 @@ export function GoalsSection({
     conceptualGoalId: string;
     goal: MeasuredGoal;
   } | null>(null);
+  const [renewing, setRenewing] = useState<MeasuredGoal | null>(null);
 
   async function refresh() {
     try {
@@ -237,6 +263,7 @@ export function GoalsSection({
                         goal={measured}
                         onChanged={(patch) => patchMeasuredLocal(goal.id, measured.id, patch)}
                         onEdit={() => setEditingMeasured({ conceptualGoalId: goal.id, goal: measured })}
+                        onRenew={() => setRenewing(measured)}
                         onDelete={() => handleDeleteMeasured(goal.id, measured.id)}
                       />
                     ))}
@@ -289,6 +316,9 @@ export function GoalsSection({
           onClose={() => setEditingMeasured(null)}
           onSaved={refresh}
         />
+      )}
+      {renewing && (
+        <RenewGoalModal goal={renewing} onClose={() => setRenewing(null)} onSaved={refresh} />
       )}
     </div>
   );

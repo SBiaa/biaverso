@@ -7,7 +7,7 @@ export const GET = route(async (request: Request) => {
   const { pillarId } = parseQuery(request, pillarIdQuerySchema);
   const goals = await prisma.conceptualGoal.findMany({
     where: pillarId ? { pillarId } : undefined,
-    include: { measuredGoals: true },
+    include: { measuredGoals: { orderBy: { deadline: "asc" } } },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(goals);

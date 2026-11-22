@@ -18,6 +18,7 @@ type MeasuredGoalFormModalProps = {
     deadline: string | null;
     status: string;
     progress: number;
+    lesson: string | null;
   };
   onClose: () => void;
   onSaved: () => void;
@@ -43,6 +44,7 @@ export function MeasuredGoalFormModal({
     deadline: toDateInputValue(initial?.deadline ?? null),
     status: initial?.status ?? "EM_ANDAMENTO",
     progress: initial?.progress ?? 0,
+    lesson: initial?.lesson ?? "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -146,6 +148,16 @@ export function MeasuredGoalFormModal({
             className="w-full accent-accent"
           />
         </div>
+
+        {form.status !== "EM_ANDAMENTO" && (
+          <textarea
+            placeholder="Aprendizado: o que funcionou, o que não funcionou"
+            value={form.lesson}
+            onChange={(e) => update("lesson", e.target.value)}
+            rows={3}
+            className="resize-none rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
+        )}
 
         <ErrorNote message={error} />
 

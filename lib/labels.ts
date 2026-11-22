@@ -191,6 +191,7 @@ export const passwordCategoryLabels: Record<string, string> = {
 export const measuredGoalStatusLabels: Record<string, string> = {
   EM_ANDAMENTO: "Em andamento",
   CONCLUIDO: "Concluído",
+  NAO_ATINGIDO: "Não atingido",
   PAUSADO: "Pausado",
   CANCELADO: "Cancelado",
 };

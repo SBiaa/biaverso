@@ -42,6 +42,7 @@ export default async function PillarDetailPage({
       deadline: measured.deadline ? measured.deadline.toISOString() : null,
       status: measured.status,
       progress: measured.progress,
+      lesson: measured.lesson,
     })),
   }));
 

@@ -373,9 +373,28 @@ export const measuredGoalCreateSchema = z.object({
   deadline: dateOnly.nullish(),
   status: z.enum(E.MeasuredGoalStatus).default("EM_ANDAMENTO"),
   progress: z.coerce.number().int().min(0).max(100).default(0),
+  lesson: optionalText,
   conceptualGoalId: id,
 });
 export const measuredGoalPatchSchema = measuredGoalCreateSchema.partial();
+
+/**
+ * Renovar = encerrar a meta atual com o resultado real e abrir a próxima no
+ * mesmo objetivo conceitual. A antiga fica como histórico, nunca é editada
+ * para virar a nova.
+ */
+export const measuredGoalRenewSchema = z.object({
+  close: z.object({
+    status: z.enum(["CONCLUIDO", "NAO_ATINGIDO"]),
+    progress: z.coerce.number().int().min(0).max(100),
+    lesson: optionalText,
+  }),
+  next: z.object({
+    title: text,
+    target: optionalText,
+    deadline: dateOnly.nullish(),
+  }),
+});
 
 export const moodboardCreateSchema = z.object({
   type: z.enum(E.MoodboardType),
