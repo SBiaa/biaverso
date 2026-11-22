@@ -944,6 +944,8 @@ model Project {
   priceTable  ProjectPriceItem[]
   devLog      ProjectLogEntry[]
   timeEntries TimeEntry[]
+  // A ideia de onde o projeto saiu, quando saiu de uma.
+  idea        Idea?
 
   @@index([businessId])
   @@index([clientId])
@@ -1882,6 +1884,11 @@ model Idea {
   updatedAt   DateTime   @updatedAt
   businessId  String?
   business    Business?  @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  // O projeto que nasceu desta ideia ("Virou projeto"). Único: uma ideia vira
+  // um projeto só. Apagar o projeto não apaga a ideia, só desfaz o vínculo.
+  projectId String?  @unique
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([businessId])
 }
