@@ -91,7 +91,7 @@ export function WeekFillGrid({
           <tr key={row.key} className="border-t border-border">
             <th
               scope="row"
-              className="sticky left-0 z-10 bg-surface py-1 pr-2 text-left text-sm font-normal text-text-primary"
+              className="sticky left-0 z-10 w-24 bg-surface py-1 pr-2 text-left text-xs leading-tight font-normal text-text-primary sm:w-auto sm:text-sm"
             >
               {row.name}
             </th>
@@ -149,7 +149,7 @@ export function WeekFillGrid({
       </p>
 
       <div className="-mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[560px] border-collapse">
+        <table className="w-full min-w-[400px] border-collapse">
           <thead>
             <tr>
               <th scope="col" className="sticky left-0 z-10 bg-surface">

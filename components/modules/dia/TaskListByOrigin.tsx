@@ -104,11 +104,15 @@ function TaskRow({
               Atrasado
             </AttentionBadge>
           )}
-          <TaskStatusPicker
-            status={task.status}
-            title={task.title}
-            onChange={(status) => onStatus(task.id, status)}
-          />
+          {/* Tarefa de casa é feito ou não feito: o círculo basta, e o seletor
+              "A fazer / Concluí" só poluía a lista. */}
+          {task.origin !== "CASA" && (
+            <TaskStatusPicker
+              status={task.status}
+              title={task.title}
+              onChange={(status) => onStatus(task.id, status)}
+            />
+          )}
           <SubtaskToggle
             open={open}
             onClick={() => setOpen((v) => !v)}
