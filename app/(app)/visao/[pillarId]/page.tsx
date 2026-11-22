@@ -63,6 +63,7 @@ export default async function PillarDetailPage({
       currentValue: measured.currentValue,
       unit: measured.unit,
       businessId: measured.businessId,
+      lesson: measured.lesson,
     })),
   }));
 

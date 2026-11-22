@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { closedAtFor } from "@/lib/measured-goals";
 import { parseBody, parseQuery, route } from "@/lib/api";
 import { conceptualGoalIdQuerySchema, measuredGoalCreateSchema } from "@/lib/schemas";
 
@@ -16,7 +17,12 @@ export const POST = route(async (request: Request) => {
   const data = await parseBody(request, measuredGoalCreateSchema);
   return NextResponse.json(
     await prisma.measuredGoal.create({
-      data: { ...data, target: data.target ?? null, deadline: data.deadline ?? null },
+      data: {
+        ...data,
+        target: data.target ?? null,
+        deadline: data.deadline ?? null,
+        closedAt: closedAtFor(data.status),
+      },
     }),
   );
 });

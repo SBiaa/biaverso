@@ -1035,6 +1035,7 @@ export const measuredGoalCreateSchema = z.object({
   targetValue: goalAmount.nullish(),
   currentValue: goalAmount.default(0),
   unit: optionalText,
+  lesson: optionalText,
   businessId: optionalId,
   conceptualGoalId: id,
 });
@@ -1050,8 +1051,30 @@ export const measuredGoalPatchSchema = z.object({
   targetValue: goalAmount.nullish(),
   currentValue: goalAmount.optional(),
   unit: optionalTextPatch,
+  lesson: optionalTextPatch,
   businessId: optionalId,
   conceptualGoalId: id.optional(),
+});
+
+/**
+ * Renovar = encerrar a meta atual com o resultado real e abrir a próxima no
+ * mesmo objetivo conceitual. A antiga fica como histórico, nunca é editada
+ * para virar a nova. Termo, unidade e empresa vêm da antiga.
+ */
+export const measuredGoalRenewSchema = z.object({
+  close: z.object({
+    status: z.enum(["CONCLUIDO", "NAO_ATINGIDO"]),
+    // Com meta numérica o resultado é o valor completado; sem ela, o percentual.
+    currentValue: goalAmount.optional(),
+    progress: z.coerce.number().int().min(0).max(100).optional(),
+    lesson: optionalText,
+  }),
+  next: z.object({
+    title: text,
+    target: optionalText,
+    targetValue: goalAmount.nullish(),
+    deadline: dateOnly.nullish(),
+  }),
 });
 
 export const moodboardCreateSchema = z.object({
@@ -1498,3 +1521,36 @@ export const yearPlanSchema = z
     budgetNotes: z.string().max(10000).nullable(),
   })
   .partial();
+
+// ---------------------------------------------------------- despejo do ano
+const planYear = z.coerce.number().int().min(2000).max(2100);
+
+/** Cria itens do despejo: vários textos de uma vez, ou um item "Depois" trazido do ano anterior. */
+export const brainstormCreateSchema = z
+  .object({
+    year: planYear,
+    texts: z.array(z.string().trim().max(500)).max(200).optional(),
+    carriedFromId: id.optional(),
+  })
+  .refine((v) => v.carriedFromId || v.texts?.some((t) => t), "escreva pelo menos um item");
+
+export const brainstormPatchSchema = z.object({
+  text: text.optional(),
+  pillarId: optionalId,
+  decision: z.enum(E.BrainstormDecision).nullish(),
+});
+
+/** "Virar meta": num objetivo conceitual existente ou num novo, criado no pilar do item. */
+export const brainstormGoalSchema = z
+  .object({
+    title: text,
+    conceptualGoalId: id.optional(),
+    newConceptualTitle: z.string().trim().max(300).optional(),
+    targetValue: goalAmount.nullish(),
+    unit: optionalText,
+    deadline: dateOnly.nullish(),
+  })
+  .refine(
+    (v) => v.conceptualGoalId || v.newConceptualTitle,
+    "escolha um objetivo conceitual ou dê nome a um novo",
+  );

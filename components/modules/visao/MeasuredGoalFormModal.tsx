@@ -4,7 +4,11 @@ import { useState } from "react";
 
 import { Button, ErrorNote, Modal } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { goalTermLabels, measuredGoalStatusLabels } from "@/lib/labels";
+import {
+  closedMeasuredGoalStatuses,
+  goalTermLabels,
+  measuredGoalStatusLabels,
+} from "@/lib/labels";
 import { parseGoalAmount } from "@/lib/vision-shared";
 
 const statusOptions = Object.keys(measuredGoalStatusLabels);
@@ -24,6 +28,7 @@ export type MeasuredGoalInitial = {
   currentValue: number;
   unit: string | null;
   businessId: string | null;
+  lesson: string | null;
 };
 
 type MeasuredGoalFormModalProps = {
@@ -67,6 +72,7 @@ export function MeasuredGoalFormModal({
     unit: initial?.unit ?? "",
     businessId: initial?.businessId ?? "",
     progress: initial?.progress ?? 0,
+    lesson: initial?.lesson ?? "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -99,6 +105,7 @@ export function MeasuredGoalFormModal({
       unit: form.unit,
       businessId: form.businessId || null,
       progress: Number(form.progress),
+      lesson: form.lesson,
     };
 
     try {
@@ -235,6 +242,17 @@ export function MeasuredGoalFormModal({
           </select>
         </div>
       </div>
+
+      {closedMeasuredGoalStatuses.includes(form.status) && (
+        <textarea
+          placeholder="Aprendizado: o que funcionou, o que não funcionou"
+          value={form.lesson}
+          onChange={(e) => update("lesson", e.target.value)}
+          rows={3}
+          aria-label="Aprendizado"
+          className={`resize-none ${field}`}
+        />
+      )}
 
       <ErrorNote message={error} />
 

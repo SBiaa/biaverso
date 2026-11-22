@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
 import { YearPlanner, type YearPlanData } from "@/components/modules/ano/YearPlanner";
+import type { BrainstormItemDTO } from "@/components/modules/ano/BrainstormSection";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function AnoPage({
   const start = new Date(Date.UTC(year, 0, 1));
   const end = new Date(Date.UTC(year + 1, 0, 1));
 
-  const [plan, pillars] = await Promise.all([
+  const [plan, pillars, brainstormItems, carryCandidates] = await Promise.all([
     prisma.yearPlan.findUnique({ where: { year } }),
     prisma.pillar.findMany({
       where: { status: "ATIVO" },
@@ -29,7 +30,10 @@ export default async function AnoPage({
         name: true,
         color: true,
         conceptualGoals: {
+          orderBy: { title: "asc" },
           select: {
+            id: true,
+            title: true,
             measuredGoals: {
               where: { deadline: { gte: start, lt: end } },
               orderBy: { deadline: "asc" },
@@ -38,6 +42,24 @@ export default async function AnoPage({
           },
         },
       },
+    }),
+    prisma.brainstormItem.findMany({
+      where: { year },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        text: true,
+        decision: true,
+        pillarId: true,
+        measuredGoalId: true,
+        desireId: true,
+      },
+    }),
+    // O que ficou para "Depois" no ano anterior e ainda não foi trazido.
+    prisma.brainstormItem.findMany({
+      where: { year: year - 1, decision: "DEPOIS", carriedTo: null },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, text: true },
     }),
   ]);
 
@@ -58,6 +80,18 @@ export default async function AnoPage({
         key={year}
         year={year}
         initial={data}
+        brainstorm={{
+          items: brainstormItems as BrainstormItemDTO[],
+          carryCandidates,
+          conceptualGoals: pillars.flatMap((p) =>
+            p.conceptualGoals.map((c) => ({
+              id: c.id,
+              title: c.title,
+              pillarId: p.id,
+              pillarName: p.name,
+            })),
+          ),
+        }}
         pillars={pillars.map((p) => ({
           id: p.id,
           name: p.name,

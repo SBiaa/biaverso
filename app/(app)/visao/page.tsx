@@ -81,6 +81,7 @@ export default async function VisaoPage({
         progress: true,
         conceptualGoalId: true,
         businessId: true,
+        lesson: true,
       },
     }),
     prisma.priorityLevel.findMany({
