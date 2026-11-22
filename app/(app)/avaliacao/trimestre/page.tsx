@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getOrCreateQuarterReview } from "@/lib/avaliacao";
+import { getClosedMeasuredGoals, getOrCreateQuarterReview } from "@/lib/avaliacao";
 import { prisma } from "@/lib/prisma";
 import { formatMonthYearBR, parseIntParam, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
@@ -7,6 +7,7 @@ import { Card } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
 import { QuarterPicker } from "@/components/modules/avaliacao/QuarterPicker";
 import { QuarterReviewForm } from "@/components/modules/avaliacao/QuarterReviewForm";
+import { ClosedGoalsCard } from "@/components/modules/avaliacao/ClosedGoalsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,16 @@ export default async function AvaliacaoTrimestrePage({
   const year = parseIntParam(params.year, 1970, 2999) ?? today.getUTCFullYear();
 
   const review = await getOrCreateQuarterReview(quarter, year);
-  const months = await prisma.monthReview.findMany({
-    where: { quarterReviewId: review.id },
-    orderBy: { month: "asc" },
-  });
+  const [months, closedGoals] = await Promise.all([
+    prisma.monthReview.findMany({
+      where: { quarterReviewId: review.id },
+      orderBy: { month: "asc" },
+    }),
+    getClosedMeasuredGoals(
+      new Date(Date.UTC(year, (quarter - 1) * 3, 1)),
+      new Date(Date.UTC(year, quarter * 3, 1)),
+    ),
+  ]);
 
   return (
     <>
@@ -60,6 +67,8 @@ export default async function AvaliacaoTrimestrePage({
             </ul>
           )}
         </Card>
+
+        <ClosedGoalsCard goals={closedGoals} period="no trimestre" />
 
         <QuarterReviewForm review={review} />
       </main>

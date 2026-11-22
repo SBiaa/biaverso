@@ -5,7 +5,7 @@ import { ChevronDown, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Card, Button, ErrorNote } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
-import { measuredGoalStatusLabels } from "@/lib/labels";
+import { closedMeasuredGoalStatuses, measuredGoalStatusLabels } from "@/lib/labels";
 import { formatDateBR } from "@/lib/utils";
 import { ConceptualGoalFormModal } from "./ConceptualGoalFormModal";
 import { MeasuredGoalFormModal } from "./MeasuredGoalFormModal";
@@ -20,9 +20,6 @@ type MeasuredGoal = {
   progress: number;
   lesson: string | null;
 };
-
-/** Metas que já saíram do ciclo — ficam como histórico, apagadas visualmente. */
-const closedStatuses = ["CONCLUIDO", "NAO_ATINGIDO", "CANCELADO"];
 
 type ConceptualGoal = {
   id: string;
@@ -48,7 +45,7 @@ function MeasuredGoalRow({
   onRenew: () => void;
   onDelete: () => void;
 }) {
-  const closed = closedStatuses.includes(goal.status);
+  const closed = closedMeasuredGoalStatuses.includes(goal.status);
   return (
     <div className={cn("flex flex-col gap-2 rounded-md border border-border p-3", closed && "opacity-60")}>
       <div className="flex items-start justify-between gap-2">

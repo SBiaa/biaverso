@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { getOrCreateMonthReview, getQuarter } from "@/lib/avaliacao";
+import { getClosedMeasuredGoals, getOrCreateMonthReview, getQuarter } from "@/lib/avaliacao";
 import { prisma } from "@/lib/prisma";
-import { formatDateBR, parseIntParam, todayUtc } from "@/lib/utils";
+import { formatDateBR, getMonthRange, parseIntParam, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, MonthPicker } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
 import { MonthReviewForm } from "@/components/modules/avaliacao/MonthReviewForm";
+import { ClosedGoalsCard } from "@/components/modules/avaliacao/ClosedGoalsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,14 @@ export default async function AvaliacaoMesPage({
   const year = parseIntParam(params.year, 1970, 2999) ?? today.getUTCFullYear();
 
   const review = await getOrCreateMonthReview(month, year);
-  const weeks = await prisma.weekReview.findMany({
-    where: { monthReviewId: review.id },
-    orderBy: { weekStart: "asc" },
-  });
+  const { start, end } = getMonthRange(new Date(Date.UTC(year, month - 1, 1)));
+  const [weeks, closedGoals] = await Promise.all([
+    prisma.weekReview.findMany({
+      where: { monthReviewId: review.id },
+      orderBy: { weekStart: "asc" },
+    }),
+    getClosedMeasuredGoals(start, end),
+  ]);
 
   const quarterHref = `/avaliacao/trimestre?quarter=${getQuarter(month)}&year=${year}`;
 
@@ -67,6 +72,8 @@ export default async function AvaliacaoMesPage({
             </ul>
           )}
         </Card>
+
+        <ClosedGoalsCard goals={closedGoals} period="no mês" />
 
         <MonthReviewForm review={review} />
       </main>

@@ -124,3 +124,30 @@ export async function getBiggestBlockStats(limit = 8) {
     .map(([block, count]) => ({ block, label: blockLabels[block] ?? block, count }))
     .sort((a, b) => b.count - a.count);
 }
+
+/** Metas metrificadas encerradas no intervalo [start, end), com o pilar. */
+export async function getClosedMeasuredGoals(start: Date, end: Date) {
+  const goals = await prisma.measuredGoal.findMany({
+    where: { closedAt: { gte: start, lt: end } },
+    orderBy: { closedAt: "asc" },
+    include: { conceptualGoal: { select: { pillar: true } } },
+  });
+
+  return goals.map((goal) => ({
+    id: goal.id,
+    title: goal.title,
+    target: goal.target,
+    status: goal.status,
+    progress: goal.progress,
+    lesson: goal.lesson,
+    closedAt: goal.closedAt!,
+    pillar: {
+      id: goal.conceptualGoal.pillar.id,
+      name: goal.conceptualGoal.pillar.name,
+      color: goal.conceptualGoal.pillar.color,
+      icon: goal.conceptualGoal.pillar.icon,
+    },
+  }));
+}
+
+export type ClosedMeasuredGoal = Awaited<ReturnType<typeof getClosedMeasuredGoals>>[number];

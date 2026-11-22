@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { closedAtFor } from "@/lib/measured-goals";
 import { parseBody, route } from "@/lib/api";
 import { measuredGoalRenewSchema } from "@/lib/schemas";
 
@@ -12,7 +13,14 @@ export const POST = route(async (request: Request, { params }: Params) => {
   const { close, next } = await parseBody(request, measuredGoalRenewSchema);
 
   const [closed, created] = await prisma.$transaction(async (tx) => {
-    const current = await tx.measuredGoal.update({ where: { id }, data: close });
+    const previous = await tx.measuredGoal.findUniqueOrThrow({
+      where: { id },
+      select: { closedAt: true },
+    });
+    const current = await tx.measuredGoal.update({
+      where: { id },
+      data: { ...close, closedAt: closedAtFor(close.status, previous.closedAt) },
+    });
     const fresh = await tx.measuredGoal.create({
       data: {
         title: next.title,
