@@ -4,7 +4,7 @@ import { ApiError, parseBody, route } from "@/lib/api";
 import { brainstormCreateSchema } from "@/lib/schemas";
 
 export const POST = route(async (request: Request) => {
-  const { year, texts, carriedFromId } = await parseBody(request, brainstormCreateSchema);
+  const { year, texts, pillarId, carriedFromId } = await parseBody(request, brainstormCreateSchema);
 
   if (carriedFromId) {
     const source = await prisma.brainstormItem.findUniqueOrThrow({
@@ -21,7 +21,7 @@ export const POST = route(async (request: Request) => {
   // Um item por linha não vazia, na ordem em que foi escrito.
   const lines = (texts ?? []).filter(Boolean);
   const items = await prisma.$transaction(
-    lines.map((text) => prisma.brainstormItem.create({ data: { year, text } })),
+    lines.map((text) => prisma.brainstormItem.create({ data: { year, text, pillarId } })),
   );
   return NextResponse.json(items);
 });

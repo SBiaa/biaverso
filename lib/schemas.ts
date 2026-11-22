@@ -1530,6 +1530,8 @@ export const brainstormCreateSchema = z
   .object({
     year: planYear,
     texts: z.array(z.string().trim().max(500)).max(200).optional(),
+    // Anotado direto na página de um pilar.
+    pillarId: id.optional(),
     carriedFromId: id.optional(),
   })
   .refine((v) => v.carriedFromId || v.texts?.some((t) => t), "escreva pelo menos um item");
