@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/layout/Topbar";
-import { navGroups, type NavItem } from "@/components/layout/nav-config";
+import { bottomNavItems, navGroups, type NavItem } from "@/components/layout/nav-config";
 import { CommandPaletteTrigger } from "@/components/layout/CommandPalette";
 import { getBusinessIcon } from "@/lib/business-visuals";
 
 // Já estão na barra de baixo, que fica sempre visível: repetir aqui só faria
 // a lista crescer sem dar acesso novo a nada.
-const skipHrefs = new Set(["/", "/dia", "/financeiro", "/cardapio"]);
+// O que já está na barra de baixo não se repete aqui. Lido da própria barra
+// para não sair de sincronia quando ela muda.
+const skipHrefs = new Set(bottomNavItems.map((item) => item.href));
 
 export const dynamic = "force-dynamic";
 

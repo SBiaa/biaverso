@@ -53,6 +53,10 @@ export function IconButton({
   type = "button",
   tone = "default",
   revealOnHover = false,
+  // Botão só de ícone não tem texto: o `title` (a dica do mouse) era o único
+  // nome dele, e leitor de tela nem sempre lê `title`. Vira o nome também,
+  // salvo quando quem chama já deu um `aria-label` próprio.
+  "aria-label": ariaLabel,
   ...props
 }: ComponentPropsWithRef<"button"> & {
   tone?: "default" | "danger";
@@ -81,6 +85,7 @@ export function IconButton({
           : "text-text-secondary hover:bg-hover-strong hover:text-text-primary",
         className,
       )}
+      aria-label={ariaLabel ?? props.title}
       {...props}
     />
   );

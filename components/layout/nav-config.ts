@@ -96,20 +96,22 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Segurança",
-    items: [{ href: "/senhas", label: "Senhas", icon: KeyRound }],
-  },
-  {
+    // Senhas e Configurações eram dois grupos de um item só cada: duas linhas
+    // de título para dois links.
     title: "Sistema",
-    items: [{ href: "/configuracoes", label: "Configurações", icon: Settings }],
+    items: [
+      { href: "/senhas", label: "Senhas", icon: KeyRound },
+      { href: "/configuracoes", label: "Configurações", icon: Settings },
+    ],
   },
 ];
 
 export const bottomNavItems: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/dia", label: "Dia", icon: CalendarCheck },
+  // Agenda no lugar do Cardápio: é a tela que se abre várias vezes no dia.
+  { href: "/agenda", label: "Agenda", icon: CalendarDays },
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
-  { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
   { href: "/mais", label: "Mais", icon: MoreHorizontal },
 ];
 
