@@ -2016,6 +2016,8 @@ model ConceptualGoal {
   pillarId      String
   pillar        Pillar         @relation(fields: [pillarId], references: [id], onDelete: Cascade)
   measuredGoals MeasuredGoal[]
+  // Rascunhos do despejo que viraram este objetivo.
+  brainstormItems BrainstormItem[]
 
   @@index([pillarId])
   @@index([priorityLevelId])
@@ -2718,6 +2720,14 @@ model BrainstormItem {
   measuredGoal   MeasuredGoal? @relation(fields: [measuredGoalId], references: [id], onDelete: SetNull)
   desireId       String?       @unique
   desire         Desire?       @relation(fields: [desireId], references: [id], onDelete: SetNull)
+  // Virou só o objetivo conceitual (a meta com número fica para depois).
+  // Vários rascunhos podem alimentar o mesmo objetivo.
+  conceptualGoalId String?
+  conceptualGoal   ConceptualGoal? @relation(fields: [conceptualGoalId], references: [id], onDelete: SetNull)
+
+  // Quando o item foi colocado no lugar (virou meta, desejo, objetivo ou foi
+  // marcado à mão como "já organizei"). Organizado sai da lista de rascunhos.
+  organizedAt DateTime?
 
   // Item "Depois" de um ano trazido para o despejo do ano seguinte.
   carriedFromId String?         @unique
@@ -2726,6 +2736,7 @@ model BrainstormItem {
 
   @@index([year])
   @@index([pillarId])
+  @@index([conceptualGoalId])
 }
 
 enum BrainstormDecision {

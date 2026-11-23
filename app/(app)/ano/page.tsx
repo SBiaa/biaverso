@@ -53,6 +53,8 @@ export default async function AnoPage({
         pillarId: true,
         measuredGoalId: true,
         desireId: true,
+        conceptualGoalId: true,
+        organizedAt: true,
       },
     }),
     // O que ficou para "Depois" no ano anterior e ainda não foi trazido.
@@ -81,7 +83,9 @@ export default async function AnoPage({
         year={year}
         initial={data}
         brainstorm={{
-          items: brainstormItems as BrainstormItemDTO[],
+          items: brainstormItems.map(
+            (i): BrainstormItemDTO => ({ ...i, organizedAt: i.organizedAt?.toISOString() ?? null }),
+          ),
           carryCandidates,
           conceptualGoals: pillars.flatMap((p) =>
             p.conceptualGoals.map((c) => ({

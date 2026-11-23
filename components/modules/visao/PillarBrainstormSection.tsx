@@ -12,8 +12,10 @@ import {
 } from "@/components/modules/ano/BrainstormGoalModal";
 import {
   BrainstormItemRow,
+  OrganizedToggle,
   sortItems,
   splitDump,
+  splitOrganized,
   useBrainstormItems,
   type BrainstormItemDTO,
 } from "@/components/modules/ano/brainstorm-shared";
@@ -35,15 +37,17 @@ export function PillarBrainstormSection({
   initialItems: BrainstormItemDTO[];
   conceptualGoals: ConceptualChoice[];
 }) {
-  const { items, error, busyId, add, patch, remove, toDesire, replace } =
+  const { items, error, busyId, add, patch, remove, toDesire, replace, setOrganized } =
     useBrainstormItems(initialItems);
   const [draft, setDraft] = useState("");
+  const [showOrganized, setShowOrganized] = useState(false);
   const [goalFor, setGoalFor] = useState<BrainstormItemDTO | null>(null);
   const router = useRouter();
 
-  // Soltos não interessam aqui: foram decididos como barulho.
-  const visible = useMemo(
-    () => sortItems(items.filter((i) => i.decision !== "SOLTAR")),
+  // Soltos não interessam aqui (foram decididos como barulho) e os já
+  // organizados saem da frente: ficam atrás do "Ver já organizados".
+  const { open: visible, organized } = useMemo(
+    () => splitOrganized(items.filter((i) => i.decision !== "SOLTAR")),
     [items],
   );
   const pending = visible.filter((i) => !i.decision).length;
@@ -88,11 +92,15 @@ export function PillarBrainstormSection({
         </Button>
       </div>
 
-      {visible.length === 0 ? (
-        <p className="text-sm text-text-secondary">Nenhum rascunho para este pilar ainda.</p>
+      {visible.length === 0 && !showOrganized ? (
+        <p className="text-sm text-text-secondary">
+          {organized.length > 0
+            ? "Tudo organizado por aqui."
+            : "Nenhum rascunho para este pilar ainda."}
+        </p>
       ) : (
         <ul className="flex flex-col divide-y divide-border">
-          {visible.map((item) => (
+          {(showOrganized ? [...visible, ...sortItems(organized)] : visible).map((item) => (
             <BrainstormItemRow
               key={item.id}
               item={item}
@@ -106,10 +114,17 @@ export function PillarBrainstormSection({
                 // O desejo novo aparece em "Desejos e intenções", mais abaixo.
                 if (await toDesire(item)) router.refresh();
               }}
+              onOrganized={(value) => setOrganized(item.id, value)}
             />
           ))}
         </ul>
       )}
+
+      <OrganizedToggle
+        count={organized.length}
+        open={showOrganized}
+        onToggle={() => setShowOrganized((v) => !v)}
+      />
 
       <ErrorNote message={error} />
 

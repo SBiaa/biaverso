@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowUpRight, Trash2 } from "lucide-react";
+import { ArrowUpRight, Check, Trash2 } from "lucide-react";
 import { IconButton, InlineEdit, confirmAction } from "@/components/ui";
 import { PillSelect, type PillOption } from "@/components/modules/visao/cells";
 import { api, errorMessage } from "@/lib/client-api";
@@ -23,6 +23,10 @@ export type BrainstormItemDTO = {
   pillarId: string | null;
   measuredGoalId: string | null;
   desireId: string | null;
+  /** Virou só o objetivo conceitual (sem meta com número ainda). */
+  conceptualGoalId: string | null;
+  /** Quando foi colocado no lugar. Organizado sai da lista de rascunhos. */
+  organizedAt: string | null;
 };
 
 export const DECISIONS: { value: Decision; emoji: string; label: string; hint: string }[] = [
@@ -37,6 +41,14 @@ const ORDER: (Decision | null)[] = [null, "FOCO", "DESEJO", "DEPOIS", "SOLTAR"];
 
 export function sortItems(items: BrainstormItemDTO[]) {
   return [...items].sort((a, b) => ORDER.indexOf(a.decision) - ORDER.indexOf(b.decision));
+}
+
+/** Separa o que ainda pede atenção do que já foi colocado no lugar. */
+export function splitOrganized(items: BrainstormItemDTO[]) {
+  return {
+    open: sortItems(items.filter((i) => !i.organizedAt)),
+    organized: items.filter((i) => i.organizedAt),
+  };
 }
 
 /** Uma linha por item; marcadores de lista colada ("- ", "1. ", "• ") saem. */
@@ -68,12 +80,12 @@ export function useBrainstormItems(initial: BrainstormItemDTO[]) {
     }
   }
 
-  async function patch(id: string, local: Partial<BrainstormItemDTO>) {
+  async function patch(id: string, local: Partial<BrainstormItemDTO>, body: object = local) {
     const previous = items;
     setError(null);
     replace({ id, ...local });
     try {
-      await api.patch(`/api/brainstorm-items/${id}`, local);
+      await api.patch(`/api/brainstorm-items/${id}`, body);
     } catch (e) {
       setItems(previous);
       setError(errorMessage(e));
@@ -115,12 +127,40 @@ export function useBrainstormItems(initial: BrainstormItemDTO[]) {
     }
   }
 
-  return { items, setItems, error, busyId, add, patch, remove, toDesire, replace };
+  /** "Já organizei" (ou desfazer): na tela na hora, no servidor em seguida. */
+  const setOrganized = (id: string, organized: boolean) =>
+    patch(id, { organizedAt: organized ? new Date().toISOString() : null }, { organized });
+
+  return { items, setItems, error, busyId, add, patch, remove, toDesire, replace, setOrganized };
 }
 
 const linkClass =
   "inline-flex items-center gap-0.5 text-xs font-medium text-accent-ink hover:underline";
 
+/** Botão que mostra/esconde os rascunhos já organizados, embaixo da lista. */
+export function OrganizedToggle({
+  count,
+  open,
+  onToggle,
+}: {
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  if (count === 0) return null;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="self-start text-xs font-medium text-text-secondary hover:text-text-primary"
+    >
+      {open
+        ? "Esconder os já organizados"
+        : `Ver ${count} ${count === 1 ? "já organizado" : "já organizados"}`}
+    </button>
+  );
+}
 /** Um item do despejo: texto editável, pilar (opcional), destino e o próximo passo. */
 export function BrainstormItemRow({
   item,
@@ -132,6 +172,7 @@ export function BrainstormItemRow({
   onRemove,
   onMakeGoal,
   onToDesire,
+  onOrganized,
 }: {
   item: BrainstormItemDTO;
   /** Sem opções, o seletor de pilar some (na página do pilar ele já é dado). */
@@ -144,8 +185,11 @@ export function BrainstormItemRow({
   onRemove: () => void;
   onMakeGoal: () => void;
   onToDesire: () => void;
+  /** Marca (true) ou desmarca (false) como já organizado. */
+  onOrganized: (organized: boolean) => void;
 }) {
   const dropped = item.decision === "SOLTAR";
+  const organized = Boolean(item.organizedAt);
 
   return (
     <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
@@ -157,9 +201,20 @@ export function BrainstormItemRow({
             onSave={(text) => Promise.resolve(onPatch({ text }))}
           />
         </div>
-        <IconButton onClick={onRemove} aria-label={`Apagar ${item.text}`} tone="danger" revealOnHover>
-          <Trash2 size={14} />
-        </IconButton>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {!organized && (
+            <IconButton
+              onClick={() => onOrganized(true)}
+              aria-label={`Já organizei ${item.text}`}
+              title="Já coloquei no lugar: sai da lista"
+            >
+              <Check size={15} />
+            </IconButton>
+          )}
+          <IconButton onClick={onRemove} aria-label={`Apagar ${item.text}`} tone="danger" revealOnHover>
+            <Trash2 size={14} />
+          </IconButton>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -199,9 +254,9 @@ export function BrainstormItemRow({
         </div>
 
         {item.decision === "FOCO" &&
-          (item.measuredGoalId ? (
+          (item.measuredGoalId || item.conceptualGoalId ? (
             <Link href={goalHref} className={linkClass}>
-              Virou meta <ArrowUpRight size={12} />
+              {item.measuredGoalId ? "Virou meta" : "Virou objetivo"} <ArrowUpRight size={12} />
             </Link>
           ) : (
             <button type="button" onClick={onMakeGoal} className={linkClass}>
@@ -224,6 +279,19 @@ export function BrainstormItemRow({
               Mandar para Desejos →
             </button>
           ))}
+
+        {organized && (
+          <span className="inline-flex items-center gap-1 text-xs text-text-secondary">
+            <Check size={12} /> Organizado
+            <button
+              type="button"
+              onClick={() => onOrganized(false)}
+              className="underline hover:text-text-primary"
+            >
+              desfazer
+            </button>
+          </span>
+        )}
       </div>
     </li>
   );

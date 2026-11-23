@@ -17,7 +17,7 @@ export const POST = route(async (_request: Request, { params }: Params) => {
     });
     return tx.brainstormItem.update({
       where: { id },
-      data: { decision: "DESEJO", desireId: desire.id },
+      data: { decision: "DESEJO", desireId: desire.id, organizedAt: new Date() },
     });
   });
 

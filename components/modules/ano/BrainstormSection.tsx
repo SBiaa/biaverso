@@ -9,8 +9,10 @@ import { cn } from "@/lib/utils";
 import { BrainstormGoalModal, type ConceptualChoice } from "./BrainstormGoalModal";
 import {
   BrainstormItemRow,
+  OrganizedToggle,
   sortItems,
   splitDump,
+  splitOrganized,
   useBrainstormItems,
   type BrainstormItemDTO,
 } from "./brainstorm-shared";
@@ -43,8 +45,9 @@ export function BrainstormSection({
   pillars: PillarChoice[];
   conceptualGoals: ConceptualChoice[];
 }) {
-  const { items, error, busyId, add, patch, remove, toDesire, replace } =
+  const { items, error, busyId, add, patch, remove, toDesire, replace, setOrganized } =
     useBrainstormItems(initialItems);
+  const [showOrganized, setShowOrganized] = useState(false);
   const [carry, setCarry] = useState(initialCarry);
   const [draft, setDraft] = useState("");
   const [goalFor, setGoalFor] = useState<BrainstormItemDTO | null>(null);
@@ -57,8 +60,10 @@ export function BrainstormSection({
     color: p.color,
   }));
 
-  const sorted = useMemo(() => sortItems(items), [items]);
-  const pending = items.filter((i) => !i.decision).length;
+  // Os já organizados saem da frente; as contagens abaixo ainda valem para o ano todo.
+  const { open: openItems, organized } = useMemo(() => splitOrganized(items), [items]);
+  const shown = showOrganized ? [...openItems, ...sortItems(organized)] : openItems;
+  const pending = openItems.filter((i) => !i.decision).length;
   const focus = items.filter((i) => i.decision === "FOCO");
   const crowdedPillars = pillars.filter(
     (p) => focus.filter((i) => i.pillarId === p.id).length > MAX_FOCUS_PER_PILLAR,
@@ -140,6 +145,7 @@ export function BrainstormSection({
       {items.length > 0 && (
         <p className="text-xs text-text-secondary">
           {items.length} {items.length === 1 ? "item" : "itens"}
+          {organized.length > 0 && ` · ${organized.length} organizados`}
           {pending > 0 && ` · ${pending} por separar`}
           {focus.length > 0 && ` · ${focus.length} em foco`}
         </p>
@@ -156,9 +162,9 @@ export function BrainstormSection({
       )}
 
       {/* 2. Separar  ·  3. Transformar */}
-      {sorted.length > 0 && (
+      {shown.length > 0 && (
         <ul className="flex flex-col divide-y divide-border">
-          {sorted.map((item) => (
+          {shown.map((item) => (
             <BrainstormItemRow
               key={item.id}
               item={item}
@@ -169,10 +175,17 @@ export function BrainstormSection({
               onRemove={() => remove(item)}
               onMakeGoal={() => setGoalFor(item)}
               onToDesire={() => toDesire(item)}
+              onOrganized={(value) => setOrganized(item.id, value)}
             />
           ))}
         </ul>
       )}
+
+      <OrganizedToggle
+        count={organized.length}
+        open={showOrganized}
+        onToggle={() => setShowOrganized((v) => !v)}
+      />
 
       <ErrorNote message={error} />
 
