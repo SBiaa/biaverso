@@ -65,6 +65,8 @@ export default async function PillarDetailPage({
       pillarId: true,
       measuredGoalId: true,
       desireId: true,
+      conceptualGoalId: true,
+      organizedAt: true,
     },
   });
 
@@ -110,7 +112,9 @@ export default async function PillarDetailPage({
         <PillarBrainstormSection
           pillar={{ id: pillar.id, name: pillar.name }}
           year={year}
-          initialItems={brainstormItems as BrainstormItemDTO[]}
+          initialItems={brainstormItems.map(
+            (i): BrainstormItemDTO => ({ ...i, organizedAt: i.organizedAt?.toISOString() ?? null }),
+          )}
           conceptualGoals={pillar.conceptualGoals.map((c) => ({
             id: c.id,
             title: c.title,

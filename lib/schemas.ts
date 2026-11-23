@@ -1553,6 +1553,8 @@ export const brainstormPatchSchema = z.object({
   text: text.optional(),
   pillarId: optionalId,
   decision: z.enum(E.BrainstormDecision).nullish(),
+  // "Já organizei": colocado no lugar por outro caminho. false desfaz.
+  organized: z.boolean().optional(),
 });
 
 /** "Virar meta": num objetivo conceitual existente ou num novo, criado no pilar do item. */
@@ -1561,6 +1563,8 @@ export const brainstormGoalSchema = z
     title: text,
     conceptualGoalId: id.optional(),
     newConceptualTitle: z.string().trim().max(300).optional(),
+    // Só o objetivo conceitual: a meta com número fica para depois.
+    onlyConceptual: z.boolean().optional(),
     targetValue: goalAmount.nullish(),
     unit: optionalText,
     deadline: dateOnly.nullish(),

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, ErrorNote, Field, Modal, ModalActions, fieldClass } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
+import { cn } from "@/lib/utils";
 import { parseGoalAmount } from "@/lib/vision-shared";
 import type { BrainstormItemDTO } from "./brainstorm-shared";
 
@@ -11,8 +12,9 @@ export type ConceptualChoice = { id: string; title: string; pillarId: string; pi
 const NEW = "__novo__";
 
 /**
- * Transforma um item em Foco num objetivo metrificado. O objetivo conceitual
- * pode ser um que já existe ou um novo, criado no pilar do item.
+ * Transforma um item em Foco num objetivo metrificado, ou só num objetivo
+ * conceitual (a meta com número fica para depois). O objetivo conceitual pode
+ * ser um que já existe ou um novo, criado no pilar do item.
  */
 export function BrainstormGoalModal({
   item,
@@ -32,10 +34,12 @@ export function BrainstormGoalModal({
   // Com pilar, só os objetivos dele; sem pilar, todos (com o nome do pilar ao lado).
   const choices = pillar ? conceptualGoals.filter((c) => c.pillarId === pillar.id) : conceptualGoals;
 
+  const [onlyConceptual, setOnlyConceptual] = useState(false);
   const [form, setForm] = useState({
     title: item.text,
     conceptual: choices[0]?.id ?? (pillar ? NEW : ""),
-    newConceptualTitle: "",
+    // Só o objetivo: o próprio rascunho costuma ser o nome dele.
+    newConceptualTitle: choices.length === 0 ? item.text : "",
     targetValue: "",
     unit: "",
     deadline: `${year}-12-31`,
@@ -47,7 +51,7 @@ export function BrainstormGoalModal({
     setForm((prev) => ({ ...prev, [key]: value }));
 
   async function handleSubmit() {
-    if (!form.title.trim()) return;
+    if (!onlyConceptual && !form.title.trim()) return;
     const targetValue = parseGoalAmount(form.targetValue);
     if (targetValue === undefined) {
       setError("Valor inválido. Use algo como 1800, 1.800 ou 7k.");
@@ -67,7 +71,8 @@ export function BrainstormGoalModal({
     setError(null);
     try {
       const updated = await api.post<BrainstormItemDTO>(`/api/brainstorm-items/${item.id}/goal`, {
-        title: form.title,
+        title: form.title.trim() || item.text,
+        onlyConceptual,
         ...(creatingConceptual
           ? { newConceptualTitle: form.newConceptualTitle }
           : { conceptualGoalId: form.conceptual }),
@@ -85,14 +90,49 @@ export function BrainstormGoalModal({
   }
 
   return (
-    <Modal title="Virar meta" onClose={onClose} onSubmit={handleSubmit}>
-      <Field label="Meta">
-        <input
-          value={form.title}
-          onChange={(e) => set("title", e.target.value)}
-          className={fieldClass}
-        />
-      </Field>
+    <Modal
+      title={onlyConceptual ? "Virar objetivo" : "Virar meta"}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+    >
+      <div className="flex gap-2" role="group" aria-label="O que o rascunho vira">
+        {(
+          [
+            [false, "Objetivo com meta", "com número e prazo"],
+            [true, "Só o objetivo", "o número fica para depois"],
+          ] as const
+        ).map(([value, label, hint]) => (
+          <button
+            key={label}
+            type="button"
+            aria-pressed={onlyConceptual === value}
+            onClick={() => {
+              setOnlyConceptual(value);
+              // Só o objetivo, sem nenhum no pilar: já sugere criar um com o nome do rascunho.
+              if (value && pillar && !form.newConceptualTitle) set("newConceptualTitle", item.text);
+            }}
+            className={cn(
+              "flex-1 rounded-md border px-3 py-1.5 text-left text-sm",
+              onlyConceptual === value
+                ? "border-accent bg-accent/10 text-text-primary"
+                : "border-border text-text-secondary",
+            )}
+          >
+            <span className="block font-medium">{label}</span>
+            <span className="block text-xs text-text-secondary">{hint}</span>
+          </button>
+        ))}
+      </div>
+
+      {!onlyConceptual && (
+        <Field label="Meta">
+          <input
+            value={form.title}
+            onChange={(e) => set("title", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+      )}
 
       <Field label="Objetivo conceitual (o porquê)">
         <select
@@ -124,41 +164,45 @@ export function BrainstormGoalModal({
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-2">
-        <Field label="Quanto">
-          <input
-            value={form.targetValue}
-            onChange={(e) => set("targetValue", e.target.value)}
-            placeholder="Ex.: 12k"
-            className={fieldClass}
-          />
-        </Field>
-        <Field label="Unidade">
-          <input
-            value={form.unit}
-            onChange={(e) => set("unit", e.target.value)}
-            placeholder="R$, kg…"
-            className={fieldClass}
-          />
-        </Field>
-        <Field label="Prazo">
-          <input
-            type="date"
-            value={form.deadline}
-            onChange={(e) => set("deadline", e.target.value)}
-            className={fieldClass}
-          />
-        </Field>
-      </div>
-      <p className="text-xs text-text-secondary">
-        Número e unidade são opcionais: dá para completar depois na Central de Visão.
-      </p>
+      {!onlyConceptual && (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <Field label="Quanto">
+              <input
+                value={form.targetValue}
+                onChange={(e) => set("targetValue", e.target.value)}
+                placeholder="Ex.: 12k"
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Unidade">
+              <input
+                value={form.unit}
+                onChange={(e) => set("unit", e.target.value)}
+                placeholder="R$, kg…"
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Prazo">
+              <input
+                type="date"
+                value={form.deadline}
+                onChange={(e) => set("deadline", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+          </div>
+          <p className="text-xs text-text-secondary">
+            Número e unidade são opcionais: dá para completar depois na Central de Visão.
+          </p>
+        </>
+      )}
 
       <ErrorNote message={error} />
 
       <ModalActions>
         <Button type="submit" disabled={saving}>
-          Criar meta
+          {onlyConceptual ? "Criar objetivo" : "Criar meta"}
         </Button>
         <Button variant="ghost" onClick={onClose}>
           Cancelar

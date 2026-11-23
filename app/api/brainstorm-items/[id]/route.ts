@@ -7,8 +7,16 @@ type Params = { params: Promise<{ id: string }> };
 
 export const PATCH = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
-  const data = await parseBody(request, brainstormPatchSchema);
-  return NextResponse.json(await prisma.brainstormItem.update({ where: { id }, data }));
+  const { organized, ...data } = await parseBody(request, brainstormPatchSchema);
+  return NextResponse.json(
+    await prisma.brainstormItem.update({
+      where: { id },
+      data: {
+        ...data,
+        ...(organized !== undefined && { organizedAt: organized ? new Date() : null }),
+      },
+    }),
+  );
 });
 
 // Apaga só o item: a meta ou o desejo que ele virou continuam existindo.

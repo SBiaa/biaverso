@@ -6,7 +6,8 @@ import { brainstormGoalSchema } from "@/lib/schemas";
 type Params = { params: Promise<{ id: string }> };
 
 // "Virar meta": cria o objetivo metrificado (e, se pedido, o conceitual) e liga
-// ao item, numa transação só.
+// ao item, numa transação só. Com `onlyConceptual`, para no objetivo conceitual:
+// a meta com número fica para depois. Nos dois casos o item sai dos rascunhos.
 export const POST = route(async (request: Request, { params }: Params) => {
   const { id } = await params;
   const data = await parseBody(request, brainstormGoalSchema);
@@ -26,6 +27,13 @@ export const POST = route(async (request: Request, { params }: Params) => {
       conceptualGoalId = conceptual.id;
     }
 
+    if (data.onlyConceptual) {
+      return tx.brainstormItem.update({
+        where: { id },
+        data: { decision: "FOCO", conceptualGoalId, organizedAt: new Date() },
+      });
+    }
+
     const goal = await tx.measuredGoal.create({
       data: {
         title: data.title,
@@ -38,7 +46,7 @@ export const POST = route(async (request: Request, { params }: Params) => {
 
     return tx.brainstormItem.update({
       where: { id },
-      data: { decision: "FOCO", measuredGoalId: goal.id },
+      data: { decision: "FOCO", measuredGoalId: goal.id, organizedAt: new Date() },
       include: { measuredGoal: { select: { id: true, title: true } } },
     });
   });
