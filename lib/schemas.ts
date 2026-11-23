@@ -61,7 +61,7 @@ export const waterLogSchema = z.object({
 
 export const dayFocusSchema = z.object({
   dayId: id,
-  kind: z.enum(["task", "production", "collection", "prospect"]),
+  kind: z.enum(["task", "production", "collection", "prospect", "post"]),
   taskId: id,
   focused: z.boolean(),
 });
@@ -71,7 +71,7 @@ export const workTaskOrderSchema = z.object({
   items: z
     .array(
       z.object({
-        kind: z.enum(["production", "collection", "prospect", "lesson", "study", "task"]),
+        kind: z.enum(["production", "collection", "prospect", "lesson", "study", "task", "post"]),
         taskId: id,
       }),
     )

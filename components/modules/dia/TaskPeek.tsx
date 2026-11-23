@@ -44,6 +44,7 @@ const originLinkLabel: Record<WorkTask["kind"], string> = {
   lesson: "Abrir o curso",
   study: "Abrir os estudos",
   task: "Abrir",
+  post: "Abrir o negócio",
 };
 
 function Property({ label, children }: { label: string; children: ReactNode }) {
@@ -171,9 +172,13 @@ export function TaskPeek({
   // Aula e estudo espiritual não têm passos, prioridade nem tempo.
   const plain = task.kind === "lesson" || task.kind === "study";
   const hasSteps = !plain && task.kind !== "prospect";
-  const hasPlan = task.kind !== "study" && task.kind !== "task";
-  const canRename = task.kind === "production" || task.kind === "collection" || task.kind === "task";
-  const canPickProject = task.kind === "production" && task.businessId !== null;
+  const hasPlan = task.kind !== "study" && task.kind !== "task" && task.kind !== "post";
+  const canRename =
+    task.kind === "production" || task.kind === "collection" || task.kind === "task" || task.kind === "post";
+  const canPickProject =
+    (task.kind === "production" || task.kind === "post") && task.businessId !== null;
+  // Post não tem dia de fazer: o dia dele é o da publicação.
+  const isPost = task.kind === "post";
   const projectOptions = projects.filter((p) => p.businessId === task.businessId);
   // Projeto concluído ou pausado não vem na lista, mas continua sendo o da tarefa.
   if (task.project && !projectOptions.some((p) => p.id === task.project!.id)) {
@@ -375,7 +380,13 @@ export function TaskPeek({
                 andamento pessoal — iniciei, pausei… — e ganha o nome dele. */}
             <Property label={task.kind === "production" ? "Andamento" : "Status"}>
               {task.progress === null ? (
-                <span className="px-1.5 text-text-secondary">{task.done ? "Feita" : "A fazer"}</span>
+                <span className="px-1.5 text-text-secondary">{task.kind === "post"
+                    ? task.done
+                      ? "Publicado"
+                      : "A publicar"
+                    : task.done
+                      ? "Feita"
+                      : "A fazer"}</span>
               ) : (
                 <TaskStatusPicker
                   status={task.done ? "CONCLUIDA" : task.progress}
@@ -405,18 +416,20 @@ export function TaskPeek({
               </>
             )}
 
-            <Property label="Realização">
-              <DateInput
-                value={task.scheduledDate}
-                label={`Realização de ${task.title}`}
-                late={false}
-                onCommit={(value) => onDate(task, "scheduledDate", value)}
-              />
-            </Property>
-            <Property label="Prazo">
+            {!isPost && (
+              <Property label="Realização">
+                <DateInput
+                  value={task.scheduledDate}
+                  label={`Realização de ${task.title}`}
+                  late={false}
+                  onCommit={(value) => onDate(task, "scheduledDate", value)}
+                />
+              </Property>
+            )}
+            <Property label={isPost ? "Publicação" : "Prazo"}>
               <DateInput
                 value={task.dueDate}
-                label={`Prazo de ${task.title}`}
+                label={`${isPost ? "Publicação" : "Prazo"} de ${task.title}`}
                 late={task.overdue && !task.done}
                 onCommit={(value) => onDate(task, "dueDate", value)}
               />

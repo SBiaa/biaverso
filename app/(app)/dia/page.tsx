@@ -27,7 +27,12 @@ import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
 import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
 import { syncMissedDeadlines } from "@/lib/ace";
-import { productionTypeLabels } from "@/lib/labels";
+import {
+  contentStatusLabels,
+  postTypeLabels,
+  productionTypeLabels,
+  socialNetworkLabels,
+} from "@/lib/labels";
 import { studyKindLabels } from "@/lib/espiritual-shared";
 import { getUserSettings } from "@/lib/settings";
 import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
@@ -238,7 +243,28 @@ async function WorkSection({
     deliveredAt: true,
   } as const;
 
-  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, orders, businesses, projects, covers] = await Promise.all([
+  // Posts do cronograma: o dia dele é a data de publicação, e "feito" é
+  // publicado. Post não tem prioridade, tempo nem data de realização.
+  const postSelect = {
+    id: true,
+    title: true,
+    type: true,
+    network: true,
+    status: true,
+    publishDate: true,
+    completedAt: true,
+    notes: true,
+    businessId: true,
+    business: { select: { name: true, color: true } },
+    client: { select: { name: true } },
+    project: { select: { id: true, name: true } },
+    subtasks: {
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, done: true },
+    },
+  } as const;
+
+  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, posts, donePosts, orders, businesses, projects, covers] = await Promise.all([
     prisma.priorityLevel.findMany({
       orderBy: { order: "asc" },
       select: { id: true, name: true, color: true, order: true },
@@ -293,6 +319,17 @@ async function WorkSection({
         OR: [{ deliveredAt: dayRange }, { scheduledDate: dayRange }, { dueDate: dayRange }],
       },
       select: studySelect,
+    }),
+    prisma.contentPost.findMany({
+      where: { status: { notIn: ["PUBLICADO", "CANCELADO"] } },
+      select: postSelect,
+    }),
+    prisma.contentPost.findMany({
+      where: {
+        status: "PUBLICADO",
+        OR: [{ completedAt: dayRange }, { publishDate: dayRange }],
+      },
+      select: postSelect,
     }),
     prisma.workTaskOrder.findMany({ select: { kind: true, taskId: true, position: true } }),
     prisma.business.findMany({
@@ -452,6 +489,45 @@ async function WorkSection({
     subtasks: [],
   });
 
+  const fromPost = (t: (typeof posts)[number], done: boolean): WorkTask => ({
+    kind: "post",
+    id: t.id,
+    position: positionOf("post", t.id),
+    title: t.title,
+    done,
+    progress: null,
+    doneOnLoad: done,
+    originLabel: t.business.name,
+    originColor: t.business.color,
+    originHref: `/negocios/${t.businessId}`,
+    detail: [
+      `Post · ${postTypeLabels[t.type] ?? t.type}`,
+      socialNetworkLabels[t.network] ?? t.network,
+      t.client?.name ?? "Interno",
+      // O status do post diz em que pé ele está; publicado é o "feito".
+      !done && t.status !== "PLANEJADO" && t.status !== "PRAZO_PERDIDO"
+        ? contentStatusLabels[t.status]
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    project: t.project
+      ? { id: t.project.id, name: t.project.name, href: projectHref(t.businessId, t.project.id) }
+      : null,
+    businessId: t.businessId,
+    notes: t.notes,
+    urgent: false,
+    priorityLevelId: null,
+    estimateMinutes: null,
+    dueDate: iso(t.publishDate),
+    scheduledDate: null,
+    completedAt: iso(t.completedAt),
+    overdue: !done && t.status !== "PRAZO_PERDIDO" && isLate(t.publishDate),
+    missed: t.status === "PRAZO_PERDIDO",
+    collectionId: null,
+    subtasks: t.subtasks,
+  });
+
   // Tarefa avulsa do dia. Não tem prioridade nem tempo estimado no banco, então
   // essas colunas ficam em branco; o resto (foco, passos, prazo) funciona igual.
   const fromDayTask = (t: (typeof dayTasks)[number]): WorkTask => ({
@@ -490,6 +566,8 @@ async function WorkSection({
     ...collection.map((t) => fromCollection(t, false)),
     ...doneProduction.map((t) => fromProduction(t, true)),
     ...doneCollection.map((t) => fromCollection(t, true)),
+    ...posts.map((t) => fromPost(t, false)),
+    ...donePosts.map((t) => fromPost(t, true)),
     ...prospect.map((t) => fromProspect(t, false)),
     ...doneProspect.map((t) => fromProspect(t, true)),
     ...lessons.map((t) => fromLesson(t, false)),
@@ -547,7 +625,7 @@ async function getFocusItems(
   const idsOf = (kind: FocusKind) =>
     rows.filter((r) => r.kind === kind).map((r) => r.taskId);
 
-  const [production, collection, prospect] = await Promise.all([
+  const [production, collection, prospect, posts] = await Promise.all([
     prisma.productionTask.findMany({
       where: { id: { in: idsOf("production") } },
       select: { id: true, title: true, status: true, business: { select: { name: true, color: true } } },
@@ -578,9 +656,25 @@ async function getFocusItems(
         },
       },
     }),
+    prisma.contentPost.findMany({
+      where: { id: { in: idsOf("post") } },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        businessId: true,
+        business: { select: { name: true, color: true } },
+      },
+    }),
   ]);
 
   const items = rows.flatMap((row): FocusItem[] => {
+    if (row.kind === "post") {
+      const t = posts.find((x) => x.id === row.taskId);
+      return t
+        ? [{ id: focusKey("post", t.id), taskId: t.id, kind: "post", title: t.title, done: t.status === "PUBLICADO", originLabel: t.business.name, originColor: t.business.color, originHref: `/negocios/${t.businessId}`, collectionId: null }]
+        : [];
+    }
     const base = { id: focusKey(row.kind as FocusKind, row.taskId), taskId: row.taskId };
 
     if (row.kind === "task") {

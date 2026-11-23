@@ -36,6 +36,11 @@ function doneRequest(item: FocusItem, done: boolean) {
       return api.patch(`/api/collections/${item.collectionId}/tasks/${item.taskId}`, { done });
     case "prospect":
       return api.patch(`/api/prospect-tasks/${item.taskId}`, { done });
+    case "post":
+      // Post feito é post publicado.
+      return api.patch(`/api/ace/posts/${item.taskId}`, {
+        status: done ? "PUBLICADO" : "PLANEJADO",
+      });
   }
 }
 

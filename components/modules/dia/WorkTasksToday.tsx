@@ -61,8 +61,8 @@ import { TaskStatusPicker } from "@/components/modules/tarefas/TaskStatusPicker"
 import type { TaskProgress, TaskStatus } from "@/app/generated/prisma/enums";
 
 export type WorkTask = {
-  /** `production`, `collection`, `prospect` ou `lesson`: decide para qual rota o PATCH vai. */
-  kind: "production" | "collection" | "prospect" | "lesson" | "study" | "task";
+  /** Decide para qual rota o PATCH vai. `post` é post do cronograma de conteúdo. */
+  kind: "production" | "collection" | "prospect" | "lesson" | "study" | "task" | "post";
   id: string;
   title: string;
   done: boolean;
@@ -163,6 +163,8 @@ function doneBody(task: WorkTask, done: boolean): object {
   // Produção guarda status; coleção e prospecção guardam um booleano.
   if (task.kind === "production") return { status: done ? "CONCLUIDO" : "A_FAZER" };
   if (task.kind === "study") return { status: done ? "FEITO" : "A_FAZER" };
+  // Post feito é post publicado; reaberto volta a planejado.
+  if (task.kind === "post") return { status: done ? "PUBLICADO" : "PLANEJADO" };
   return { done };
 }
 
@@ -171,6 +173,7 @@ function patchUrl(task: WorkTask) {
   if (task.kind === "prospect") return `/api/prospect-tasks/${task.id}`;
   if (task.kind === "lesson") return `/api/study/lessons/${task.id}`;
   if (task.kind === "study") return `/api/spiritual-studies/${task.id}`;
+  if (task.kind === "post") return `/api/ace/posts/${task.id}`;
   return task.kind === "production"
     ? `/api/ace/tasks/${task.id}`
     : `/api/collections/${task.collectionId}/tasks/${task.id}`;
@@ -306,7 +309,7 @@ function TaskRow({
                 {!plain && (
                   <FocusStar
                     dayId={dayId}
-                    kind={task.kind as "task" | "production" | "collection" | "prospect"}
+                    kind={task.kind as "task" | "production" | "collection" | "prospect" | "post"}
                     taskId={task.id}
                     focused={focused}
                     title={task.title}
@@ -379,10 +382,10 @@ function TaskRow({
           className={cn(
             "py-2 pr-3 align-top",
             mobileCell,
-            (task.kind === "study" || task.kind === "task") && "max-md:hidden",
+            (task.kind === "study" || task.kind === "task" || task.kind === "post") && "max-md:hidden",
           )}
         >
-          {task.kind === "study" || task.kind === "task" ? (
+          {task.kind === "study" || task.kind === "task" || task.kind === "post" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
             <PrioritySelect
@@ -397,10 +400,10 @@ function TaskRow({
           className={cn(
             "py-2 pr-3 align-top",
             mobileCell,
-            (task.kind === "study" || task.kind === "task") && "max-md:hidden",
+            (task.kind === "study" || task.kind === "task" || task.kind === "post") && "max-md:hidden",
           )}
         >
-          {task.kind === "study" || task.kind === "task" ? (
+          {task.kind === "study" || task.kind === "task" || task.kind === "post" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
             <EstimateInput
@@ -440,7 +443,10 @@ function TaskRow({
           data-label="Fazer em"
           className={cn("whitespace-nowrap py-2 pr-3 align-top", mobileCell)}
         >
-          {task.done ? (
+          {/* Post não tem dia de fazer: o dia dele é o da publicação, no prazo. */}
+          {task.kind === "post" ? (
+            <span className="text-text-secondary/60">—</span>
+          ) : task.done ? (
             task.scheduledDate ? (
               <span className="text-text-secondary">
                 {formatDateBR(new Date(task.scheduledDate))}
@@ -793,17 +799,21 @@ export function WorkTasksToday({
     const missedLimit = today - MISSED_DEADLINE_AFTER_DAYS * 24 * 60 * 60 * 1000;
     const time = (d: string | null) => (d ? new Date(d).getTime() : null);
     const due = time(next.dueDate);
-    // "Prazo perdido" (só produção) olha o prazo máximo, como o servidor.
+    // "Prazo perdido" (produção e post) olha o prazo máximo, como o servidor.
     const missed =
-      task.kind === "production" ? due !== null && due < missedLimit : task.missed;
+      task.kind === "production" || task.kind === "post"
+        ? due !== null && due < missedLimit
+        : task.missed;
     const overdue =
       !missed &&
       [time(next.scheduledDate), due].some((t) => t !== null && t < today);
 
+    // No post, o prazo é a data de publicação.
+    const column = task.kind === "post" && field === "dueDate" ? "publishDate" : field;
     return save(
       task,
       { [field]: next[field], overdue, missed },
-      { [field]: value },
+      { [column]: value },
     );
   }
 
