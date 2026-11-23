@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, Circle, ListPlus, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { CheckCircle2, ChevronDown, ChevronRight, Circle, ListPlus, Plus, Trash2 } from "lucide-react";
 import { confirmAction, ErrorNote, IconButton, InlineEdit } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
@@ -228,6 +228,65 @@ export function SubtaskList({
 }
 
 /** Botão que abre/fecha os passos e mostra o andamento (2/5). */
+/**
+ * Quais tarefas estão com os passos abertos. Fica no navegador (localStorage),
+ * e não no banco: é só jeito de olhar a tela. Guardar é o que faz a escolha
+ * durar — antes toda tarefa com passos reabria a cada carregamento, e uma
+ * tarefa de 9 passos ocupava a tela como se fossem 9 tarefas.
+ */
+const OPEN_STORAGE_KEY = "biaverso:passos-abertos";
+const openListeners = new Set<() => void>();
+
+function readOpenRaw() {
+  try {
+    return localStorage.getItem(OPEN_STORAGE_KEY) ?? "[]";
+  } catch {
+    return "[]";
+  }
+}
+
+function parseOpen(raw: string): string[] {
+  try {
+    const value: unknown = JSON.parse(raw);
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function subscribeOpen(callback: () => void) {
+  openListeners.add(callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    openListeners.delete(callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+/**
+ * Passos abertos ou recolhidos de UMA tarefa. Nasce recolhido: o contador
+ * (2/5) já diz quanto falta, e abrir é um toque. `key` precisa ser único entre
+ * os tipos de tarefa (ex.: "production:abc").
+ */
+export function useSubtasksOpen(key: string): [boolean, () => void] {
+  // No servidor não há localStorage: tudo recolhido, e o navegador acerta depois.
+  const raw = useSyncExternalStore(subscribeOpen, readOpenRaw, () => "[]");
+  const open = useMemo(() => parseOpen(raw).includes(key), [raw, key]);
+
+  function toggle() {
+    const list = parseOpen(readOpenRaw()).filter((k) => k !== key);
+    if (!open) list.push(key);
+    try {
+      localStorage.setItem(OPEN_STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // Sem armazenamento (aba anônima cheia etc.): só não lembra.
+    }
+    openListeners.forEach((l) => l());
+  }
+
+  return [open, toggle];
+}
+
 export function SubtaskToggle({
   open,
   onClick,
@@ -239,11 +298,17 @@ export function SubtaskToggle({
   doneCount: number;
   total: number;
 }) {
+  const Chevron = open ? ChevronDown : ChevronRight;
   return (
     <button
       type="button"
       onClick={onClick}
-      title={total === 0 ? "Quebrar em passos" : "Ver os passos"}
+      title={total === 0 ? "Quebrar em passos" : open ? "Recolher os passos" : "Mostrar os passos"}
+      aria-label={
+        total === 0
+          ? "Quebrar em passos"
+          : `${open ? "Recolher" : "Mostrar"} os passos (${doneCount} de ${total} feitos)`
+      }
       aria-expanded={open}
       className={cn(
         "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs",
@@ -251,7 +316,9 @@ export function SubtaskToggle({
         "hover:bg-border hover:text-text-primary",
       )}
     >
-      <ListPlus size={13} />
+      {/* Com passos, a setinha diz que dá para abrir e fechar; sem passos, o
+          ícone de lista é o convite para quebrar a tarefa. */}
+      {total > 0 ? <Chevron size={13} /> : <ListPlus size={13} />}
       {total > 0 && (
         <span className={cn(doneCount === total && "text-accent-ink")}>
           {doneCount}/{total}

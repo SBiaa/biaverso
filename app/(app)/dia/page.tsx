@@ -128,9 +128,12 @@ async function WorkSection({
   await syncMissedDeadlines();
 
   const today = todayUtc();
-  // Semana de segunda a domingo, como o cardápio. O corte é exclusivo.
+  // "Semana" são os 7 dias a partir do dia aberto, e não segunda a domingo:
+  // fechando no domingo, a aba no domingo era igual a "Hoje" e as tarefas da
+  // semana que começa amanhã não apareciam em lugar nenhum além de "Tudo".
+  // O corte é exclusivo.
   const dayEnd = new Date(date.getTime() + 86_400_000);
-  const weekEnd = new Date(date.getTime() + (8 - (date.getUTCDay() || 7)) * 86_400_000);
+  const weekEnd = new Date(date.getTime() + 7 * 86_400_000);
   // Concluídas no dia aberto: é o que a aba "Feitas" mostra.
   // Pela data de finalização (completedAt) ou pela de execução (o prazo do dia):
   // o seletor do card escolhe, então traz as duas e a tela filtra.

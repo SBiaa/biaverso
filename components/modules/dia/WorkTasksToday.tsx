@@ -54,6 +54,7 @@ import {
   SubtaskList,
   SubtaskToggle,
   useSubtasks,
+  useSubtasksOpen,
   type SubtaskItem,
 } from "@/components/modules/tarefas/Subtasks";
 import { TaskStatusPicker } from "@/components/modules/tarefas/TaskStatusPicker";
@@ -123,7 +124,7 @@ type Range = "today" | "tomorrow" | "week" | "all" | "paused" | "missed" | "done
 const RANGES: { id: Range; label: string }[] = [
   { id: "today", label: "Hoje" },
   { id: "tomorrow", label: "Amanhã" },
-  { id: "week", label: "Semana" },
+  { id: "week", label: "7 dias" },
   { id: "all", label: "Tudo" },
   { id: "paused", label: "Pausadas" },
   { id: "missed", label: "Prazo perdido" },
@@ -228,8 +229,8 @@ function TaskRow({
     },
     task.subtasks,
   );
-  // Tarefa já quebrada nasce aberta: o ponto dos passos é ver por onde começar.
-  const [open, setOpen] = useState(task.subtasks.length > 0 && !task.done);
+  // Passos nascem recolhidos e a tela lembra quais ela abriu.
+  const [open, toggleOpen] = useSubtasksOpen(`${task.kind}:${task.id}`);
   // Painel lateral da tarefa, como o "peek" do Notion. Fica aqui na linha para
   // dividir os passos (useSubtasks) com ela: marcar um passo no painel já
   // atualiza o 1/3 da tabela.
@@ -314,7 +315,7 @@ function TaskRow({
                 {task.kind !== "prospect" && !plain && (
                   <SubtaskToggle
                     open={open}
-                    onClick={() => setOpen((v) => !v)}
+                    onClick={toggleOpen}
                     doneCount={subtasks.doneCount}
                     total={subtasks.subtasks.length}
                   />
@@ -923,7 +924,7 @@ export function WorkTasksToday({
               ? "Nenhuma tarefa pausada."
               : range === "tomorrow"
               ? "Nada com prazo para amanhã."
-              : `Nada com prazo ${range === "today" ? "até hoje" : "até o fim da semana"}.`}
+              : `Nada com prazo ${range === "today" ? "até hoje" : "nos próximos 7 dias"}.`}
         </p>
       )}
 

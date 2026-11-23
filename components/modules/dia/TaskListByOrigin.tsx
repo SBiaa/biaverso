@@ -16,7 +16,7 @@ import {
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { FocusStar } from "@/components/modules/dia/FocusStar";
-import { SubtaskList, SubtaskToggle, useSubtasks, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
+import { SubtaskList, SubtaskToggle, useSubtasks, useSubtasksOpen, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
 import { TaskStatusPicker } from "@/components/modules/tarefas/TaskStatusPicker";
 import type { TaskStatus } from "@/app/generated/prisma/enums";
 
@@ -61,8 +61,8 @@ function TaskRow({
   onRename: (id: string, title: string) => Promise<unknown>;
 }) {
   const subtasks = useSubtasks({ kind: "task", id: task.id }, task.subtasks);
-  // Tarefa com passos abertos já nasce expandida: o ponto é ver por onde começar.
-  const [open, setOpen] = useState(task.subtasks.length > 0 && !task.done);
+  // Passos nascem recolhidos e a tela lembra quais ela abriu.
+  const [open, toggleOpen] = useSubtasksOpen(`task:${task.id}`);
 
   return (
     <div className="flex flex-col gap-1">
@@ -115,7 +115,7 @@ function TaskRow({
           )}
           <SubtaskToggle
             open={open}
-            onClick={() => setOpen((v) => !v)}
+            onClick={toggleOpen}
             doneCount={subtasks.doneCount}
             total={subtasks.subtasks.length}
           />
