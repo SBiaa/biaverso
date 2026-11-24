@@ -382,10 +382,10 @@ function TaskRow({
           className={cn(
             "py-2 pr-3 align-top",
             mobileCell,
-            (task.kind === "study" || task.kind === "task" || task.kind === "post") && "max-md:hidden",
+            (task.kind === "study" || task.kind === "task") && "max-md:hidden",
           )}
         >
-          {task.kind === "study" || task.kind === "task" || task.kind === "post" ? (
+          {task.kind === "study" || task.kind === "task" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
             <PrioritySelect
@@ -400,10 +400,10 @@ function TaskRow({
           className={cn(
             "py-2 pr-3 align-top",
             mobileCell,
-            (task.kind === "study" || task.kind === "task" || task.kind === "post") && "max-md:hidden",
+            (task.kind === "study" || task.kind === "task") && "max-md:hidden",
           )}
         >
-          {task.kind === "study" || task.kind === "task" || task.kind === "post" ? (
+          {task.kind === "study" || task.kind === "task" ? (
             <span className="text-text-secondary/60">—</span>
           ) : (
             <EstimateInput
@@ -443,10 +443,7 @@ function TaskRow({
           data-label="Fazer em"
           className={cn("whitespace-nowrap py-2 pr-3 align-top", mobileCell)}
         >
-          {/* Post não tem dia de fazer: o dia dele é o da publicação, no prazo. */}
-          {task.kind === "post" ? (
-            <span className="text-text-secondary/60">—</span>
-          ) : task.done ? (
+          {task.done ? (
             task.scheduledDate ? (
               <span className="text-text-secondary">
                 {formatDateBR(new Date(task.scheduledDate))}

@@ -1244,6 +1244,15 @@ model ContentPost {
   status      ContentStatus @default(PLANEJADO)
   publishDate DateTime?
   completedAt DateTime?
+
+  // O post como tarefa no Dia, igual à produção: em que pé está (iniciei,
+  // pausei...), quando ela vai fazer (antes da publicação), prioridade e
+  // quanto tempo deve levar. `status` continua sendo o do cronograma.
+  progress        TaskProgress   @default(A_FAZER)
+  scheduledDate   DateTime?
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  estimateMinutes Int?
   caption     String?
   notes       String?
   createdAt   DateTime      @default(now())
@@ -1287,6 +1296,7 @@ model ContentPost {
   @@index([businessId, publishDate])
   @@index([clientId])
   @@index([projectId])
+  @@index([priorityLevelId])
 }
 
 /// Capa do post no Feed, em data URL JPEG 4:5 (1080x1350). Tabela à parte,
@@ -1536,6 +1546,7 @@ model PriorityLevel {
   prospectTasks   ProspectTask[]
   studyLessons    StudyLesson[]
   conceptualGoals ConceptualGoal[]
+  contentPosts    ContentPost[]
 }
 
 enum CollectionStatus {

@@ -243,16 +243,20 @@ async function WorkSection({
     deliveredAt: true,
   } as const;
 
-  // Posts do cronograma: o dia dele é a data de publicação, e "feito" é
-  // publicado. Post não tem prioridade, tempo nem data de realização.
+  // Posts do cronograma: o prazo é a data de publicação, e "feito" é
+  // publicado. Andamento, realização, prioridade e tempo são como na produção.
   const postSelect = {
     id: true,
     title: true,
     type: true,
     network: true,
     status: true,
+    progress: true,
     publishDate: true,
+    scheduledDate: true,
     completedAt: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
     notes: true,
     businessId: true,
     business: { select: { name: true, color: true } },
@@ -495,7 +499,7 @@ async function WorkSection({
     position: positionOf("post", t.id),
     title: t.title,
     done,
-    progress: null,
+    progress: t.progress,
     doneOnLoad: done,
     originLabel: t.business.name,
     originColor: t.business.color,
@@ -517,12 +521,12 @@ async function WorkSection({
     businessId: t.businessId,
     notes: t.notes,
     urgent: false,
-    priorityLevelId: null,
-    estimateMinutes: null,
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
     dueDate: iso(t.publishDate),
-    scheduledDate: null,
+    scheduledDate: iso(t.scheduledDate),
     completedAt: iso(t.completedAt),
-    overdue: !done && t.status !== "PRAZO_PERDIDO" && isLate(t.publishDate),
+    overdue: !done && t.status !== "PRAZO_PERDIDO" && isLate(t.scheduledDate, t.publishDate),
     missed: t.status === "PRAZO_PERDIDO",
     collectionId: null,
     subtasks: t.subtasks,

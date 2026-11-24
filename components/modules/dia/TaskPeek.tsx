@@ -172,12 +172,12 @@ export function TaskPeek({
   // Aula e estudo espiritual não têm passos, prioridade nem tempo.
   const plain = task.kind === "lesson" || task.kind === "study";
   const hasSteps = !plain && task.kind !== "prospect";
-  const hasPlan = task.kind !== "study" && task.kind !== "task" && task.kind !== "post";
+  const hasPlan = task.kind !== "study" && task.kind !== "task";
   const canRename =
     task.kind === "production" || task.kind === "collection" || task.kind === "task" || task.kind === "post";
   const canPickProject =
     (task.kind === "production" || task.kind === "post") && task.businessId !== null;
-  // Post não tem dia de fazer: o dia dele é o da publicação.
+  // No post, o prazo é a data de publicação.
   const isPost = task.kind === "post";
   const projectOptions = projects.filter((p) => p.businessId === task.businessId);
   // Projeto concluído ou pausado não vem na lista, mas continua sendo o da tarefa.
@@ -378,15 +378,12 @@ export function TaskPeek({
 
             {/* Na produção já existe "No Kanban" (a coluna do negócio); este é o
                 andamento pessoal — iniciei, pausei… — e ganha o nome dele. */}
-            <Property label={task.kind === "production" ? "Andamento" : "Status"}>
+            {/* O post também: o status do cronograma é outro campo. */}
+            <Property
+              label={task.kind === "production" || task.kind === "post" ? "Andamento" : "Status"}
+            >
               {task.progress === null ? (
-                <span className="px-1.5 text-text-secondary">{task.kind === "post"
-                    ? task.done
-                      ? "Publicado"
-                      : "A publicar"
-                    : task.done
-                      ? "Feita"
-                      : "A fazer"}</span>
+                <span className="px-1.5 text-text-secondary">{task.done ? "Feita" : "A fazer"}</span>
               ) : (
                 <TaskStatusPicker
                   status={task.done ? "CONCLUIDA" : task.progress}
@@ -416,16 +413,14 @@ export function TaskPeek({
               </>
             )}
 
-            {!isPost && (
-              <Property label="Realização">
-                <DateInput
-                  value={task.scheduledDate}
-                  label={`Realização de ${task.title}`}
-                  late={false}
-                  onCommit={(value) => onDate(task, "scheduledDate", value)}
-                />
-              </Property>
-            )}
+            <Property label="Realização">
+              <DateInput
+                value={task.scheduledDate}
+                label={`Realização de ${task.title}`}
+                late={false}
+                onCommit={(value) => onDate(task, "scheduledDate", value)}
+              />
+            </Property>
             <Property label={isPost ? "Publicação" : "Prazo"}>
               <DateInput
                 value={task.dueDate}

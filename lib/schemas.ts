@@ -577,6 +577,11 @@ export const contentPostPatchSchema = contentPostCreateSchema
     // Feed: fixar grava a hora (o Instagram ordena os fixados por ela).
     pinned: z.boolean().optional(),
     gridGroupId: optionalTextPatch,
+    // O post como tarefa no Dia: andamento, data de fazer, prioridade e tempo.
+    progress: z.enum(E.TaskProgress).optional(),
+    scheduledDate: dateOnly.nullish(),
+    priorityLevelId: optionalId,
+    estimateMinutes,
   });
 
 export const productionTaskCreateSchema = z.object({
