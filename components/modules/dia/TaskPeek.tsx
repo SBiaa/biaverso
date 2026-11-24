@@ -35,6 +35,8 @@ import {
   type SaveTask,
 } from "@/components/modules/ace/ProductionPanelParts";
 import type { ProductionExtras } from "@/lib/production-peek";
+import { contentStatusLabels, postTypeLabels, socialNetworkLabels } from "@/lib/labels";
+import { postDetail } from "@/lib/post-detail";
 
 /** Para onde leva o botão de origem, conforme o tipo da tarefa. */
 const originLinkLabel: Record<WorkTask["kind"], string> = {
@@ -53,6 +55,68 @@ function Property({ label, children }: { label: string; children: ReactNode }) {
       <span className="text-text-secondary">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
+  );
+}
+
+const selectClass =
+  "min-w-0 max-w-full cursor-pointer rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-text-primary outline-none hover:border-border focus:border-border focus:ring-2 focus:ring-accent";
+
+/**
+ * Tipo, rede e status do cronograma do post, trocados ali mesmo. Publicar pelo
+ * status é o mesmo que concluir pelo círculo.
+ */
+function PostProperties({ task, onSave }: { task: WorkTask; onSave: SaveTask }) {
+  const [error, setError] = useState<string | null>(null);
+  const post = task.post;
+  if (!post) return null;
+
+  async function change(field: "type" | "network" | "status", value: string) {
+    if (!post || post[field] === value) return;
+    const next = { ...post, [field]: value };
+    const done = next.status === "PUBLICADO";
+    const local: Partial<WorkTask> = {
+      post: next,
+      detail: postDetail(next, done),
+      missed: next.status === "PRAZO_PERDIDO",
+    };
+    if (field === "status" && done !== task.done) {
+      local.done = done;
+      local.completedAt = done ? new Date().toISOString() : null;
+    }
+    setError(null);
+    try {
+      await onSave(task, local, { [field]: value });
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
+
+  const fields = [
+    { field: "type", label: "Tipo", labels: postTypeLabels },
+    { field: "network", label: "Rede", labels: socialNetworkLabels },
+    { field: "status", label: "Status do post", labels: contentStatusLabels },
+  ] as const;
+
+  return (
+    <>
+      {fields.map(({ field, label, labels }) => (
+        <Property key={field} label={label}>
+          <select
+            value={post[field]}
+            onChange={(e) => change(field, e.target.value)}
+            aria-label={label}
+            className={selectClass}
+          >
+            {Object.entries(labels).map(([value, text]) => (
+              <option key={value} value={value}>
+                {text}
+              </option>
+            ))}
+          </select>
+        </Property>
+      ))}
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </>
   );
 }
 
@@ -375,6 +439,8 @@ export function TaskPeek({
                   {extrasError ?? "Carregando tipo e cliente…"}
                 </p>
               ))}
+
+            {isPost && <PostProperties task={task} onSave={onSave} />}
 
             {/* Na produção já existe "No Kanban" (a coluna do negócio); este é o
                 andamento pessoal — iniciei, pausei… — e ganha o nome dele. */}

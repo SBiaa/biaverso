@@ -22,16 +22,14 @@ import { MealChecklist } from "@/components/modules/dia/MealChecklist";
 import { NotesField } from "@/components/modules/dia/NotesField";
 import { WorkTasksToday, type WorkTask } from "@/components/modules/dia/WorkTasksToday";
 import { projectHref } from "@/lib/projects-shared";
+import { postDetail } from "@/lib/post-detail";
 import { getCoverVersions } from "@/lib/business-cover";
 import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
 import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
 import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
 import { syncMissedDeadlines } from "@/lib/ace";
 import {
-  contentStatusLabels,
-  postTypeLabels,
   productionTypeLabels,
-  socialNetworkLabels,
 } from "@/lib/labels";
 import { studyKindLabels } from "@/lib/espiritual-shared";
 import { getUserSettings } from "@/lib/settings";
@@ -493,6 +491,12 @@ async function WorkSection({
     subtasks: [],
   });
 
+  const post = (t: (typeof posts)[number]) => ({
+    type: t.type,
+    network: t.network,
+    status: t.status,
+    clientName: t.client?.name ?? null,
+  });
   const fromPost = (t: (typeof posts)[number], done: boolean): WorkTask => ({
     kind: "post",
     id: t.id,
@@ -504,17 +508,8 @@ async function WorkSection({
     originLabel: t.business.name,
     originColor: t.business.color,
     originHref: `/negocios/${t.businessId}`,
-    detail: [
-      `Post · ${postTypeLabels[t.type] ?? t.type}`,
-      socialNetworkLabels[t.network] ?? t.network,
-      t.client?.name ?? "Interno",
-      // O status do post diz em que pé ele está; publicado é o "feito".
-      !done && t.status !== "PLANEJADO" && t.status !== "PRAZO_PERDIDO"
-        ? contentStatusLabels[t.status]
-        : null,
-    ]
-      .filter(Boolean)
-      .join(" · "),
+    detail: postDetail(post(t), done),
+    post: post(t),
     project: t.project
       ? { id: t.project.id, name: t.project.name, href: projectHref(t.businessId, t.project.id) }
       : null,

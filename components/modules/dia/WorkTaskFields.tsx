@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn, hexToRgba, toDateInputValue } from "@/lib/utils";
 import type { WorkTask } from "./WorkTasksToday";
 import { formatMinutes, parseMinutes, type PriorityLevelDTO } from "@/lib/task-plan";
@@ -55,7 +55,13 @@ export function EstimateInput({
   );
 }
 
-/** Data editável direto na linha: clicar abre o calendário do navegador. */
+/**
+ * Data editável direto na linha: clicar abre o calendário do navegador.
+ *
+ * Grava sozinha um instante depois de escolher (o calendário do navegador não
+ * tira o foco do campo), ao sair do campo, no Enter e também se o painel
+ * fechar antes disso — antes a data escolhida se perdia ao fechar o painel.
+ */
 export function DateInput({
   value,
   label,
@@ -68,17 +74,45 @@ export function DateInput({
   onCommit: (value: string | null) => void;
 }) {
   const current = value ? toDateInputValue(value) : "";
+  const [draft, setDraft] = useState(current);
+  const [synced, setSynced] = useState(current);
+  // Mudou por fora (gravou, ou voltou por erro): o campo acompanha.
+  if (synced !== current) {
+    setSynced(current);
+    setDraft(current);
+  }
+
+  const latest = useRef({ draft, current, onCommit });
+  useEffect(() => {
+    latest.current = { draft, current, onCommit };
+  });
+
+  const commit = useCallback(() => {
+    const { draft, current, onCommit } = latest.current;
+    // Ano ainda sendo digitado (0002, 0020...) não grava.
+    if (draft && Number(draft.slice(0, 4)) < 1900) return;
+    if (draft !== current) {
+      latest.current.current = draft;
+      onCommit(draft || null);
+    }
+  }, []);
+
+  // Escolheu no calendário e ficou parada: grava sem precisar clicar fora.
+  useEffect(() => {
+    if (draft === current) return;
+    const timer = setTimeout(commit, 800);
+    return () => clearTimeout(timer);
+  }, [draft, current, commit]);
+
+  // O painel fechou com a data ainda pendente: grava assim mesmo.
+  useEffect(() => commit, [commit]);
 
   return (
     <input
       type="date"
-      // Remonta quando o valor muda por fora (gravou, ou voltou por erro).
-      key={current}
-      defaultValue={current}
-      onBlur={(e) => {
-        const value = e.currentTarget.value;
-        if (value !== current) onCommit(value || null);
-      }}
+      value={draft}
+      onChange={(e) => setDraft(e.currentTarget.value)}
+      onBlur={commit}
       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
       aria-label={label}
       title="Clique para mudar a data"
@@ -86,7 +120,7 @@ export function DateInput({
         "w-[8.5rem] cursor-pointer rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm outline-none hover:border-border focus:border-border focus:ring-2 focus:ring-accent",
         late
           ? "font-medium text-danger"
-          : current
+          : draft
             ? "text-text-secondary"
             : "text-text-secondary/60",
       )}

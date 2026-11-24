@@ -101,7 +101,12 @@ export type WorkTask = {
   description?: string | null;
   /** Anotações; só produção tem. */
   notes?: string | null;
+  /** Só post do cronograma: o que dá para trocar no painel. */
+  post?: PostFields;
 };
+
+/** Tipo, rede e status do post (o status do cronograma, não o andamento). */
+export type PostFields = { type: string; network: string; status: string; clientName: string | null };
 
 export type TaskProject = { id: string; name: string; href: string };
 
