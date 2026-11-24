@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { Card, Button, ErrorNote, SaveStatus, useSaveStatus } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { StarRating } from "./StarRating";
 import { cn } from "@/lib/utils";
@@ -32,23 +32,28 @@ function ButtonGroup({
   options,
   value,
   onChange,
+  label,
 }: {
   options: Record<string, string>;
   value: string | null;
   onChange: (value: string) => void;
+  /** O nome do grupo para quem não vê o título acima dele. */
+  label?: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2" role="group" aria-label={label}>
       {Object.entries(options).map(([optionValue, label]) => (
         <button
           key={optionValue}
           type="button"
           onClick={() => onChange(optionValue)}
+          // Diz qual está marcada: antes só a cor mostrava.
+          aria-pressed={value === optionValue}
           className={cn(
             "rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
             value === optionValue
-              ? "border-accent bg-accent/10 text-accent"
-              : "border-border text-text-secondary hover:bg-black/[0.03]",
+              ? "border-accent bg-accent/10 text-accent-ink"
+              : "border-border text-text-secondary hover:bg-hover",
           )}
         >
           {label}
@@ -59,31 +64,35 @@ function ButtonGroup({
 }
 
 export function WeekReviewForm({ review }: { review: WeekReviewData }) {
+  const router = useRouter();
   const [form, setForm] = useState(review);
-  const [saved, setSaved] = useState(false);
+  const { state: saveState, track } = useSaveStatus();
   const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function persist(patch: Partial<WeekReviewData>) {
     try {
-      await api.patch(`/api/week-reviews/${review.id}`, patch);
+      await track(api.patch(`/api/week-reviews/${review.id}`, patch));
       setError(null);
+      // Sem isso, a navegação de volta pra essa semana (ou pra troca de
+      // semana no WeekPicker) podia servir o RSC antigo do Router Cache,
+      // dando a impressão de que o registro não foi salvo.
+      router.refresh();
+      return true;
     } catch (e) {
       // O texto digitado continua na tela — só o aviso muda.
       setError(errorMessage(e));
+      return false;
     }
   }
 
   function save(patch: Partial<WeekReviewData>) {
     setForm((prev) => ({ ...prev, ...patch }));
-    setSaved(false);
     void persist(patch);
   }
 
   function saveDebounced(patch: Partial<WeekReviewData>) {
     setForm((prev) => ({ ...prev, ...patch }));
-    setSaved(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       void persist(patch);
@@ -93,10 +102,6 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
   async function handleSaveAll() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     await persist(form);
-    if (error) return;
-    setSaved(true);
-    if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
-    savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
   }
 
   return (
@@ -109,6 +114,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
           <StarRating
             value={form.effectiveness ? starsValues.indexOf(form.effectiveness) + 1 : 0}
             onChange={(n) => save({ effectiveness: starsValues[n - 1] })}
+            label="Efetividade"
           />
         </div>
 
@@ -118,6 +124,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
             options={energyLabels}
             value={form.energy}
             onChange={(value) => save({ energy: value })}
+            label="Energia"
           />
         </div>
 
@@ -129,6 +136,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
             options={blockLabels}
             value={form.biggestBlock}
             onChange={(value) => save({ biggestBlock: value })}
+            label="Maior trava"
           />
         </div>
 
@@ -140,6 +148,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
             options={executionLabels}
             value={form.executedPlan}
             onChange={(value) => save({ executedPlan: value })}
+            label="Executei o planejado"
           />
         </div>
 
@@ -151,6 +160,7 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
             options={qualityLabels}
             value={form.foodHydration}
             onChange={(value) => save({ foodHydration: value })}
+            label="Alimentação e hidratação"
           />
         </div>
 
@@ -196,18 +206,14 @@ export function WeekReviewForm({ review }: { review: WeekReviewData }) {
           placeholder="Reflita sobre o que você priorizou nesta semana..."
           className="min-h-[100px] resize-none rounded-lg border border-border p-3 text-sm outline-none focus:ring-2 focus:ring-accent"
         />
-        <Link href="/visao" className="self-start text-xs font-medium text-accent">
+        <Link href="/visao" className="self-start text-xs font-medium text-accent-ink">
           Ver Central de Visão
         </Link>
       </Card>
 
       <div className="flex items-center justify-end gap-2">
         <ErrorNote message={error} />
-        {saved && (
-          <span className="flex items-center gap-1 text-xs text-accent">
-            <Check size={14} /> Salvo
-          </span>
-        )}
+        <SaveStatus state={saveState} />
         <Button type="button" onClick={handleSaveAll}>
           Salvar
         </Button>

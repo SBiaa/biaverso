@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  ErrorNote,
+  Field,
+  fieldClass,
+  Modal,
+  ModalActions,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { payMethodLabels, transactionCategoryLabels } from "@/lib/labels";
 import { toDateInputValue, todayInputValue } from "@/lib/utils";
@@ -22,6 +30,7 @@ type TransactionInitial = {
   category: string;
   payMethod: string | null;
   notes: string | null;
+  received?: boolean;
 };
 
 function emptyForm() {
@@ -34,6 +43,7 @@ function emptyForm() {
     category: categoryOptions[0],
     payMethod: "",
     notes: "",
+    received: true,
   };
 }
 
@@ -47,6 +57,7 @@ function formFromTransaction(transaction: TransactionInitial) {
     category: transaction.category,
     payMethod: transaction.payMethod ?? "",
     notes: transaction.notes ?? "",
+    received: transaction.received ?? true,
   };
 }
 
@@ -88,6 +99,8 @@ export function AddTransactionForm({
       payMethod: form.payMethod || null,
       amount: Number(form.amount),
       date: form.date,
+      // "Caiu na conta" só existe para entrada; saída nasce sempre marcada.
+      received: form.type === "ENTRADA" ? form.received : true,
     };
 
     try {
@@ -97,6 +110,7 @@ export function AddTransactionForm({
       if (!isEdit) setForm((prev) => ({ ...prev, name: "", amount: "", notes: "" }));
       onClose?.();
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -104,92 +118,136 @@ export function AddTransactionForm({
     }
   }
 
-  if (!open) {
-    return <Button onClick={() => setOpen(true)}>+ Nova transação</Button>;
-  }
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
-      <ErrorNote message={error} />
-      <div className="grid grid-cols-2 gap-2">
+  const modal = open && (
+    <Modal
+      title={isEdit ? "Editar transação" : "Nova transação"}
+      onClose={cancel}
+      onSubmit={handleSubmit}
+      size="md"
+    >
+      <Field label="Nome">
         <input
-          placeholder="Nome"
           value={form.name}
           onChange={(e) => update("name", e.target.value)}
-          className="col-span-2 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          placeholder="Ex.: Mercado"
+          className={fieldClass}
         />
-        <select
-          value={form.type}
-          onChange={(e) => update("type", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          <option value="ENTRADA">Entrada</option>
-          <option value="SAIDA">Saída</option>
-        </select>
-        <input
-          type="number"
-          step="0.01"
-          placeholder="Valor"
-          value={form.amount}
-          onChange={(e) => update("amount", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <input
-          type="date"
-          value={form.date}
-          onChange={(e) => update("date", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-        <select
-          value={form.businessId}
-          onChange={(e) => update("businessId", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          <option value="">Pessoal/Casa</option>
-          {businesses.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={form.category}
-          onChange={(e) => update("category", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          {categoryOptions.map((c) => (
-            <option key={c} value={c}>
-              {transactionCategoryLabels[c]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={form.payMethod}
-          onChange={(e) => update("payMethod", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        >
-          <option value="">Forma de pagamento</option>
-          {payMethodOptions.map((p) => (
-            <option key={p} value={p}>
-              {payMethodLabels[p]}
-            </option>
-          ))}
-        </select>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Tipo">
+          <select
+            value={form.type}
+            onChange={(e) => update("type", e.target.value)}
+            className={fieldClass}
+          >
+            <option value="ENTRADA">Entrada</option>
+            <option value="SAIDA">Saída</option>
+          </select>
+        </Field>
+        <Field label="Valor (R$)">
+          <input
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={form.amount}
+            onChange={(e) => update("amount", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="Data">
+          <input
+            type="date"
+            value={form.date}
+            onChange={(e) => update("date", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="De quem é">
+          <select
+            value={form.businessId}
+            onChange={(e) => update("businessId", e.target.value)}
+            className={fieldClass}
+          >
+            <option value="">Pessoal/Casa</option>
+            {businesses.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Categoria">
+          <select
+            value={form.category}
+            onChange={(e) => update("category", e.target.value)}
+            className={fieldClass}
+          >
+            {categoryOptions.map((c) => (
+              <option key={c} value={c}>
+                {transactionCategoryLabels[c]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Forma de pagamento">
+          <select
+            value={form.payMethod}
+            onChange={(e) => update("payMethod", e.target.value)}
+            className={fieldClass}
+          >
+            <option value="">—</option>
+            {payMethodOptions.map((p) => (
+              <option key={p} value={p}>
+                {payMethodLabels[p]}
+              </option>
+            ))}
+          </select>
+        </Field>
       </div>
-      <input
-        placeholder="Notas (opcional)"
-        value={form.notes}
-        onChange={(e) => update("notes", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
+      <Field label="Notas (opcional)">
+        <input
+          value={form.notes}
+          onChange={(e) => update("notes", e.target.value)}
+          className={fieldClass}
+        />
+      </Field>
+      {form.type === "ENTRADA" && (
+        <label className="flex items-start gap-2 text-sm text-text-primary">
+          <input
+            type="checkbox"
+            checked={form.received}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, received: e.target.checked }))
+            }
+            className="mt-0.5"
+          />
+          <span>
+            Já caiu na conta
+            <span className="block text-xs text-text-secondary">
+              Desmarque se ainda é só previsão — aí ela não soma no saldo do mês.
+            </span>
+          </span>
+        </label>
+      )}
+      <ErrorNote message={error} />
+      <ModalActions>
+        <Button type="submit" disabled={saving || !form.name.trim() || !form.amount}>
+          {saving ? "Salvando..." : "Salvar"}
         </Button>
         <Button variant="ghost" onClick={cancel}>
           Cancelar
         </Button>
-      </div>
-    </div>
+      </ModalActions>
+    </Modal>
+  );
+
+  // Editando, quem chama já tem o próprio botão: aqui só entra o modal.
+  if (isEdit) return modal;
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>+ Nova transação</Button>
+      {modal}
+    </>
   );
 }

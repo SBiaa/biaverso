@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseBody, parseQuery, route } from "@/lib/api";
 import { aceListQuerySchema, contentPostCreateSchema } from "@/lib/schemas";
-import { resolvePostCompletedAt } from "@/lib/ace";
+import { linkClientToBusiness, resolvePostCompletedAt, scopeClientFilter } from "@/lib/ace";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const GET = route(async (request: Request) => {
@@ -11,7 +11,8 @@ export const GET = route(async (request: Request) => {
   const posts = await prisma.contentPost.findMany({
     where: {
       businessId: q.businessId,
-      clientId: q.clientId,
+      // Um cliente específico já é mais restrito que qualquer escopo.
+      clientId: q.clientId ?? scopeClientFilter(q.scope),
       projectId: q.projectId,
       status: q.status as Prisma.ContentPostWhereInput["status"],
       type: q.type as Prisma.ContentPostWhereInput["type"],
@@ -36,6 +37,12 @@ export const POST = route(async (request: Request) => {
       completedAt: resolvePostCompletedAt(data.status, completedAt, null),
     },
   });
+
+  // O select de cliente lista todo mundo, não só quem já era do negócio: quem
+  // veio de fora ganha o vínculo agora.
+  if (post.clientId) {
+    await linkClientToBusiness(post.clientId, post.businessId);
+  }
 
   return NextResponse.json(post);
 });

@@ -1,0 +1,209 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
+import { Button, notify } from "@/components/ui";
+import { TIME_STATUS_REFRESH_EVENT } from "@/components/layout/TimeStatusBar";
+import { EntryModal } from "@/components/modules/horas/TimeEntryList";
+import {
+  instantToMinutes,
+  timeToMinutes,
+  type ActivityCategoryDTO,
+  type ProjectOptionDTO,
+  type TimeBlockDTO,
+  type TimeEntryDTO,
+} from "@/lib/time-tracking-shared";
+
+const HOUR_HEIGHT = 24;
+const TOTAL_HEIGHT = HOUR_HEIGHT * 24;
+const MIN_BAR_HEIGHT = 6;
+
+function topFor(minutes: number) {
+  return (minutes / 60) * HOUR_HEIGHT;
+}
+
+function heightFor(startMinutes: number, endMinutes: number) {
+  return Math.max(
+    MIN_BAR_HEIGHT,
+    ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT,
+  );
+}
+
+function Lane({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`relative ${className ?? ""}`}
+      style={{ height: TOTAL_HEIGHT }}
+    >
+      {Array.from({ length: 13 }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute left-0 right-0 border-t border-border/60"
+          style={{ top: i * HOUR_HEIGHT * 2 }}
+        />
+      ))}
+      {children}
+    </div>
+  );
+}
+
+export function DayTimeline({
+  dayId,
+  activeCategories,
+  categories,
+  projects,
+  blocks,
+  entries,
+  nowMinutes,
+}: {
+  dayId: string;
+  /** Categorias ativas, usadas para escolher ao adicionar/editar. */
+  activeCategories: ActivityCategoryDTO[];
+  categories: ActivityCategoryDTO[];
+  projects: ProjectOptionDTO[];
+  blocks: TimeBlockDTO[];
+  entries: TimeEntryDTO[];
+  /** Minutos desde a meia-noite, se o dia mostrado for hoje — desenha a linha "agora". */
+  nowMinutes?: number | null;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState<TimeEntryDTO | null>(null);
+  const [creating, setCreating] = useState(false);
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+
+  return (
+    <div className="flex flex-col gap-3">
+      {activeCategories.length > 0 && (
+        <div>
+          <Button variant="secondary" onClick={() => setCreating(true)}>
+            <Plus size={14} />
+            Adicionar horas
+          </Button>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <div className="w-10 shrink-0" style={{ height: TOTAL_HEIGHT }}>
+          {Array.from({ length: 13 }).map((_, i) => (
+            <div
+              key={i}
+              className="text-right text-[11px] text-text-secondary"
+              style={{ height: HOUR_HEIGHT * 2 }}
+            >
+              {String(i * 2).padStart(2, "0")}h
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-1 gap-1">
+          <div className="flex-1">
+            <p className="mb-1 text-center text-[11px] font-medium uppercase text-text-secondary">
+              Planejado
+            </p>
+            <Lane className="rounded-md border border-border">
+              {blocks.map((block) => {
+                const category = categoryById.get(block.categoryId);
+                const start = timeToMinutes(block.startTime);
+                const end = timeToMinutes(block.endTime);
+                return (
+                  <div
+                    key={block.id}
+                    title={`${category?.name ?? ""} · ${block.startTime}–${block.endTime}`}
+                    className="absolute left-0.5 right-0.5 overflow-hidden rounded px-1 text-[11px] text-white"
+                    style={{
+                      top: topFor(start),
+                      height: heightFor(start, end),
+                      backgroundColor: category?.color ?? "#6366F1",
+                    }}
+                  >
+                    {category?.name}
+                  </div>
+                );
+              })}
+            </Lane>
+          </div>
+
+          <div className="flex-1">
+            <p className="mb-1 text-center text-[11px] font-medium uppercase text-text-secondary">
+              Realizado
+            </p>
+            <Lane className="rounded-md border border-border">
+              {entries.map((entry) => {
+                const category = categoryById.get(entry.categoryId);
+                const start = instantToMinutes(entry.startedAt);
+                const end = entry.endedAt
+                  ? instantToMinutes(entry.endedAt)
+                  : (nowMinutes ?? start);
+                return (
+                  <div
+                    key={entry.id}
+                    title={category?.name ?? ""}
+                    role={entry.endedAt ? "button" : undefined}
+                    tabIndex={entry.endedAt ? 0 : undefined}
+                    onClick={
+                      entry.endedAt ? () => setEditing(entry) : undefined
+                    }
+                    onKeyDown={
+                      entry.endedAt
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setEditing(entry);
+                            }
+                          }
+                        : undefined
+                    }
+                    className={`absolute left-0.5 right-0.5 overflow-hidden rounded px-1 text-[11px] text-white ${
+                      entry.endedAt ? "cursor-pointer hover:brightness-110" : ""
+                    }`}
+                    style={{
+                      top: topFor(start),
+                      height: heightFor(start, end),
+                      backgroundColor: category?.color ?? "#6366F1",
+                      opacity: entry.endedAt ? 1 : 0.7,
+                    }}
+                  >
+                    {category?.name}
+                  </div>
+                );
+              })}
+              {nowMinutes != null && (
+                <div
+                  className="absolute left-0 right-0 border-t-2 border-accent"
+                  style={{ top: topFor(nowMinutes) }}
+                />
+              )}
+            </Lane>
+          </div>
+        </div>
+
+        {(editing || creating) && (
+          <EntryModal
+            entry={editing}
+            dayId={dayId}
+            categories={activeCategories}
+            projects={projects}
+            onClose={() => {
+              setEditing(null);
+              setCreating(false);
+            }}
+            onSaved={() => {
+              const wasCreating = creating;
+              setEditing(null);
+              setCreating(false);
+              router.refresh();
+              window.dispatchEvent(new Event(TIME_STATUS_REFRESH_EVENT));
+              notify(wasCreating ? "Registrado." : "Salvo.");
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}

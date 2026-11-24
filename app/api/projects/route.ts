@@ -12,6 +12,9 @@ export const POST = route(async (request: Request) => {
       startDate: data.startDate ?? null,
       endDate: data.endDate ?? null,
       clientId: data.clientId ?? null,
+      // Projeto sem cliente é interno, tenha a tela marcado ou não — é o que
+      // faz a aba Interno do negócio encontrar o projeto depois.
+      isInternal: data.isInternal || !data.clientId,
     },
   });
 

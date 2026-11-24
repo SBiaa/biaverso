@@ -4,9 +4,11 @@ import { contentStatusLabels, productionStatusLabels } from "@/lib/labels";
 import {
   donePostStatuses,
   doneTaskStatuses,
+  MISSED_DEADLINE_AFTER_DAYS,
   isPostOverdue,
   isTaskOverdue,
   type ClientOverview,
+  type ProspectOverview,
   type PendingItem,
   type MonthlyHistoryEntry,
 } from "@/lib/ace-shared";
@@ -16,28 +18,76 @@ import type { Prisma } from "@/app/generated/prisma/client";
 // from a "use client" component — see "@/lib/ace-shared" for the client-safe subset.
 export * from "@/lib/ace-shared";
 
+/**
+ * Tarefa ou post aberto com mais de uma semana de atraso vira PRAZO_PERDIDO; se
+ * a data for remarcada para dentro da semana (ou apagada), volta para o começo
+ * da fila. Roda ao abrir as telas que listam os dois, como o ATRASADO das
+ * contas fixas.
+ */
+export async function syncMissedDeadlines() {
+  const limit = new Date(todayUtc());
+  limit.setUTCDate(limit.getUTCDate() - MISSED_DEADLINE_AFTER_DAYS);
+
+  // As quatro atualizações mexem em linhas diferentes (uma marca, a outra
+  // desmarca), então a ordem não importa e elas vão juntas: uma ida ao banco
+  // em vez de quatro em fila, a cada tela que abre.
+  await Promise.all([
+    prisma.productionTask.updateMany({
+      where: {
+        status: { in: ["A_FAZER", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] },
+        dueDate: { lt: limit },
+      },
+      data: { status: "PRAZO_PERDIDO" },
+    }),
+    prisma.productionTask.updateMany({
+      where: {
+        status: "PRAZO_PERDIDO",
+        OR: [{ dueDate: null }, { dueDate: { gte: limit } }],
+      },
+      data: { status: "A_FAZER" },
+    }),
+    prisma.contentPost.updateMany({
+      where: {
+        status: { in: ["PLANEJADO", "EM_CRIACAO", "AGUARDANDO_APROVACAO", "APROVADO"] },
+        publishDate: { lt: limit },
+      },
+      data: { status: "PRAZO_PERDIDO" },
+    }),
+    prisma.contentPost.updateMany({
+      where: {
+        status: "PRAZO_PERDIDO",
+        OR: [{ publishDate: null }, { publishDate: { gte: limit } }],
+      },
+      data: { status: "PLANEJADO" },
+    }),
+  ]);
+}
+
 export async function getClientsOverview(
   businessId: string,
   statusFilter?: string,
 ): Promise<ClientOverview[]> {
-  const clients = await prisma.client.findMany({
-    where: {
-      businessLinks: {
-        some: {
-          businessId,
-          ...(statusFilter
-            ? { status: statusFilter as Prisma.ClientBusinessWhereInput["status"] }
-            : {}),
+  // As três consultas não dependem uma da outra: vão juntas.
+  const [clients, posts, tasks] = await Promise.all([
+    prisma.client.findMany({
+      where: {
+        businessLinks: {
+          some: {
+            businessId,
+            // Prospect tem quadro próprio (getProspectsOverview); sem filtro
+            // explícito, a lista de clientes não mistura os dois.
+            status: statusFilter
+              ? (statusFilter as Prisma.ClientBusinessWhereInput["status"])
+              : { not: "PROSPECT" },
+          },
         },
       },
-    },
-    include: {
-      projects: { where: { businessId } },
-    },
-    orderBy: { name: "asc" },
-  });
-
-  const [posts, tasks] = await Promise.all([
+      include: {
+        projects: { where: { businessId } },
+      },
+      orderBy: { name: "asc" },
+    }),
+    // Só o que monta a "próxima entrega" do card.
     prisma.contentPost.findMany({
       where: {
         businessId,
@@ -45,6 +95,7 @@ export async function getClientsOverview(
         publishDate: { not: null },
       },
       orderBy: { publishDate: "asc" },
+      select: { clientId: true, publishDate: true, title: true },
     }),
     prisma.productionTask.findMany({
       where: {
@@ -53,6 +104,7 @@ export async function getClientsOverview(
         dueDate: { not: null },
       },
       orderBy: { dueDate: "asc" },
+      select: { clientId: true, dueDate: true, title: true },
     }),
   ]);
 
@@ -69,12 +121,45 @@ export async function getClientsOverview(
     return {
       id: client.id,
       name: client.name,
+      color: client.color,
+      photo: client.photo,
       activeProjectCount: client.projects.filter((p) => p.status === "EM_ANDAMENTO").length,
       nextDelivery: upcoming
         ? { date: upcoming.date.toISOString(), title: upcoming.title, kind: upcoming.kind }
         : null,
     };
   });
+}
+
+/** Os cartões do quadro de prospecção deste negócio, mais recentes primeiro. */
+export async function getProspectsOverview(businessId: string): Promise<ProspectOverview[]> {
+  const links = await prisma.clientBusiness.findMany({
+    where: { businessId, status: "PROSPECT" },
+    orderBy: { joinedAt: "desc" },
+    include: {
+      client: {
+        select: { id: true, name: true, color: true, photo: true, email: true, phone: true, instagram: true },
+      },
+    },
+  });
+
+  return links.map((link) => ({
+    linkId: link.id,
+    clientId: link.clientId,
+    name: link.client.name,
+    color: link.client.color,
+    photo: link.client.photo,
+    email: link.client.email,
+    phone: link.client.phone,
+    instagram: link.client.instagram,
+    stage: link.prospectStage ?? "NOVO_CONTATO",
+    source: link.source,
+    nextFollowUpAt: link.nextFollowUpAt ? link.nextFollowUpAt.toISOString() : null,
+    lastContactAt: link.lastContactAt ? link.lastContactAt.toISOString() : null,
+    proposalValue: link.proposalValue,
+    notes: link.notes,
+    joinedAt: link.joinedAt.toISOString(),
+  }));
 }
 
 export async function getPendingItems(
@@ -204,4 +289,79 @@ export async function getMonthlyHistory(
   }
 
   return entries;
+}
+
+// Campos exatos que `toPostRecord`/`toTaskRecord` consomem. Usar estes `select`
+// evita puxar a linha inteira do banco só para montar o record — e o
+// `satisfies` quebra o build se algum campo do record deixar de ser buscado.
+export const postRecordSelect = {
+  id: true,
+  title: true,
+  type: true,
+  network: true,
+  status: true,
+  publishDate: true,
+  completedAt: true,
+  caption: true,
+  notes: true,
+  clientId: true,
+  projectId: true,
+  pilar: true,
+  objective: true,
+  hook: true,
+  cta: true,
+  hashtags: true,
+  slides: true,
+  script: true,
+  visualBrief: true,
+  storySupport: true,
+} satisfies Prisma.ContentPostSelect;
+
+export const taskRecordSelect = {
+  id: true,
+  title: true,
+  type: true,
+  description: true,
+  priority: true,
+  status: true,
+  dueDate: true,
+  completedAt: true,
+  notes: true,
+  clientId: true,
+  projectId: true,
+  priorityLevelId: true,
+  estimateMinutes: true,
+  // A modal da tarefa mostra e edita os passos, então eles vêm junto.
+  subtasks: {
+    orderBy: { order: "asc" },
+    select: { id: true, title: true, done: true, stage: true },
+  },
+} satisfies Prisma.ProductionTaskSelect;
+
+// Das telas que mostram o cliente ao lado do item, só nome e cor são lidos.
+export const postWithClientSelect = {
+  ...postRecordSelect,
+  client: { select: { name: true, color: true } },
+} satisfies Prisma.ContentPostSelect;
+
+export const taskWithClientSelect = {
+  ...taskRecordSelect,
+  client: { select: { name: true, color: true } },
+} satisfies Prisma.ProductionTaskSelect;
+
+/**
+ * Garante que o cliente esteja vinculado ao negócio.
+ *
+ * Os selects de cliente mostram a agenda inteira, não só quem já é do negócio
+ * — é comum a mesma pessoa ser cliente da Ace e da Creative. Quando ela é
+ * escolhida num negócio onde ainda não tinha vínculo, o vínculo nasce aqui.
+ * `upsert` com `update: {}` é intencional: se já existe, nada é sobrescrito,
+ * então um vínculo marcado como INATIVO não volta para ATIVO sozinho.
+ */
+export async function linkClientToBusiness(clientId: string, businessId: string) {
+  await prisma.clientBusiness.upsert({
+    where: { clientId_businessId: { clientId, businessId } },
+    create: { clientId, businessId, status: "ATIVO" },
+    update: {},
+  });
 }

@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import { Card, ErrorNote } from "@/components/ui";
+import {
+  Card,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { formatCurrencyBRL } from "@/lib/utils";
 
@@ -23,18 +29,18 @@ export function CardInstallmentsList({ items }: { items: PurchaseItem[] }) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(item: PurchaseItem) {
-    if (
-      !confirm(
-        `Deletar "${item.description}" apaga todas as ${item.installments} parcelas nas faturas do cartão. Esta ação não pode ser desfeita.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Deletar "${item.description}" apaga todas as ${item.installments} parcelas nas faturas do cartão. Esta ação não pode ser desfeita.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeletingId(item.id);
     setError(null);
 
     try {
       await api.delete(`/api/credit-card-purchases/${item.id}`);
       router.refresh();
+      notify("Excluído.");
     } catch (e) {
       setError(errorMessage(e));
       setDeletingId(null);
@@ -74,15 +80,14 @@ export function CardInstallmentsList({ items }: { items: PurchaseItem[] }) {
                   {item.nextInvoice ? ` · próxima na fatura de ${item.nextInvoice}` : ""}
                 </p>
               </div>
-              <button
-                type="button"
+              <IconButton
                 title="Deletar compra"
                 onClick={() => handleDelete(item)}
                 disabled={deletingId === item.id}
-                className="text-text-secondary hover:text-red-600 disabled:opacity-50"
+                tone="danger"
               >
-                <Trash2 size={14} />
-              </button>
+                <Trash2 size={15} />
+              </IconButton>
             </div>
 
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">

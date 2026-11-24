@@ -1,22 +1,51 @@
+import { Suspense } from "react";
+import { mealTitle } from "@/lib/pratos";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDay, materializeRoutineTasks, materializeHabits } from "@/lib/day";
+import {
+  getOrCreateDay,
+  materializeHabits,
+  materializeRoutineTasks,
+} from "@/lib/day";
 import { parseDateOnly, toDateInputValue, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui";
+import { Card, CardTitle, Skeleton } from "@/components/ui";
 import { DayPicker } from "@/components/modules/dia/DayPicker";
 import { MoodEnergySelector } from "@/components/modules/dia/MoodEnergySelector";
+import { DaySummary } from "@/components/modules/dia/DaySummary";
+import { DayReviewToggle } from "@/components/modules/dia/DayReviewToggle";
+import { FocusToday, type FocusItem } from "@/components/modules/dia/FocusToday";
 import { DayTypeToggle } from "@/components/modules/dia/DayTypeToggle";
 import { HabitChecklist } from "@/components/modules/dia/HabitChecklist";
 import { WaterTracker } from "@/components/modules/dia/WaterTracker";
 import { TaskListByOrigin } from "@/components/modules/dia/TaskListByOrigin";
 import { MealChecklist } from "@/components/modules/dia/MealChecklist";
 import { NotesField } from "@/components/modules/dia/NotesField";
-import { AceTasksToday } from "@/components/modules/dia/AceTasksToday";
-import { getUtcDayRange } from "@/lib/ace";
-import type { BadgeOrigin } from "@/components/ui";
+import { WorkTasksToday, type WorkTask } from "@/components/modules/dia/WorkTasksToday";
+import { projectHref } from "@/lib/projects-shared";
+import { postDetail } from "@/lib/post-detail";
+import { getCoverVersions } from "@/lib/business-cover";
+import { TodayRoutines } from "@/components/modules/beleza/TodayRoutines";
+import { DueCareToday } from "@/components/modules/beleza/DueCareToday";
+import { getAppointmentsDueBy, getRoutinesForDay } from "@/lib/beleza";
+import { syncMissedDeadlines } from "@/lib/ace";
+import {
+  productionTypeLabels,
+} from "@/lib/labels";
+import { studyKindLabels } from "@/lib/espiritual-shared";
+import { getUserSettings } from "@/lib/settings";
+import { getWeekStart, weekdayIndex } from "@/lib/cardapio";
+import { focusKey, type FocusKind } from "@/lib/day-focus";
+import { onlyNextSteps } from "@/lib/prospect-shared";
+import { originLabels, type BadgeOrigin } from "@/components/ui";
 import type { MealType } from "@/app/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * O cartão "Tarefas de hoje" é da vida pessoal: casa e pessoal. Tarefa avulsa
+ * de Ace, Tarot ou Creative é trabalho e mora em "Tarefas em andamento".
+ */
+const HOME_ORIGINS: string[] = ["CASA", "PESSOAL"];
 
 const mealTypeLabels: Record<string, string> = {
   CAFE_DA_MANHA: "Café da manhã",
@@ -29,15 +58,659 @@ async function getDay(date: Date) {
   await materializeRoutineTasks(created);
   await materializeHabits(created);
 
+  // `select` em vez de `include`: as relações completas traziam linha inteira de
+  // Habit, Recipe e WaterLog só para ler um nome, um título e um total.
   return prisma.day.findUniqueOrThrow({
     where: { id: created.id },
-    include: {
-      habits: { include: { habit: true } },
-      waterLogs: true,
-      tasks: { orderBy: { order: "asc" } },
-      mealLogs: { include: { recipe: true } },
+    select: {
+      id: true,
+      date: true,
+      mood: true,
+      energy: true,
+      type: true,
+      notes: true,
+      reviewedAt: true,
+      habits: {
+        select: { id: true, done: true, habit: { select: { name: true } } },
+      },
+      // Só a contagem é usada na tela.
+      waterLogs: { select: { id: true } },
+      tasks: {
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          title: true,
+          done: true,
+          status: true,
+          origin: true,
+          type: true,
+          dueDate: true,
+          scheduledDate: true,
+          completedAt: true,
+          business: { select: { name: true, color: true } },
+          project: { select: { id: true, name: true, businessId: true } },
+          subtasks: {
+            orderBy: { order: "asc" },
+            select: { id: true, title: true, done: true },
+          },
+        },
+      },
+      mealLogs: {
+        select: {
+          id: true,
+          mealType: true,
+          eaten: true,
+          recipe: { select: { title: true } },
+        },
+      },
     },
   });
+}
+
+/**
+ * Tudo o que está em andamento nos negócios e nas coleções, numa lista só. A
+ * consulta varre as tarefas em aberto sem corte de data e por isso fica atrás de
+ * um Suspense: não segura a pintura do dia inteiro.
+ *
+ * Sem filtro de prazo, de propósito: antes só entrava tarefa com data até hoje,
+ * então uma coleção em andamento cujas tarefas não tinham prazo não aparecia —
+ * e o dia mostrava só a que já estava atrasada.
+ */
+async function WorkSection({
+  date,
+  dayId,
+  focusKeys,
+  dayTasks,
+}: {
+  date: Date;
+  dayId: string;
+  focusKeys: string[];
+  /** Tarefas avulsas do dia com origem de negócio (Ace, Tarot, Creative). */
+  dayTasks: Awaited<ReturnType<typeof getDay>>["tasks"];
+}) {
+  await syncMissedDeadlines();
+
+  const today = todayUtc();
+  // "Semana" são os 7 dias a partir do dia aberto, e não segunda a domingo:
+  // fechando no domingo, a aba no domingo era igual a "Hoje" e as tarefas da
+  // semana que começa amanhã não apareciam em lugar nenhum além de "Tudo".
+  // O corte é exclusivo.
+  const dayEnd = new Date(date.getTime() + 86_400_000);
+  const weekEnd = new Date(date.getTime() + 7 * 86_400_000);
+  // Concluídas no dia aberto: é o que a aba "Feitas" mostra.
+  // Pela data de finalização (completedAt) ou pela de execução (o prazo do dia):
+  // o seletor do card escolhe, então traz as duas e a tela filtra.
+  const dayRange = { gte: date, lt: dayEnd };
+  const doneInDay = {
+    OR: [{ completedAt: dayRange }, { scheduledDate: dayRange }, { dueDate: dayRange }],
+  };
+
+  const productionSelect = {
+    id: true,
+    title: true,
+    type: true,
+    status: true,
+    progress: true,
+    priority: true,
+    dueDate: true,
+    scheduledDate: true,
+    completedAt: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    description: true,
+    notes: true,
+    businessId: true,
+    business: { select: { name: true, color: true } },
+    client: { select: { name: true } },
+    project: { select: { id: true, name: true } },
+    subtasks: {
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, done: true },
+    },
+  } as const;
+  const collectionSelect = {
+    id: true,
+    title: true,
+    progress: true,
+    dueDate: true,
+    scheduledDate: true,
+    completedAt: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    collectionId: true,
+    description: true,
+    collection: {
+      select: { name: true, businessId: true, business: { select: { color: true } } },
+    },
+    subtasks: {
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, done: true },
+    },
+  } as const;
+
+  const prospectSelect = {
+    id: true,
+    key: true,
+    clientBusinessId: true,
+    title: true,
+    progress: true,
+    dueDate: true,
+    scheduledDate: true,
+    completedAt: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    clientBusiness: {
+      select: {
+        client: { select: { id: true, name: true } },
+        business: { select: { id: true, name: true, color: true } },
+      },
+    },
+  } as const;
+  // Só prospect em aberto: passo de quem já virou cliente ou foi perdido sai da lista.
+  const openProspect = { clientBusiness: { status: "PROSPECT" as const } };
+
+  // Aula só entra com alguma data (execução ou prazo): sem isso, todo curso
+  // cadastrado despejaria as aulas na lista. Curso pausado/abandonado fica fora.
+  const lessonSelect = {
+    id: true,
+    title: true,
+    done: true,
+    scheduledDate: true,
+    dueDate: true,
+    completedAt: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    course: {
+      select: {
+        id: true,
+        title: true,
+        subject: { select: { name: true, area: { select: { name: true } } } },
+      },
+    },
+  } as const;
+  const activeCourse = { course: { status: { notIn: ["PAUSADO", "ABANDONADO"] as ("PAUSADO" | "ABANDONADO")[] } } };
+
+  // Exercícios e textos do espiritual: abertos entram sempre (têm poucos e o prazo
+  // é opcional); os feitos, pelo dia da entrega ou do prazo.
+  const studySelect = {
+    id: true,
+    title: true,
+    kind: true,
+    dueDate: true,
+    scheduledDate: true,
+    deliveredAt: true,
+  } as const;
+
+  // Posts do cronograma: o prazo é a data de publicação, e "feito" é
+  // publicado. Andamento, realização, prioridade e tempo são como na produção.
+  const postSelect = {
+    id: true,
+    title: true,
+    type: true,
+    network: true,
+    status: true,
+    progress: true,
+    publishDate: true,
+    scheduledDate: true,
+    completedAt: true,
+    priorityLevelId: true,
+    estimateMinutes: true,
+    notes: true,
+    businessId: true,
+    business: { select: { name: true, color: true } },
+    client: { select: { name: true } },
+    project: { select: { id: true, name: true } },
+    subtasks: {
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, done: true },
+    },
+  } as const;
+
+  const [levels, production, collection, doneProduction, doneCollection, openProspectTasks, doneProspect, lessons, doneLessons, studies, doneStudies, posts, donePosts, orders, businesses, projects, covers] = await Promise.all([
+    prisma.priorityLevel.findMany({
+      orderBy: { order: "asc" },
+      select: { id: true, name: true, color: true, order: true },
+    }),
+    prisma.productionTask.findMany({
+      where: { status: { notIn: ["CONCLUIDO", "CANCELADO"] } },
+      select: productionSelect,
+    }),
+    prisma.collectionTask.findMany({
+      where: { done: false, collection: { status: { not: "ENCERRADA" } } },
+      select: collectionSelect,
+    }),
+    prisma.productionTask.findMany({
+      where: { status: "CONCLUIDO", ...doneInDay },
+      select: productionSelect,
+    }),
+    prisma.collectionTask.findMany({
+      where: { done: true, ...doneInDay, collection: { status: { not: "ENCERRADA" } } },
+      select: collectionSelect,
+    }),
+    prisma.prospectTask.findMany({
+      where: { done: false, ...openProspect },
+      select: prospectSelect,
+    }),
+    prisma.prospectTask.findMany({
+      where: { done: true, ...doneInDay, ...openProspect },
+      select: prospectSelect,
+    }),
+    prisma.studyLesson.findMany({
+      where: {
+        done: false,
+        OR: [{ scheduledDate: { not: null } }, { dueDate: { not: null } }],
+        ...activeCourse,
+      },
+      select: lessonSelect,
+    }),
+    prisma.studyLesson.findMany({
+      where: {
+        done: true,
+        OR: [{ completedAt: dayRange }, { scheduledDate: dayRange }, { dueDate: dayRange }],
+        ...activeCourse,
+      },
+      select: lessonSelect,
+    }),
+    prisma.spiritualStudy.findMany({
+      where: { status: { in: ["A_FAZER", "EM_ANDAMENTO"] } },
+      select: studySelect,
+    }),
+    prisma.spiritualStudy.findMany({
+      where: {
+        status: { in: ["FEITO", "ENTREGUE"] },
+        OR: [{ deliveredAt: dayRange }, { scheduledDate: dayRange }, { dueDate: dayRange }],
+      },
+      select: studySelect,
+    }),
+    prisma.contentPost.findMany({
+      where: { status: { notIn: ["PUBLICADO", "CANCELADO"] } },
+      select: postSelect,
+    }),
+    prisma.contentPost.findMany({
+      where: {
+        status: "PUBLICADO",
+        OR: [{ completedAt: dayRange }, { publishDate: dayRange }],
+      },
+      select: postSelect,
+    }),
+    prisma.workTaskOrder.findMany({ select: { kind: true, taskId: true, position: true } }),
+    prisma.business.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
+    }),
+    // Para o painel da tarefa: ligar uma tarefa de produção a um projeto.
+    prisma.project.findMany({
+      where: { status: "EM_ANDAMENTO" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, businessId: true },
+    }),
+    getCoverVersions(),
+  ]);
+
+  // Ordem que ela montou arrastando; quem não tem posição fica na ordem automática.
+  const positions = new Map(orders.map((o) => [`${o.kind}:${o.taskId}`, o.position]));
+  const positionOf = (kind: string, id: string) => positions.get(`${kind}:${id}`) ?? null;
+
+  // "Enviar a proposta" só aparece depois de "Criar a proposta" concluída.
+  const prospect = onlyNextSteps(openProspectTasks);
+
+  // Passar de qualquer uma das duas datas (realização ou prazo) já é atraso.
+  const isLate = (...dates: (Date | null)[]) =>
+    dates.some((d) => d !== null && d.getTime() < today.getTime());
+  const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+  const fromProduction = (t: (typeof production)[number], done: boolean): WorkTask => ({
+    kind: "production",
+    id: t.id,
+    position: positionOf("production", t.id),
+    title: t.title,
+    done,
+    progress: t.progress,
+    doneOnLoad: done,
+    originLabel: t.business.name,
+    originColor: t.business.color,
+    originHref: `/negocios/${t.businessId}`,
+    detail: [productionTypeLabels[t.type], t.client?.name ?? "Interno"].join(" · "),
+    project: t.project
+      ? { id: t.project.id, name: t.project.name, href: projectHref(t.businessId, t.project.id) }
+      : null,
+    businessId: t.businessId,
+    description: t.description,
+    notes: t.notes,
+    urgent: !done && t.priority === "URGENTE",
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && t.status !== "PRAZO_PERDIDO" && isLate(t.scheduledDate, t.dueDate),
+    missed: t.status === "PRAZO_PERDIDO",
+    collectionId: null,
+    subtasks: t.subtasks,
+  });
+
+  const fromCollection = (t: (typeof collection)[number], done: boolean): WorkTask => ({
+    kind: "collection",
+    id: t.id,
+    position: positionOf("collection", t.id),
+    title: t.title,
+    done,
+    progress: t.progress,
+    doneOnLoad: done,
+    originLabel: t.collection.name,
+    originColor: t.collection.business.color,
+    originHref: `/negocios/${t.collection.businessId}/colecoes/${t.collectionId}`,
+    detail: "Coleção",
+    project: null,
+    businessId: t.collection.businessId,
+    description: t.description,
+    urgent: false,
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && isLate(t.scheduledDate, t.dueDate),
+    collectionId: t.collectionId,
+    subtasks: t.subtasks,
+  });
+
+  const fromProspect = (t: (typeof prospect)[number], done: boolean): WorkTask => ({
+    kind: "prospect",
+    id: t.id,
+    position: positionOf("prospect", t.id),
+    title: t.title,
+    done,
+    progress: t.progress,
+    doneOnLoad: done,
+    originLabel: t.clientBusiness.client.name,
+    originColor: t.clientBusiness.business.color,
+    originHref: `/clientes/${t.clientBusiness.client.id}`,
+    detail: `Prospecção · ${t.clientBusiness.business.name}`,
+    project: null,
+    businessId: t.clientBusiness.business.id,
+    urgent: false,
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && isLate(t.scheduledDate, t.dueDate),
+    collectionId: null,
+    subtasks: [],
+  });
+
+  const fromLesson = (t: (typeof lessons)[number], done: boolean): WorkTask => ({
+    kind: "lesson",
+    id: t.id,
+    position: positionOf("lesson", t.id),
+    title: t.title,
+    done,
+    progress: null,
+    doneOnLoad: done,
+    originLabel: t.course.subject.area.name,
+    originColor: "#6366F1",
+    originHref: `/conhecimento/curso/${t.course.id}`,
+    detail: `Aula · ${t.course.title}`,
+    project: null,
+    businessId: null,
+    urgent: false,
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && isLate(t.scheduledDate, t.dueDate),
+    collectionId: null,
+    subtasks: [],
+  });
+
+  const fromStudy = (t: (typeof studies)[number], done: boolean): WorkTask => ({
+    kind: "study",
+    id: t.id,
+    position: positionOf("study", t.id),
+    title: t.title,
+    done,
+    progress: null,
+    doneOnLoad: done,
+    originLabel: "Espiritual",
+    originColor: "#8B5CF6",
+    originHref: "/espiritual/estudos",
+    detail: studyKindLabels[t.kind] ?? t.kind,
+    project: null,
+    businessId: null,
+    urgent: false,
+    priorityLevelId: null,
+    estimateMinutes: null,
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.deliveredAt),
+    overdue: !done && isLate(t.scheduledDate, t.dueDate),
+    collectionId: null,
+    subtasks: [],
+  });
+
+  const post = (t: (typeof posts)[number]) => ({
+    type: t.type,
+    network: t.network,
+    status: t.status,
+    clientName: t.client?.name ?? null,
+  });
+  const fromPost = (t: (typeof posts)[number], done: boolean): WorkTask => ({
+    kind: "post",
+    id: t.id,
+    position: positionOf("post", t.id),
+    title: t.title,
+    done,
+    progress: t.progress,
+    doneOnLoad: done,
+    originLabel: t.business.name,
+    originColor: t.business.color,
+    originHref: `/negocios/${t.businessId}`,
+    detail: postDetail(post(t), done),
+    post: post(t),
+    project: t.project
+      ? { id: t.project.id, name: t.project.name, href: projectHref(t.businessId, t.project.id) }
+      : null,
+    businessId: t.businessId,
+    notes: t.notes,
+    urgent: false,
+    priorityLevelId: t.priorityLevelId,
+    estimateMinutes: t.estimateMinutes,
+    dueDate: iso(t.publishDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !done && t.status !== "PRAZO_PERDIDO" && isLate(t.scheduledDate, t.publishDate),
+    missed: t.status === "PRAZO_PERDIDO",
+    collectionId: null,
+    subtasks: t.subtasks,
+  });
+
+  // Tarefa avulsa do dia. Não tem prioridade nem tempo estimado no banco, então
+  // essas colunas ficam em branco; o resto (foco, passos, prazo) funciona igual.
+  const fromDayTask = (t: (typeof dayTasks)[number]): WorkTask => ({
+    kind: "task",
+    id: t.id,
+    position: positionOf("task", t.id),
+    title: t.title,
+    done: t.done,
+    // A avulsa já guarda o status inteiro; só "concluída" é o `done`.
+    progress: t.status === "CONCLUIDA" ? "A_FAZER" : t.status,
+    doneOnLoad: t.done,
+    originLabel: t.business?.name ?? originLabels[t.origin as BadgeOrigin] ?? t.origin,
+    originColor: t.business?.color ?? "#6B7280",
+    originHref: null,
+    detail: "Tarefa avulsa",
+    project: t.project
+      ? { id: t.project.id, name: t.project.name, href: projectHref(t.project.businessId, t.project.id) }
+      : null,
+    businessId: null,
+    urgent: false,
+    priorityLevelId: null,
+    estimateMinutes: null,
+    dueDate: iso(t.dueDate),
+    scheduledDate: iso(t.scheduledDate),
+    completedAt: iso(t.completedAt),
+    overdue: !t.done && isLate(t.scheduledDate, t.dueDate),
+    collectionId: null,
+    subtasks: t.subtasks,
+  });
+
+  const tasks: WorkTask[] = [
+    ...dayTasks.map(fromDayTask),
+    ...studies.map((t) => fromStudy(t, false)),
+    ...doneStudies.map((t) => fromStudy(t, true)),
+    ...production.map((t) => fromProduction(t, false)),
+    ...collection.map((t) => fromCollection(t, false)),
+    ...doneProduction.map((t) => fromProduction(t, true)),
+    ...doneCollection.map((t) => fromCollection(t, true)),
+    ...posts.map((t) => fromPost(t, false)),
+    ...donePosts.map((t) => fromPost(t, true)),
+    ...prospect.map((t) => fromProspect(t, false)),
+    ...doneProspect.map((t) => fromProspect(t, true)),
+    ...lessons.map((t) => fromLesson(t, false)),
+    ...doneLessons.map((t) => fromLesson(t, true)),
+  ];
+
+  return (
+    <WorkTasksToday
+      dayId={dayId}
+      focusKeys={focusKeys}
+      tasks={tasks}
+      levels={levels}
+      dayEnd={dayEnd.toISOString()}
+      weekEnd={weekEnd.toISOString()}
+      dayDate={toDateInputValue(date)}
+      dayInPast={date.getTime() < today.getTime()}
+      businesses={businesses}
+      projects={projects}
+      covers={covers}
+    />
+  );
+}
+
+/** Rotinas e agendamentos de beleza: duas consultas próprias, também isoladas. */
+async function SelfCareSection({ date }: { date: Date }) {
+  const [careRoutines, dueCare] = await Promise.all([
+    getRoutinesForDay(date),
+    getAppointmentsDueBy(date),
+  ]);
+
+  return (
+    <Card>
+      <CardTitle className="mb-3">Autocuidado</CardTitle>
+      <TodayRoutines routines={careRoutines} date={date.toISOString()} />
+      <DueCareToday items={dueCare} />
+    </Card>
+  );
+}
+
+/**
+ * As tarefas do foco do dia, com o que a tela precisa para mostrá-las — feitas
+ * ou não. Tarefa avulsa já veio com o dia; as de produção e coleção moram em
+ * outras tabelas, então saem de duas consultas por id. Vínculo sem tarefa
+ * (apagada) é ignorado.
+ */
+async function getFocusItems(
+  dayId: string,
+  dayTasks: Awaited<ReturnType<typeof getDay>>["tasks"],
+): Promise<FocusItem[]> {
+  const rows = await prisma.dayFocus.findMany({
+    where: { dayId },
+    orderBy: { createdAt: "asc" },
+    select: { kind: true, taskId: true },
+  });
+  const idsOf = (kind: FocusKind) =>
+    rows.filter((r) => r.kind === kind).map((r) => r.taskId);
+
+  const [production, collection, prospect, posts] = await Promise.all([
+    prisma.productionTask.findMany({
+      where: { id: { in: idsOf("production") } },
+      select: { id: true, title: true, status: true, business: { select: { name: true, color: true } } },
+    }),
+    prisma.collectionTask.findMany({
+      where: { id: { in: idsOf("collection") } },
+      select: {
+        id: true,
+        title: true,
+        done: true,
+        collectionId: true,
+        collection: {
+          select: { name: true, businessId: true, business: { select: { color: true } } },
+        },
+      },
+    }),
+    prisma.prospectTask.findMany({
+      where: { id: { in: idsOf("prospect") } },
+      select: {
+        id: true,
+        title: true,
+        done: true,
+        clientBusiness: {
+          select: {
+            client: { select: { id: true, name: true } },
+            business: { select: { color: true } },
+          },
+        },
+      },
+    }),
+    prisma.contentPost.findMany({
+      where: { id: { in: idsOf("post") } },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        businessId: true,
+        business: { select: { name: true, color: true } },
+      },
+    }),
+  ]);
+
+  const items = rows.flatMap((row): FocusItem[] => {
+    if (row.kind === "post") {
+      const t = posts.find((x) => x.id === row.taskId);
+      return t
+        ? [{ id: focusKey("post", t.id), taskId: t.id, kind: "post", title: t.title, done: t.status === "PUBLICADO", originLabel: t.business.name, originColor: t.business.color, originHref: `/negocios/${t.businessId}`, collectionId: null }]
+        : [];
+    }
+    const base = { id: focusKey(row.kind as FocusKind, row.taskId), taskId: row.taskId };
+
+    if (row.kind === "task") {
+      const t = dayTasks.find((x) => x.id === row.taskId);
+      return t
+        ? [{ ...base, kind: "task", title: t.title, done: t.done, originLabel: t.business?.name ?? null, originColor: t.business?.color ?? null, originHref: null, collectionId: null }]
+        : [];
+    }
+    if (row.kind === "production") {
+      const t = production.find((x) => x.id === row.taskId);
+      return t
+        ? [{ ...base, kind: "production", title: t.title, done: t.status === "CONCLUIDO", originLabel: t.business.name, originColor: t.business.color, originHref: null, collectionId: null }]
+        : [];
+    }
+    if (row.kind === "prospect") {
+      const t = prospect.find((x) => x.id === row.taskId);
+      return t
+        ? [{ ...base, kind: "prospect", title: t.title, done: t.done, originLabel: t.clientBusiness.client.name, originColor: t.clientBusiness.business.color, originHref: `/clientes/${t.clientBusiness.client.id}`, collectionId: null }]
+        : [];
+    }
+    const t = collection.find((x) => x.id === row.taskId);
+    return t
+      ? [{ ...base, kind: "collection", title: t.title, done: t.done, originLabel: t.collection.name, originColor: t.collection.business.color, originHref: `/negocios/${t.collection.businessId}/colecoes/${t.collectionId}`, collectionId: t.collectionId }]
+      : [];
+  });
+
+  return items;
+}
+
+function SectionFallback() {
+  return (
+    <Card className="space-y-3">
+      <Skeleton className="h-4 w-40" />
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-4/5" />
+    </Card>
+  );
 }
 
 type SearchParams = Promise<{ date?: string }>;
@@ -48,23 +721,32 @@ export default async function DiaPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
+  const today = todayUtc();
   // Param inválido cai para hoje em vez de criar um Day com data inválida.
-  const date = (params.date ? parseDateOnly(params.date) : null) ?? todayUtc();
+  const date = (params.date ? parseDateOnly(params.date) : null) ?? today;
   const day = await getDay(date);
 
-  const { start: dueStart, end: dueEnd } = getUtcDayRange(date);
-  const aceTasks = await prisma.productionTask.findMany({
-    where: { dueDate: { gte: dueStart, lt: dueEnd }, status: { notIn: ["CONCLUIDO", "CANCELADO"] } },
-    orderBy: { createdAt: "asc" },
-  });
+  const [settings, focusItems, mealPlans] = await Promise.all([
+    getUserSettings(),
+    getFocusItems(day.id, day.tasks),
+    prisma.mealPlan.findMany({
+      where: { weekStart: getWeekStart(date), dayOfWeek: weekdayIndex(date) },
+      select: {
+        mealType: true,
+        recipe: { select: { title: true } },
+        optionIngredient: { select: { name: true } },
+      },
+    }),
+  ]);
 
   const meals = (["CAFE_DA_MANHA", "ALMOCO", "JANTAR"] as MealType[]).map(
     (mealType) => {
       const log = day.mealLogs.find((m) => m.mealType === mealType);
+      const plan = mealPlans.find((p) => p.mealType === mealType);
       return {
         mealType,
         label: mealTypeLabels[mealType],
-        recipeTitle: log?.recipe?.title ?? null,
+        recipeTitle: log?.recipe?.title ?? mealTitle(plan?.recipe?.title, plan?.optionIngredient?.name) ?? null,
         logId: log?.id ?? null,
         eaten: log?.eaten ?? false,
       };
@@ -74,76 +756,130 @@ export default async function DiaPage({
   return (
     <>
       <Topbar title="Dia a dia" />
-      <main key={day.id} className="flex-1 space-y-4 p-4 md:p-6 md:max-w-3xl">
-        <div>
-          <DayPicker date={day.date.toISOString()} />
-          <p className="text-sm text-text-secondary">Como está o seu dia?</p>
+      <main
+        key={day.id}
+        className="mx-auto w-full max-w-[1800px] flex-1 space-y-4 px-4 py-5 md:space-y-6 md:px-8 md:py-8"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <DayPicker date={day.date.toISOString()} />
+            <p className="text-sm text-text-secondary">Como está o seu dia?</p>
+          </div>
+          {/* Dia futuro não tem o que conferir. */}
+          {day.date.getTime() <= today.getTime() && (
+            <div className="max-w-xs">
+              <DayReviewToggle dayId={day.id} reviewed={day.reviewedAt !== null} />
+            </div>
+          )}
         </div>
 
-        <Card>
-          <MoodEnergySelector
-            dayId={day.id}
-            initialMood={day.mood}
-            initialEnergy={day.energy}
-          />
-        </Card>
+        <DaySummary
+          tasks={{ done: day.tasks.filter((t) => t.done).length, total: day.tasks.length }}
+          habits={{ done: day.habits.filter((h) => h.done).length, total: day.habits.length }}
+          meals={{ done: meals.filter((m) => m.eaten).length, total: meals.length }}
+          water={{ done: day.waterLogs.length, total: settings.waterGoal }}
+        />
 
-        <Card className="flex flex-col gap-4">
-          <DayTypeToggle dayId={day.id} initialType={day.type} />
-          <HabitChecklist
-            items={day.habits.map((h) => ({
-              id: h.id,
-              name: h.habit.name,
-              done: h.done,
-            }))}
-          />
-        </Card>
+        <FocusToday dayId={day.id} items={focusItems} />
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Tarefas de hoje
-          </h2>
-          <TaskListByOrigin
-            dayId={day.id}
-            dayDate={toDateInputValue(day.date)}
-            initialTasks={day.tasks.map((t) => ({
-              id: t.id,
-              title: t.title,
-              done: t.done,
-              origin: t.origin as BadgeOrigin,
-            }))}
-          />
-        </Card>
+        {/* Duas colunas de peso diferente, e não uma pilha: à esquerda o que é
+            longo e muda o dia todo (tarefas e andamento dos negócios); à direita os
+            registros curtos que você marca de passagem. Empilhados, os curtos
+            jogavam as tarefas para 2000px abaixo da dobra. */}
+        <div className="grid items-start gap-4 xl:grid-cols-3 xl:gap-6">
+          {/* `min-w-0`: item de grid nasce com `min-width: auto`, então a
+              coluna esticava para caber a tabela de produção inteira e o
+              `overflow-x-auto` dela nunca chegava a rolar — a página é que
+              vazava, 530px num visor de 375. */}
+          <div className="flex min-w-0 flex-col gap-4 xl:col-span-2 xl:gap-6">
+            <Card>
+              {/* O seletor de tipo do dia mora aqui, e não junto dos hábitos:
+                  o que ele troca são as tarefas de rotina desta lista. Ao lado
+                  dos hábitos, parecia mexer neles. */}
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                {/* Na Home, "Tarefas de hoje" junta todas as origens. Aqui o
+                    trabalho mora em "Tarefas em andamento", então o nome diz
+                    o que esta lista mostra. */}
+                <CardTitle>Casa e pessoal</CardTitle>
+                <DayTypeToggle dayId={day.id} initialType={day.type} />
+              </div>
+              <TaskListByOrigin
+                dayId={day.id}
+                dayDate={toDateInputValue(day.date)}
+                dayInPast={day.date.getTime() < today.getTime()}
+                focusIds={focusItems.filter((f) => f.kind === "task").map((f) => f.taskId)}
+                initialTasks={day.tasks.filter((t) => HOME_ORIGINS.includes(t.origin)).map((t) => ({
+                  id: t.id,
+                  title: t.title,
+                  done: t.done,
+                  status: t.status,
+                  origin: t.origin as BadgeOrigin,
+                  business: t.business,
+                  overdue: !t.done && t.dueDate !== null && t.dueDate.getTime() < today.getTime(),
+                  subtasks: t.subtasks,
+                }))}
+              />
+            </Card>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Produção Ace
-          </h2>
-          <AceTasksToday
-            initialTasks={aceTasks.map((t) => ({ id: t.id, title: t.title, status: t.status }))}
-          />
-        </Card>
+            <Suspense fallback={<SectionFallback />}>
+              <WorkSection
+                date={date}
+                dayId={day.id}
+                focusKeys={focusItems.map((f) => f.id)}
+                dayTasks={day.tasks.filter((t) => !HOME_ORIGINS.includes(t.origin))}
+              />
+            </Suspense>
+          </div>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Água
-          </h2>
-          <WaterTracker dayId={day.id} initialCount={day.waterLogs.length} />
-        </Card>
+          <div className="flex min-w-0 flex-col gap-4 xl:gap-6">
+            <Card>
+              <MoodEnergySelector
+                dayId={day.id}
+                initialMood={day.mood}
+                initialEnergy={day.energy}
+              />
+            </Card>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Cardápio
-          </h2>
-          <MealChecklist dayId={day.id} initialMeals={meals} />
-        </Card>
+            <Card>
+              <HabitChecklist
+                items={day.habits.map((h) => ({
+                  id: h.id,
+                  name: h.habit.name,
+                  done: h.done,
+                }))}
+              />
+            </Card>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Notas do dia
-          </h2>
-          <NotesField dayId={day.id} initialNotes={day.notes} />
-        </Card>
+            <Card>
+              <CardTitle className="mb-3">
+                Água
+              </CardTitle>
+              <WaterTracker
+                dayId={day.id}
+                initialCount={day.waterLogs.length}
+                settings={settings}
+              />
+            </Card>
+
+            <Card>
+              <CardTitle className="mb-3">
+                Cardápio
+              </CardTitle>
+              <MealChecklist dayId={day.id} initialMeals={meals} />
+            </Card>
+
+            <Suspense fallback={<SectionFallback />}>
+              <SelfCareSection date={date} />
+            </Suspense>
+
+            <Card>
+              <CardTitle className="mb-3">
+                Notas do dia
+              </CardTitle>
+              <NotesField dayId={day.id} initialNotes={day.notes} />
+            </Card>
+          </div>
+        </div>
       </main>
     </>
   );

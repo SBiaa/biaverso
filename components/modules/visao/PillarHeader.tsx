@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { getPillarIcon } from "@/lib/vision-visuals";
 import { PillarFormModal } from "./PillarFormModal";
+import { IconButton } from "@/components/ui";
 
 type PillarHeaderData = {
   id: string;
@@ -11,6 +12,8 @@ type PillarHeaderData = {
   description: string | null;
   color: string;
   icon: string | null;
+  status: string;
+  kind: string;
 };
 
 export function PillarHeader({ pillar }: { pillar: PillarHeaderData }) {
@@ -30,18 +33,16 @@ export function PillarHeader({ pillar }: { pillar: PillarHeaderData }) {
         <Icon size={26} />
       </div>
       <div className="flex-1">
-        <h1 className="text-lg font-semibold text-text-primary">{pillar.name}</h1>
+        <h2 className="text-lg font-semibold tracking-tight text-text-primary">{pillar.name}</h2>
         {pillar.description && (
           <p className="text-sm text-text-secondary">{pillar.description}</p>
         )}
       </div>
-      <button
-        type="button"
+      <IconButton
         onClick={() => setEditing(true)}
-        className="text-text-secondary hover:text-text-primary"
       >
         <Pencil size={16} />
-      </button>
+      </IconButton>
 
       {editing && (
         <PillarFormModal mode="edit" initial={pillar} onClose={() => setEditing(false)} />

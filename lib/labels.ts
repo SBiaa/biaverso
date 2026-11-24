@@ -8,6 +8,7 @@ export const transactionCategoryLabels: Record<string, string> = {
   ALIMENTACAO: "Alimentação",
   CUSTO_OPERACIONAL: "Custo operacional",
   CARTAO_CREDITO: "Cartão de crédito",
+  BELEZA: "Beleza e autocuidado",
   OUTRO: "Outro",
 };
 
@@ -48,6 +49,12 @@ export const mealTypeLabels: Record<string, string> = {
   LANCHE: "Lanche",
 };
 
+export const taskTypeLabels: Record<string, string> = {
+  ROTINA_NORMAL: "Rotina",
+  ROTINA_FAXINA: "Faxina",
+  AVULSA: "Avulsa",
+};
+
 export const projectStatusLabels: Record<string, string> = {
   EM_ANDAMENTO: "Em andamento",
   CONCLUIDO: "Concluído",
@@ -56,12 +63,62 @@ export const projectStatusLabels: Record<string, string> = {
 };
 
 export const clientStatusLabels: Record<string, string> = {
+  PROSPECT: "Prospect",
   ATIVO: "Ativo",
   PAUSADO: "Pausado",
   INATIVO: "Inativo",
 };
 
+export const prospectStageLabels: Record<string, string> = {
+  NOVO_CONTATO: "Novo contato",
+  CONTATO_FEITO: "Contato feito",
+  PROPOSTA_ENVIADA: "Proposta enviada",
+  NEGOCIACAO: "Negociação",
+  GANHO: "Ganho",
+  PERDIDO: "Perdido",
+};
+
+/** As quatro colunas do quadro — GANHO/PERDIDO tiram o cartão do quadro. */
+export const prospectOpenStages = [
+  "NOVO_CONTATO",
+  "CONTATO_FEITO",
+  "PROPOSTA_ENVIADA",
+  "NEGOCIACAO",
+] as const;
+
+export const leadSourceLabels: Record<string, string> = {
+  INDICACAO: "Indicação",
+  PROSPECCAO_ATIVA: "Prospecção ativa",
+  INSTAGRAM: "Instagram",
+  SITE: "Site",
+  EVENTO: "Evento",
+  OUTRO: "Outro",
+};
+
 export const starsValues = ["UM", "DOIS", "TRES", "QUATRO", "CINCO"];
+
+/**
+ * Escala de humor do dia, do pior ao melhor. A posição é o que vale: o seletor
+ * do /dia grava o emoji, e a revisão do mês lê a posição como nota de 1 a 5.
+ */
+export const moodScale = ["😔", "😕", "😐", "🙂", "😄"] as const;
+
+/**
+ * O nome de cada humor, na mesma ordem. O emoji sozinho não é lido por leitor
+ * de tela de um jeito útil ("rosto pensativo"?) e nem todo mundo lê igual.
+ */
+export const moodLabels: Record<(typeof moodScale)[number], string> = {
+  "😔": "Mal",
+  "😕": "Meio pra baixo",
+  "😐": "Neutra",
+  "🙂": "Bem",
+  "😄": "Ótima",
+};
+
+export const dayTypeLabels: Record<string, string> = {
+  NORMAL: "Dia normal",
+  FAXINA: "Dia de faxina",
+};
 
 export const energyLabels: Record<string, string> = {
   BAIXA: "Baixa",
@@ -98,6 +155,31 @@ export const recipeCategoryLabels: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+export const ingredientKindLabels: Record<string, string> = {
+  PROTEINA: "Proteína",
+  CARBOIDRATO: "Carboidrato",
+  LEGUME_VERDURA: "Legume ou verdura",
+  LATICINIO: "Laticínio",
+  TEMPERO_BASICO: "Tempero e básico",
+  OUTRO: "Outro",
+};
+
+/** Plural, para os grupos da despensa. */
+export const ingredientKindGroupLabels: Record<string, string> = {
+  PROTEINA: "Proteínas",
+  CARBOIDRATO: "Carboidratos",
+  LEGUME_VERDURA: "Legumes e verduras",
+  LATICINIO: "Laticínios",
+  TEMPERO_BASICO: "Temperos e básicos",
+  OUTRO: "Sem tipo",
+};
+
+export const ingredientRoleLabels: Record<string, string> = {
+  PRECISA: "Precisa",
+  OPCAO: "Escolha um",
+  OPCIONAL: "Se tiver",
+};
+
 export const bookStatusLabels: Record<string, string> = {
   QUERO_LER: "Quero ler",
   LENDO: "Lendo",
@@ -113,6 +195,14 @@ export const knowledgeTypeLabels: Record<string, string> = {
   PODCAST: "Podcast",
   POST: "Post",
   OUTRO: "Outro",
+};
+
+export const knowledgeStatusLabels: Record<string, string> = {
+  QUERO_ESTUDAR: "Quero estudar",
+  ESTUDANDO: "Estudando",
+  ESTUDADO: "Estudado",
+  PAUSADO: "Pausado",
+  ABANDONADO: "Abandonado",
 };
 
 export const knowledgeAreaLabels: Record<string, string> = {
@@ -132,6 +222,31 @@ export const ideaStatusLabels: Record<string, string> = {
   ARQUIVADA: "Arquivada",
 };
 
+export const wishPriorityLabels: Record<string, string> = {
+  ESSENCIAL: "Essencial",
+  QUERO: "Quero muito",
+  ALGUM_DIA: "Algum dia",
+};
+
+export const wishStatusLabels: Record<string, string> = {
+  DESEJADO: "Desejado",
+  COMPRADO: "Comprado",
+  DESCARTADO: "Descartado",
+};
+
+export const wishCategoryLabels: Record<string, string> = {
+  EQUIPAMENTO: "Equipamento",
+  SOFTWARE: "Software e assinatura",
+  CASA: "Casa",
+  ROUPA: "Roupa e acessório",
+  BELEZA: "Beleza",
+  LIVRO_CURSO: "Livro e curso",
+  PRESENTE: "Presente",
+  VIAGEM: "Viagem",
+  SAUDE: "Saúde",
+  OUTRO: "Outro",
+};
+
 export const postTypeLabels: Record<string, string> = {
   STORY: "Story",
   REELS: "Reels",
@@ -149,12 +264,22 @@ export const socialNetworkLabels: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+export const contentPilarLabels: Record<string, string> = {
+  AUTORIDADE: "Autoridade",
+  PROVA: "Prova",
+  OFERTA: "Oferta",
+  HUMANO: "Humano",
+  CONVERSA: "Conversa",
+};
+
 export const contentStatusLabels: Record<string, string> = {
   PLANEJADO: "Planejado",
   EM_CRIACAO: "Em criação",
+  AGUARDANDO_APROVACAO: "Aguardando aprovação",
   APROVADO: "Aprovado",
   PUBLICADO: "Publicado",
   CANCELADO: "Cancelado",
+  PRAZO_PERDIDO: "Prazo perdido",
 };
 
 export const productionTypeLabels: Record<string, string> = {
@@ -177,6 +302,24 @@ export const productionStatusLabels: Record<string, string> = {
   AGUARDANDO_APROVACAO: "Aguardando aprovação",
   CONCLUIDO: "Concluído",
   CANCELADO: "Cancelado",
+  PRAZO_PERDIDO: "Prazo perdido",
+};
+
+export const orderStatusLabels: Record<string, string> = {
+  PENDENTE: "Pendente",
+  EM_PRODUCAO: "Em produção",
+  PRONTO: "Pronto",
+  ENVIADO: "Enviado",
+  ENTREGUE: "Entregue",
+  CANCELADO: "Cancelado",
+};
+
+export const collectionStatusLabels: Record<string, string> = {
+  IDEIA: "Ideia",
+  EM_DESENVOLVIMENTO: "Em desenvolvimento",
+  PRONTA: "Pronta",
+  LANCADA: "Lançada",
+  ENCERRADA: "Encerrada",
 };
 
 export const passwordCategoryLabels: Record<string, string> = {
@@ -188,9 +331,14 @@ export const passwordCategoryLabels: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+/** Status em que a meta saiu do ciclo e vira histórico. */
+export const closedMeasuredGoalStatuses = ["CONCLUIDO", "NAO_ATINGIDO", "CANCELADO"];
+
 export const measuredGoalStatusLabels: Record<string, string> = {
+  NAO_INICIADO: "Não iniciado",
   EM_ANDAMENTO: "Em andamento",
   CONCLUIDO: "Concluído",
+  NAO_ATINGIDO: "Não atingido",
   PAUSADO: "Pausado",
   CANCELADO: "Cancelado",
 };
@@ -207,6 +355,7 @@ export const eventCategoryLabels: Record<string, string> = {
   ACE: "Ace",
   CREATIVE: "Creative",
   SAUDE: "Saúde",
+  ESPIRITUAL: "Espiritual",
   OUTRO: "Outro",
 };
 
@@ -214,4 +363,145 @@ export const syncStatusLabels: Record<string, string> = {
   PENDENTE: "Aguardando sincronização",
   SINCRONIZADO: "Sincronizado com o Google",
   ERRO: "Erro ao sincronizar",
+};
+
+// ------------------------------------------------------------------- beleza
+export const routineTimeLabels: Record<string, string> = {
+  MANHA: "Manhã",
+  NOITE: "Noite",
+  QUALQUER: "Qualquer hora",
+};
+
+export const careTypeLabels: Record<string, string> = {
+  UNHAS: "Unhas",
+  CABELO: "Cabelo",
+  DEPILACAO: "Depilação",
+  SOBRANCELHA: "Sobrancelha",
+  ESTETICA: "Estética",
+  MASSAGEM: "Massagem",
+  OUTRO: "Outro",
+};
+
+export const productCategoryLabels: Record<string, string> = {
+  SKINCARE_LIMPEZA: "Skincare · limpeza",
+  SKINCARE_TRATAMENTO: "Skincare · tratamento",
+  SKINCARE_HIDRATACAO: "Skincare · hidratação",
+  SKINCARE_PROTECAO: "Skincare · proteção",
+  CABELO_SHAMPOO: "Cabelo · shampoo",
+  CABELO_CONDICIONADOR: "Cabelo · condicionador",
+  CABELO_MASCARA: "Cabelo · máscara",
+  CABELO_FINALIZADOR: "Cabelo · finalizador",
+  CORPO: "Corpo",
+  MAQUIAGEM: "Maquiagem",
+  UNHAS: "Unhas",
+  OUTRO: "Outro",
+};
+
+export const documentTypeLabels: Record<string, string> = {
+  LINK: "Link",
+  DRIVE: "Drive",
+  FIGMA: "Figma",
+  BRIEFING: "Briefing",
+  CONTRATO: "Contrato",
+  OUTRO: "Outro",
+};
+
+export const documentTypeColors: Record<string, string> = {
+  LINK: "#6366F1",
+  DRIVE: "#059669",
+  FIGMA: "#DB2777",
+  BRIEFING: "#D97706",
+  CONTRATO: "#DC2626",
+  OUTRO: "#6B7280",
+};
+
+export const devLogKindLabels: Record<string, string> = {
+  FUNCIONALIDADE: "Funcionalidade",
+  MELHORIA: "Melhoria",
+  CORRECAO: "Correção",
+  LANCAMENTO: "Lançamento",
+  DECISAO: "Decisão",
+  NOTA: "Nota",
+};
+
+export const devLogKindColors: Record<string, string> = {
+  FUNCIONALIDADE: "#6366F1",
+  MELHORIA: "#0891B2",
+  CORRECAO: "#DC2626",
+  LANCAMENTO: "#059669",
+  DECISAO: "#D97706",
+  NOTA: "#6B7280",
+};
+
+export const productCostKindLabels: Record<string, string> = {
+  MATERIAL: "Material",
+  IMPRESSAO: "Impressão",
+  EMBALAGEM: "Embalagem",
+  MAO_DE_OBRA: "Mão de obra",
+  FRETE: "Frete",
+  TAXA: "Taxa",
+  OUTRO: "Outro",
+};
+
+export const productCostModeLabels: Record<string, string> = {
+  FIXO: "R$ por unidade",
+  PERCENTUAL: "% do preço de venda",
+  TEMPO: "minutos × valor/hora",
+  INSUMO: "insumo da biblioteca",
+};
+
+export const cycleFlowLabels: Record<string, string> = {
+  BORRIFO: "Borrifo",
+  LEVE: "Leve",
+  MODERADO: "Moderado",
+  INTENSO: "Intenso",
+};
+
+export const cycleSymptomLabels: Record<string, string> = {
+  COLICA: "Cólica",
+  DOR_CABECA: "Dor de cabeça",
+  INCHACO: "Inchaço",
+  SENSIBILIDADE_MAMAS: "Sensibilidade nas mamas",
+  ACNE: "Acne",
+  CANSACO: "Cansaço",
+  ENJOO: "Enjoo",
+  DOR_COSTAS: "Dor nas costas",
+  INSONIA: "Insônia",
+  APETITE_AUMENTADO: "Apetite aumentado",
+  LIBIDO_ALTA: "Libido alta",
+  OUTRO: "Outro",
+};
+
+export const cycleMoodLabels: Record<string, string> = {
+  OTIMO: "Ótimo",
+  BEM: "Bem",
+  NORMAL: "Normal",
+  IRRITADA: "Irritada",
+  SENSIVEL: "Sensível",
+  ANSIOSA: "Ansiosa",
+  TRISTE: "Triste",
+};
+
+export const cyclePhaseLabels: Record<string, string> = {
+  MENSTRUAL: "Menstrual",
+  FOLICULAR: "Folicular",
+  OVULATORIA: "Ovulatória",
+  LUTEA: "Lútea",
+};
+
+export const goalTermLabels: Record<string, string> = {
+  JA: "Já",
+  CURTO_PRAZO: "Curto prazo",
+  MEDIO_PRAZO: "Médio prazo",
+  LONGO_PRAZO: "Longo prazo",
+};
+
+export const pillarStatusLabels: Record<string, string> = {
+  ATIVO: "Ativo",
+  PAUSADO: "Pausado",
+};
+
+export const pillarKindLabels: Record<string, string> = {
+  PESSOAL: "Pessoal",
+  NEGOCIO: "Negócio",
 };

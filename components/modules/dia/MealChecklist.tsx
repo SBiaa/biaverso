@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticList } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import type { MealType } from "@/app/generated/prisma/client";
 
@@ -20,44 +20,29 @@ type MealChecklistProps = {
 };
 
 export function MealChecklist({ dayId, initialMeals }: MealChecklistProps) {
-  const [meals, setMeals] = useState(initialMeals);
-  const [error, setError] = useState<string | null>(null);
+  // A refeição não tem `id` próprio quando ainda não foi marcada nenhuma vez;
+  // o tipo (café, almoço, janta) é o que identifica a linha.
+  const { items: meals, error, update } = useOptimisticList(
+    initialMeals.map((meal) => ({ ...meal, id: meal.mealType })),
+  );
 
-  async function toggle(meal: Meal) {
-    const previous = meals;
-    const nextEaten = !meal.eaten;
-
-    setError(null);
-    setMeals((prev) =>
-      prev.map((m) => (m.mealType === meal.mealType ? { ...m, eaten: nextEaten } : m)),
+  function toggle(meal: Meal & { id: string }) {
+    const eaten = !meal.eaten;
+    update(meal.id, { eaten }, () =>
+      meal.logId
+        ? api.patch(`/api/meal-logs/${meal.logId}`, { eaten })
+        : // O POST é um upsert no servidor, então clicar duas vezes rápido não
+          // cria dois logs para a mesma refeição. O `logId` novo chega pelo
+          // refresh que o hook dispara no fim.
+          api.post("/api/meal-logs", { dayId, mealType: meal.mealType, eaten }),
     );
-
-    try {
-      if (meal.logId) {
-        await api.patch(`/api/meal-logs/${meal.logId}`, { eaten: nextEaten });
-      } else {
-        // O POST é um upsert no servidor, então clicar duas vezes rápido não
-        // cria dois logs para a mesma refeição.
-        const log = await api.post<{ id: string }>("/api/meal-logs", {
-          dayId,
-          mealType: meal.mealType,
-          eaten: nextEaten,
-        });
-        setMeals((prev) =>
-          prev.map((m) => (m.mealType === meal.mealType ? { ...m, logId: log.id } : m)),
-        );
-      }
-    } catch (e) {
-      setMeals(previous);
-      setError(errorMessage(e));
-    }
   }
 
   return (
     <div className="flex flex-col gap-1.5">
       <ul className="flex flex-col gap-2">
         {meals.map((meal) => (
-          <li key={meal.mealType} className="flex items-center justify-between text-sm">
+          <li key={meal.id} className="flex items-center justify-between text-sm">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"

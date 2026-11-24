@@ -1,27 +1,155 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, Plus } from "lucide-react";
-import { Badge, Button, ErrorNote, originLabels, type BadgeOrigin } from "@/components/ui";
+import {
+  AttentionBadge,
+  Badge,
+  BusinessBadge,
+  Button,
+  ErrorNote,
+  InlineEdit,
+  originLabels,
+  type BadgeOrigin,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
+import { FocusStar } from "@/components/modules/dia/FocusStar";
+import { SubtaskList, SubtaskToggle, useSubtasks, useSubtasksOpen, type SubtaskItem } from "@/components/modules/tarefas/Subtasks";
+import { TaskStatusPicker } from "@/components/modules/tarefas/TaskStatusPicker";
+import type { TaskStatus } from "@/app/generated/prisma/enums";
 
-type TaskItem = { id: string; title: string; done: boolean; origin: BadgeOrigin };
+type TaskItem = {
+  id: string;
+  title: string;
+  done: boolean;
+  status: TaskStatus;
+  origin: BadgeOrigin;
+  business: { name: string; color: string } | null;
+  overdue: boolean;
+  subtasks: SubtaskItem[];
+};
 
 type TaskListByOriginProps = {
   dayId: string;
   /** Data do dia aberto (YYYY-MM-DD) — a tarefa vence no dia que está na tela, não em "hoje". */
   dayDate: string;
+  /** Dia aberto já passou: o que for criado aqui já nasce atrasado. */
+  dayInPast: boolean;
   initialTasks: TaskItem[];
+  /** Ids das tarefas avulsas que estão no foco do dia. */
+  focusIds: string[];
 };
 
-const originOptions = Object.keys(originLabels) as BadgeOrigin[];
+// Este cartão é da vida pessoal; tarefa de negócio vai para "Tarefas em andamento".
+const originOptions: BadgeOrigin[] = ["CASA", "PESSOAL"];
 
-export function TaskListByOrigin({ dayId, dayDate, initialTasks }: TaskListByOriginProps) {
+function TaskRow({
+  task,
+  dayId,
+  focused,
+  onToggle,
+  onStatus,
+  onRename,
+}: {
+  task: TaskItem;
+  dayId: string;
+  focused: boolean;
+  onToggle: (id: string) => void;
+  onStatus: (id: string, status: TaskStatus) => void;
+  onRename: (id: string, title: string) => Promise<unknown>;
+}) {
+  const subtasks = useSubtasks({ kind: "task", id: task.id }, task.subtasks);
+  // Passos nascem recolhidos e a tela lembra quais ela abriu.
+  const [open, toggleOpen] = useSubtasksOpen(`task:${task.id}`);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex w-full items-center gap-2 pl-1 text-sm">
+        {/* O círculo e o texto viraram alvos separados: antes a linha inteira
+            era um botão de marcar, então não havia onde clicar para renomear
+            sem concluir a tarefa junto. */}
+        <button
+          type="button"
+          onClick={() => onToggle(task.id)}
+          aria-label={task.done ? `Desmarcar ${task.title}` : `Marcar ${task.title}`}
+          // Marcar é a ação principal desta tela no celular. O ícone continua
+          // com 16px; a margem negativa devolve ao layout o espaço do alvo de
+          // 44px, para a linha não crescer.
+          className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover"
+        >
+          {task.done ? (
+            <CheckCircle2 size={16} className="text-accent-ink" />
+          ) : (
+            <Circle size={16} className="text-text-secondary" />
+          )}
+        </button>
+        <div className="min-w-0 flex-1">
+          <InlineEdit
+            value={task.title}
+            ariaLabel="Tarefa"
+            onSave={(title) => onRename(task.id, title)}
+            className={cn(
+              "block text-text-primary",
+              task.done && "text-text-secondary line-through",
+            )}
+          />
+        </div>
+        {/* Selos à direita: os títulos ficam alinhados numa coluna só. */}
+        <span className="flex shrink-0 items-center gap-1.5">
+          {task.business && <BusinessBadge business={task.business} />}
+          {task.overdue && !task.done && (
+            <AttentionBadge level="atrasado">
+              Atrasado
+            </AttentionBadge>
+          )}
+          {/* Tarefa de casa é feito ou não feito: o círculo basta, e o seletor
+              "A fazer / Concluí" só poluía a lista. */}
+          {task.origin !== "CASA" && (
+            <TaskStatusPicker
+              status={task.status}
+              title={task.title}
+              onChange={(status) => onStatus(task.id, status)}
+            />
+          )}
+          <SubtaskToggle
+            open={open}
+            onClick={toggleOpen}
+            doneCount={subtasks.doneCount}
+            total={subtasks.subtasks.length}
+          />
+          <FocusStar
+            dayId={dayId}
+            kind="task"
+            taskId={task.id}
+            focused={focused}
+            title={task.title}
+          />
+        </span>
+      </div>
+
+      {open && (
+        <div className="pl-7">
+          <SubtaskList {...subtasks} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TaskListByOrigin({
+  dayId,
+  dayDate,
+  dayInPast,
+  initialTasks,
+  focusIds,
+}: TaskListByOriginProps) {
+  const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
-  const [origin, setOrigin] = useState<BadgeOrigin>("PESSOAL");
+  const [origin, setOrigin] = useState<BadgeOrigin>("CASA");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,16 +161,49 @@ export function TaskListByOrigin({ dayId, dayDate, initialTasks }: TaskListByOri
   async function toggle(id: string) {
     const previous = tasks;
     const nextDone = !tasks.find((t) => t.id === id)?.done;
+    // Reabrir pelo círculo volta para "a fazer", igual à rota.
+    const nextStatus: TaskStatus = nextDone ? "CONCLUIDA" : "A_FAZER";
 
     setError(null);
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: nextDone } : t)));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, done: nextDone, status: nextStatus } : t)),
+    );
 
     try {
       await api.patch(`/api/tasks/${id}`, { done: nextDone });
+      // O resumo do dia, no topo, vem do servidor.
+      router.refresh();
     } catch (e) {
       setTasks(previous);
       setError(errorMessage(e));
     }
+  }
+
+  async function changeStatus(id: string, status: TaskStatus) {
+    const previous = tasks;
+
+    setError(null);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status, done: status === "CONCLUIDA" } : t)),
+    );
+
+    try {
+      await api.patch(`/api/tasks/${id}`, { status });
+      router.refresh();
+    } catch (e) {
+      setTasks(previous);
+      setError(errorMessage(e));
+    }
+  }
+
+  /**
+   * O texto novo já está na tela quando isto roda (o InlineEdit fecha depois
+   * do await), então aqui só falta gravar e refletir na lista. O erro sobe
+   * para o campo, que fica aberto com o que foi digitado.
+   */
+  async function rename(id: string, title: string) {
+    await api.patch(`/api/tasks/${id}`, { title });
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)));
   }
 
   async function addTask() {
@@ -57,9 +218,22 @@ export function TaskListByOrigin({ dayId, dayDate, initialTasks }: TaskListByOri
         dayId,
         dueDate: dayDate,
       });
-      setTasks((prev) => [...prev, { id: task.id, title: task.title, done: false, origin }]);
+      setTasks((prev) => [
+        ...prev,
+        {
+          id: task.id,
+          title: task.title,
+          done: false,
+          status: "A_FAZER",
+          origin,
+          business: null,
+          overdue: dayInPast,
+          subtasks: [],
+        },
+      ]);
       setTitle("");
       setShowForm(false);
+      router.refresh();
     } catch (e) {
       // A tarefa não entra na lista se não foi gravada.
       setError(errorMessage(e));
@@ -79,26 +253,15 @@ export function TaskListByOrigin({ dayId, dayDate, initialTasks }: TaskListByOri
           <div key={taskOrigin} className="flex flex-col gap-1.5">
             <Badge origin={taskOrigin as BadgeOrigin} />
             {items.map((task) => (
-              <button
+              <TaskRow
                 key={task.id}
-                type="button"
-                onClick={() => toggle(task.id)}
-                className="flex items-center gap-2 pl-1 text-sm"
-              >
-                {task.done ? (
-                  <CheckCircle2 size={16} className="text-accent" />
-                ) : (
-                  <Circle size={16} className="text-text-secondary" />
-                )}
-                <span
-                  className={cn(
-                    "text-text-primary",
-                    task.done && "text-text-secondary line-through",
-                  )}
-                >
-                  {task.title}
-                </span>
-              </button>
+                task={task}
+                dayId={dayId}
+                focused={focusIds.includes(task.id)}
+                onToggle={toggle}
+                onStatus={changeStatus}
+                onRename={rename}
+              />
             ))}
           </div>
         ))

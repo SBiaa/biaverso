@@ -1,0 +1,19 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { parseBody, route } from "@/lib/api";
+import { instagramHighlightPatchSchema } from "@/lib/schemas";
+
+type Params = { params: Promise<{ id: string }> };
+
+export const PATCH = route(async (request: Request, { params }: Params) => {
+  const { id } = await params;
+  const data = await parseBody(request, instagramHighlightPatchSchema);
+  const highlight = await prisma.instagramHighlight.update({ where: { id }, data });
+  return NextResponse.json(highlight);
+});
+
+export const DELETE = route(async (_request: Request, { params }: Params) => {
+  const { id } = await params;
+  await prisma.instagramHighlight.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+});

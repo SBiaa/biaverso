@@ -24,20 +24,43 @@ model User {
 
 // DIA A DIA
 model Day {
-  id        String   @id @default(cuid())
-  date      DateTime @unique
-  type      DayType  @default(NORMAL)
-  mood      String?
-  energy    Energy?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  date       DateTime  @unique
+  type       DayType   @default(NORMAL)
+  mood       String?
+  energy     Energy?
+  notes      String?
+  // Quando ela confirmou que o dia está preenchido. Até lá, "não marcado"
+  // pode ser só esquecimento: hábitos e rotina da casa deste dia ficam fora
+  // das avaliações em vez de contar como não feitos.
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  habits    HabitLog[]
-  waterLogs WaterLog[]
-  mealLogs  MealLog[]
-  tasks     Task[]
-  events    Event[]
+  habits      HabitLog[]
+  waterLogs   WaterLog[]
+  mealLogs    MealLog[]
+  tasks       Task[]
+  events      Event[]
+  timeBlocks  TimeBlock[]
+  timeEntries TimeEntry[]
+  focus       DayFocus[]
+}
+
+/// As até 3 tarefas que ela escolheu como foco de um dia. A tarefa pode ser
+/// avulsa (`task`), de produção (`production`) ou de coleção (`collection`):
+/// três tabelas diferentes, então o vínculo é por `kind` + `taskId`, sem chave
+/// estrangeira. Tarefa apagada simplesmente deixa de aparecer no foco.
+model DayFocus {
+  id        String   @id @default(cuid())
+  dayId     String
+  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  kind      String
+  taskId    String
+  createdAt DateTime @default(now())
+
+  @@unique([dayId, kind, taskId])
+  @@index([dayId])
 }
 
 enum DayType {
@@ -82,28 +105,47 @@ model WaterLog {
 }
 
 model Task {
-  id         String    @id @default(cuid())
-  title      String
-  done       Boolean   @default(false)
-  type       TaskType  @default(AVULSA)
-  origin     Origin    @default(PESSOAL)
-  dueDate    DateTime?
-  order      Int       @default(0)
-  createdAt  DateTime  @default(now())
-  dayId      String?
-  day        Day?      @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  businessId String?
-  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
-  projectId  String?
-  project    Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  id            String     @id @default(cuid())
+  title         String
+  done          Boolean    @default(false)
+  // Em que pé a tarefa está. `done` continua existindo porque o radar, as
+  // avaliações e o resumo do dia contam por ele: os dois andam juntos
+  // (`done` ⇔ status CONCLUIDA) e quem os mantém em sincronia é a rota PATCH.
+  status        TaskStatus @default(A_FAZER)
+  type          TaskType   @default(AVULSA)
+  origin        Origin     @default(PESSOAL)
+  dueDate       DateTime?
+  scheduledDate DateTime?
+  order         Int        @default(0)
+  createdAt     DateTime   @default(now())
+  // Quando foi concluída — igual ProductionTask e CollectionTask, que já
+  // tinham. Sem isto, marcar como feita não deixava rastro de quando, e um
+  // projeto tocado ontem parecia parado para o radar. Nulo em tudo que foi
+  // concluído antes deste campo existir: não dá para inventar a data.
+  completedAt   DateTime?
+  dayId         String?
+  day           Day?       @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  businessId    String?
+  business      Business?  @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  projectId     String?
+  project       Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   // Cópia de rotina: aponta para o template que a gerou. Sem isso a cópia só
   // podia ser reconhecida pelo título, e renomear um template duplicava a
   // tarefa em todo dia já materializado.
   templateId String?
-  template   Task?     @relation("RoutineTemplate", fields: [templateId], references: [id], onDelete: SetNull)
-  instances  Task[]    @relation("RoutineTemplate")
+  template   Task?   @relation("RoutineTemplate", fields: [templateId], references: [id], onDelete: SetNull)
+  instances  Task[]  @relation("RoutineTemplate")
 
+  subtasks    Subtask[]
+  timeEntries TimeEntry[]
+
+  // Uma cópia de cada rotina por dia. Sem isto, dois carregamentos simultâneos
+  // do /dia materializavam o mesmo template duas vezes e a lista aparecia
+  // duplicada, sem nada acusando o erro. No Postgres nulo não conflita com
+  // nulo, então templates (dayId nulo) e tarefas avulsas (templateId nulo)
+  // continuam livres.
+  @@unique([dayId, templateId])
   @@index([dayId])
   @@index([businessId])
   @@index([projectId])
@@ -112,10 +154,70 @@ model Task {
   @@index([type, dayId])
 }
 
+enum TaskStatus {
+  A_FAZER
+  INICIADA
+  PAUSADA
+  AGUARDANDO
+  TRAVADA
+  COM_ANSIEDADE
+  CONCLUIDA
+}
+
+// Em que pé está uma tarefa de negócio (produção, coleção, prospecção). É o
+// mesmo vocabulário de TaskStatus, sem CONCLUIDA: nessas tabelas "feita" já tem
+// dono (`done` ou ProductionStatus.CONCLUIDO). Coluna própria porque o status
+// de produção é reescrito sozinho (PRAZO_PERDIDO) e levaria o "pausei" junto.
+enum TaskProgress {
+  A_FAZER
+  INICIADA
+  PAUSADA
+  AGUARDANDO
+  TRAVADA
+  COM_ANSIEDADE
+}
+
 enum TaskType {
   ROTINA_NORMAL
   ROTINA_FAXINA
   AVULSA
+}
+
+// Quebra de uma tarefa em passos menores. Pertence a exatamente uma tarefa — do
+// dia a dia, de produção ou de coleção. Os três lados são opcionais aqui porque
+// o Prisma não tem relação polimórfica; quem garante o "exatamente um" é o
+// schema da API.
+model Subtask {
+  id        String   @id @default(cuid())
+  title     String
+  done      Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  // Etapa do passo (Roteiro, Gravação, Edição...) — só as tarefas de produção
+  // dos clientes usam. É texto livre de propósito: renomear uma etapa é trocar
+  // o nome nos passos dela, e os passos antigos continuam com nulo ("sem etapa").
+  stage String?
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  productionTaskId String?
+  productionTask   ProductionTask? @relation(fields: [productionTaskId], references: [id], onDelete: Cascade)
+
+  collectionTaskId String?
+  collectionTask   CollectionTask? @relation(fields: [collectionTaskId], references: [id], onDelete: Cascade)
+
+  // Etapas do próprio post do cronograma (Roteiro, Gravação, Edição, Legenda...).
+  // O post é o item único do calendário: as etapas moram dentro dele, sem criar
+  // uma tarefa de produção paralela com o mesmo nome.
+  contentPostId String?
+  contentPost   ContentPost? @relation(fields: [contentPostId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, order])
+  @@index([productionTaskId, order])
+  @@index([collectionTaskId, order])
+  @@index([contentPostId, order])
 }
 
 // AGENDA
@@ -142,6 +244,10 @@ model Event {
   dayId String?
   day   Day?    @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
+  /// O encontro do coven que criou este evento, quando foi o caso. O lado
+  /// dono da relação é o CovenMeeting.
+  covenMeeting CovenMeeting?
+
   @@index([dayId])
   @@index([date])
   @@index([syncStatus])
@@ -158,6 +264,8 @@ model GoogleAuth {
   id           String   @id @default(cuid())
   // E-mail da conta conectada, lido do calendário primário na conexão.
   email        String?
+  // Os dois cifrados (ver lib/crypto.ts): com eles em mãos qualquer um lê e
+  // escreve na agenda. Quem decripta é o getAuthClient, em lib/google-calendar.
   accessToken  String   @db.Text
   refreshToken String   @db.Text
   expiresAt    DateTime
@@ -189,23 +297,170 @@ enum EventCategory {
   ACE
   CREATIVE
   SAUDE
+  ESPIRITUAL
   OUTRO
+}
+
+// CONTROLE DE HORAS — categorias de atividade e blocos de tempo do dia.
+// Categoria é tabela (não enum) porque a usuária cria as suas: começa com um
+// conjunto padrão (ver lib/time-tracking.ts) e pode adicionar mais depois.
+model ActivityCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6366F1")
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  timeBlocks  TimeBlock[]
+  timeEntries TimeEntry[]
+}
+
+// Bloco planejado: "das 9h às 11h vou trabalhar". Horário como "HH:mm", igual
+// ao Event — é só exibido, não precisa virar instante real.
+model TimeBlock {
+  id        String   @id @default(cuid())
+  title     String?
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+
+  dayId String
+  day   Day    @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   ActivityCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([dayId])
+  @@index([categoryId])
+}
+
+// Tempo realmente gasto. `startedAt`/`endedAt` são instantes reais (não só
+// "HH:mm") para o cronômetro medir duração de verdade; `endedAt` nulo é o
+// registro em andamento — só um por vez (garantido pela rota de start).
+model TimeEntry {
+  id        String    @id @default(cuid())
+  title     String?
+  startedAt DateTime
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  dayId String
+  day   Day    @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   ActivityCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  // Estilo Toggl: `title` é a linha do que foi feito; `description` é o detalhe.
+  // Projeto e tarefa dizem "o que da Ace" — são opcionais e, se o projeto ou a
+  // tarefa sumirem, o registro fica (só perde o vínculo).
+  description      String?
+  projectId        String?
+  project          Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  taskId           String?
+  task             Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  // As tarefas da página do projeto ("Tarefas e posts") moram em ProductionTask,
+  // não em Task. Um registro aponta para uma ou para a outra, nunca as duas.
+  productionTaskId String?
+  productionTask   ProductionTask? @relation(fields: [productionTaskId], references: [id], onDelete: SetNull)
+  /// Nasceu de um ciclo de foco do pomodoro: encerra sozinho quando o tempo acaba.
+  pomodoro         Boolean         @default(false)
+
+  @@index([dayId])
+  @@index([categoryId])
+  @@index([endedAt])
+  @@index([projectId])
+  @@index([taskId])
+  @@index([productionTaskId])
+}
+
+// Configuração do pomodoro. Uma linha só (id "default"): o app tem uma usuária,
+// e guardar no banco faz a configuração acompanhar o celular e o computador.
+model PomodoroSettings {
+  id                    String   @id @default("default")
+  focusMinutes          Int      @default(25)
+  shortBreakMinutes     Int      @default(5)
+  longBreakMinutes      Int      @default(15)
+  cyclesBeforeLongBreak Int      @default(4)
+  autoStartBreaks       Boolean  @default(true)
+  autoStartFocus        Boolean  @default(false)
+  sound                 Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
 }
 
 // CARDÁPIO E RECEITAS
 model Recipe {
-  id          String         @id @default(cuid())
-  title       String
-  description String?
-  category    RecipeCategory
-  ingredients String
-  steps       String
-  prepTime    Int?
-  imageUrl    String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  mealPlans   MealPlan[]
-  mealLogs    MealLog[]
+  id              String             @id @default(cuid())
+  title           String
+  description     String?
+  // Lista, não valor único: a mesma receita serve de almoço e de janta, ou de
+  // café e de lanche. A grade usa isto só para sugerir, não para restringir.
+  categories      RecipeCategory[]   @default([])
+  // Texto livre que existia antes dos itens ligados à despensa. Fica opcional
+  // para as receitas antigas continuarem legíveis até serem convertidas.
+  ingredientsText String?
+  // Opcional: "frango frito" não precisa de passo a passo para existir.
+  steps           String?
+  prepTime        Int?
+  imageUrl        String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  mealPlans       MealPlan[]
+  mealLogs        MealLog[]
+  items           RecipeIngredient[]
+}
+
+// DESPENSA
+// Um ingrediente existe uma vez só e é compartilhado entre receitas: é isso
+// que permite marcar "tem em casa" num lugar e ver, em cada receita e na
+// semana planejada, o que falta comprar.
+model Ingredient {
+  id         String             @id @default(cuid())
+  name       String             @unique
+  inStock    Boolean            @default(false)
+  // O tipo é o que diz ao sorteio o que é proteína (frango, carne, ovo...).
+  kind       IngredientKind     @default(OUTRO)
+  // Básico que sempre tem (sal, óleo, alho): nunca conta como faltando.
+  alwaysHave Boolean            @default(false)
+  notes      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  recipes    RecipeIngredient[]
+  mealPlans  MealPlan[]
+}
+
+enum IngredientKind {
+  PROTEINA
+  CARBOIDRATO
+  LEGUME_VERDURA
+  LATICINIO
+  TEMPERO_BASICO
+  OUTRO
+}
+
+// Papel do ingrediente no prato. PRECISA bloqueia; OPCAO forma o grupo
+// "escolha um" (macarrão com carne moída OU frango OU atum: basta um em casa);
+// OPCIONAL é o "se tiver", que nunca impede de fazer.
+enum IngredientRole {
+  PRECISA
+  OPCAO
+  OPCIONAL
+}
+
+model RecipeIngredient {
+  id           String         @id @default(cuid())
+  recipeId     String
+  recipe       Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient     @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  // Texto livre ("2 xícaras", "a gosto"): quantidade estruturada não paga a
+  // conversão de unidade que exigiria.
+  quantity     String?
+  role         IngredientRole @default(PRECISA)
+  position     Int            @default(0)
+
+  @@unique([recipeId, ingredientId])
+  @@index([ingredientId])
 }
 
 enum RecipeCategory {
@@ -218,13 +473,16 @@ enum RecipeCategory {
 }
 
 model MealPlan {
-  id        String   @id @default(cuid())
-  weekStart DateTime
-  dayOfWeek Int
-  mealType  MealType
-  createdAt DateTime @default(now())
-  recipeId  String?
-  recipe    Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  id                 String      @id @default(cuid())
+  weekStart          DateTime
+  dayOfWeek          Int
+  mealType           MealType
+  createdAt          DateTime    @default(now())
+  recipeId           String?
+  recipe             Recipe?     @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  // Qual opção do "escolha um" ficou para este horário ("macarrão com frango").
+  optionIngredientId String?
+  optionIngredient   Ingredient? @relation(fields: [optionIngredientId], references: [id], onDelete: SetNull)
 
   @@unique([weekStart, dayOfWeek, mealType])
   @@index([recipeId])
@@ -381,13 +639,22 @@ model Transaction {
   category   TransactionCategory
   payMethod  PayMethod?
   notes      String?
+  /// Só faz sentido em ENTRADA: `false` é dinheiro previsto que ainda não caiu
+  /// na conta. Previsão não entra no saldo do mês — só depois de marcada.
+  /// Saída nasce `true`, o campo é ignorado nela.
+  received   Boolean             @default(true)
   createdAt  DateTime            @default(now())
   businessId String?
   business   Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
 
+  // Preenchida quando a transação é o pagamento de uma fatura (lançado junto
+  // com o "marcar como paga"), para desmarcar conseguir desfazer o lançamento.
+  paidInvoice CreditCardInvoice?
+
   @@index([date])
   @@index([type, date])
   @@index([businessId])
+  @@index([type, received])
 }
 
 enum TransactionType {
@@ -414,6 +681,7 @@ enum TransactionCategory {
   ALIMENTACAO
   CUSTO_OPERACIONAL
   CARTAO_CREDITO
+  BELEZA
   OUTRO
 }
 
@@ -425,15 +693,20 @@ enum PayMethod {
 }
 
 model FixedBill {
-  id          String         @id @default(cuid())
-  name        String
-  amount      Float
-  dueDay      Int
-  type        FixedBillType
-  active      Boolean        @default(true)
-  notes       String?
-  createdAt   DateTime       @default(now())
-  monthlyLogs FixedBillLog[]
+  id            String         @id @default(cuid())
+  name          String
+  amount        Float
+  dueDay        Int
+  type          FixedBillType
+  // Conta paga no cartão entra sozinha na fatura do mês — não precisa (nem deve)
+  // ter um CreditCardEntry manual, senão o valor conta duas vezes.
+  paymentMethod PayMethod      @default(PIX_DEBITO)
+  active        Boolean        @default(true)
+  notes         String?
+  createdAt     DateTime       @default(now())
+  monthlyLogs   FixedBillLog[]
+
+  @@index([active, paymentMethod])
 }
 
 enum FixedBillType {
@@ -443,15 +716,18 @@ enum FixedBillType {
 }
 
 model FixedBillLog {
-  id          String     @id @default(cuid())
-  month       Int
-  year        Int
+  id             String     @id @default(cuid())
+  month          Int
+  year           Int
   // Data real do vencimento naquele mês (gerada a partir de FixedBill.dueDay).
-  dueDate     DateTime
-  status      BillStatus @default(PENDENTE)
-  paidAt      DateTime?
-  fixedBillId String
-  fixedBill   FixedBill  @relation(fields: [fixedBillId], references: [id], onDelete: Cascade)
+  dueDate        DateTime
+  status         BillStatus @default(PENDENTE)
+  // Valor só daquele mês, quando difere do padrão da conta (reajuste, consumo
+  // variável). Nulo = usa FixedBill.amount.
+  amountOverride Float?
+  paidAt         DateTime?
+  fixedBillId    String
+  fixedBill      FixedBill  @relation(fields: [fixedBillId], references: [id], onDelete: Cascade)
 
   @@unique([fixedBillId, month, year])
   @@index([year, month, status])
@@ -472,6 +748,35 @@ model CreditCard {
   dueDay     Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+/// Fatura de um mês. Só existe a partir do momento em que é paga — mês sem
+/// linha aqui é fatura em aberto. É ela que responde "essa fatura foi paga?":
+/// as assinaturas cobradas no cartão não têm status próprio, elas seguem o
+/// status da fatura, porque não são pagas separadamente.
+model CreditCardInvoice {
+  id         String        @id @default(cuid())
+  month      Int
+  year       Int
+  status     InvoiceStatus @default(ABERTA)
+  paidAt     DateTime?
+  /// O quanto de fato saiu — pode diferir do total da fatura (pagamento
+  /// parcial, valor mínimo).
+  paidAmount Float?
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  paymentTransactionId String?      @unique
+  paymentTransaction   Transaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
+
+  @@unique([month, year])
+  @@index([status])
+}
+
+enum InvoiceStatus {
+  ABERTA
+  PAGA
 }
 
 // Compra parcelada: agrupa as parcelas espalhadas pelas faturas.
@@ -507,9 +812,17 @@ model CreditCardEntry {
   purchaseId   String?
   purchase     CreditCardPurchase? @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
 
+  // Parcelamento em campos próprios: `installment` é só o rótulo "2/6", que a
+  // projeção não consegue somar nem ordenar. Preenchidos junto com `purchaseId`
+  // (o grupo é o id da compra), então uma parcela se identifica sem JOIN.
+  installmentGroupId String?
+  installmentNumber  Int?
+  installmentTotal   Int?
+
   @@index([invoiceYear, invoiceMonth])
   @@index([businessId])
   @@index([purchaseId])
+  @@index([installmentGroupId])
 }
 
 model FinancialRecord {
@@ -545,6 +858,10 @@ model Business {
   color       String   @default("#6366F1")
   icon        String?
   active      Boolean  @default(true)
+  /// Aparecer na navegação lateral. Separado de `active` de propósito: um
+  /// negócio fora do menu continua valendo em toda parte (lançar transação,
+  /// abrir pedido, filtrar ideia) — só não ocupa linha na barra.
+  showInNav   Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -557,6 +874,73 @@ model Business {
   ideas               Idea[]
   contentPosts        ContentPost[]
   productionTasks     ProductionTask[]
+  modules             BusinessModule[]
+  orders              Order[]
+  collections         Collection[]
+  wishlistItems       WishlistItem[]
+  credentials         BusinessCredential[]
+  products            Product[]
+
+  // Pilares da Central de Visão que este negócio alimenta. Um negócio pode
+  // mexer com mais de uma área da vida (ex.: tarô é pessoal e financeiro).
+  pillars       Pillar[]
+  measuredGoals MeasuredGoal[]
+
+  cover BusinessCover?
+}
+
+/// Capa do negócio (a imagem do topo, como no Notion), em data URL JPEG.
+/// Tabela à parte para a imagem não vir junto em toda consulta de negócio.
+model BusinessCover {
+  businessId String   @id
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  image      String
+  updatedAt  DateTime @updatedAt
+}
+
+// Mesma ponte do ProjectCredential, um nível acima: senhas do negócio inteiro
+// (Instagram da marca, banco, ferramentas) que não são de um projeto só.
+model BusinessCredential {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  passwordEntryId String
+  passwordEntry   PasswordEntry @relation(fields: [passwordEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, passwordEntryId])
+  @@index([businessId])
+  @@index([passwordEntryId])
+}
+
+// Funcionalidades ligadas por negócio: as abas da página do negócio saem daqui,
+// na ordem gravada. Desativar um módulo só esconde a aba — nenhum dado é apagado.
+model BusinessModule {
+  id        String     @id @default(cuid())
+  module    ModuleType
+  active    Boolean    @default(true)
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, module])
+  @@index([businessId, order])
+}
+
+enum ModuleType {
+  CRONOGRAMA // posts, stories, reels
+  PRODUCAO // tarefas de edição, arte, site
+  CLIENTES // gestão de clientes
+  PROJETOS // projetos internos e de cliente
+  PEDIDOS // controle de pedidos (loja)
+  COLECOES // coleções sazonais de produtos
+  FINANCEIRO // visão financeira do negócio
+  SENHAS // credenciais do negócio, vindas do cofre
+  FEED // prévia do perfil do Instagram de cada cliente
 }
 
 model Project {
@@ -566,8 +950,13 @@ model Project {
   status      ProjectStatus @default(EM_ANDAMENTO)
   startDate   DateTime?
   endDate     DateTime?
+  // Projeto do próprio negócio, sem cliente do outro lado.
+  isInternal  Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  // Documentação livre do projeto (markdown): briefing, anotações, combinados.
+  content String?
 
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -578,8 +967,106 @@ model Project {
   contentPosts    ContentPost[]
   productionTasks ProductionTask[]
 
+  documents   ProjectDocument[]
+  credentials ProjectCredential[]
+  priceTable  ProjectPriceItem[]
+  devLog      ProjectLogEntry[]
+  timeEntries TimeEntry[]
+  // A ideia de onde o projeto saiu, quando saiu de uma.
+  idea        Idea?
+
   @@index([businessId])
   @@index([clientId])
+}
+
+// Links e arquivos do projeto: briefing no Drive, protótipo no Figma, contrato.
+model ProjectDocument {
+  id        String       @id @default(cuid())
+  title     String
+  url       String
+  type      DocumentType @default(LINK)
+  notes     String?
+  order     Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+enum DocumentType {
+  LINK
+  DRIVE
+  FIGMA
+  BRIEFING
+  CONTRATO
+  OUTRO
+}
+
+// Diário de desenvolvimento: uma entrada por coisa que aconteceu no projeto
+// (funcionalidade nova, correção, lançamento, decisão). A `content` do projeto
+// continua sendo o "o que é" do sistema; aqui fica a história dele.
+model ProjectLogEntry {
+  id        String     @id @default(cuid())
+  date      DateTime   @default(now())
+  kind      DevLogKind @default(FUNCIONALIDADE)
+  title     String
+  body      String?
+  // Versão em que saiu, ex.: "1.4.0". Livre, sem formato obrigatório.
+  version   String?
+  // Link do commit, PR ou deploy.
+  url       String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, date])
+}
+
+enum DevLogKind {
+  FUNCIONALIDADE
+  MELHORIA
+  CORRECAO
+  LANCAMENTO
+  DECISAO
+  NOTA
+}
+
+// Ponte para o cofre de senhas: a senha continua morando só no PasswordEntry,
+// aqui fica apenas o vínculo com o projeto.
+model ProjectCredential {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  passwordEntryId String
+  passwordEntry   PasswordEntry @relation(fields: [passwordEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, passwordEntryId])
+  @@index([projectId])
+  @@index([passwordEntryId])
+}
+
+// Tabela de preços combinada para o projeto.
+model ProjectPriceItem {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  // Ex.: "por post", "mensal", "por hora".
+  unit        String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 enum ProjectStatus {
@@ -596,13 +1083,61 @@ model Client {
   phone         String?
   instagram     String?
   notes         String?
+  /// Nicho de atuação ("odontologia", "moda feminina"…). Texto livre: serve pra
+  /// filtrar e agrupar prospects na lista de clientes.
+  niche         String?
+  /// Cor da clienta no calendário e nos cards do Ace. Nula = cor automática,
+  /// derivada do nome (ver lib/client-visuals.ts) — assim cada uma já nasce
+  /// diferente das outras sem ninguém precisar escolher.
+  color         String?
+  /// Foto de perfil como data URL (JPEG já reduzido no navegador, ~256px). Nula =
+  /// bolinha com as iniciais. Fica no banco pra não depender de storage externo.
+  photo         String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   businessLinks ClientBusiness[]
   projects      Project[]
 
+  whatsappChats   WhatsappChat[]
   contentPosts    ContentPost[]
   productionTasks ProductionTask[]
+
+  instagramProfile    InstagramProfile?
+  instagramHighlights InstagramHighlight[]
+}
+
+// FEED — prévia do perfil do Instagram da cliente antes de publicar.
+
+/// Cabeçalho do perfil como aparece no app. Um por cliente; tudo opcional,
+/// porque a prévia já funciona com o que tiver (vazio mostra "—" ou some).
+model InstagramProfile {
+  clientId       String   @id
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  handle         String?
+  displayName    String?
+  category       String?
+  bio            String?
+  link           String?
+  /// Data URL JPEG 256px. Nula = usa a foto da cliente (`Client.photo`).
+  photo          String?
+  postsCount     Int?
+  followersCount Int?
+  followingCount Int?
+  updatedAt      DateTime @updatedAt
+}
+
+/// Destaque dos stories. A capa é pequena (256px), mora na própria linha.
+model InstagramHighlight {
+  id        String   @id @default(cuid())
+  name      String
+  cover     String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, order])
 }
 
 model ClientBusiness {
@@ -615,17 +1150,92 @@ model ClientBusiness {
   clientId   String
   client     Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
+  /// Pipeline de prospecção. Só faz sentido enquanto `status = PROSPECT`, mas o
+  /// valor fica gravado depois de virar cliente ou de ser perdido — assim dá
+  /// pra medir de onde vêm os fechamentos sem precisar de outra tabela.
+  prospectStage  ProspectStage?
+  source         LeadSource?
+  nextFollowUpAt DateTime?
+  lastContactAt  DateTime?
+  proposalValue  Float?
+  lostReason     String?
+
+  prospectTasks ProspectTask[]
+  prospectNotes ProspectNote[]
+
   @@unique([clientId, businessId])
   @@index([businessId, status])
+  @@index([businessId, nextFollowUpAt])
+}
+
+/// Passo do checklist de prospecção de um vínculo. Aparece também nas tarefas do
+/// dia (como produção e coleção), por isso tem prazo, prioridade e estimativa.
+/// `key` marca os passos padrão: concluir um deles move a etapa e o último contato.
+model ProspectTask {
+  id               String         @id @default(cuid())
+  title            String
+  key              String?
+  done             Boolean        @default(false)
+  progress         TaskProgress   @default(A_FAZER)
+  dueDate          DateTime?
+  scheduledDate    DateTime?
+  order            Int            @default(0)
+  createdAt        DateTime       @default(now())
+  completedAt      DateTime?
+  estimateMinutes  Int?
+  priorityLevelId  String?
+  priorityLevel    PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  clientBusinessId String
+  clientBusiness   ClientBusiness @relation(fields: [clientBusinessId], references: [id], onDelete: Cascade)
+
+  @@index([clientBusinessId, order])
+  @@index([priorityLevelId])
+  @@index([dueDate, done])
+}
+
+/// Anotação do que foi identificado no prospect (NOTA) ou registro automático de
+/// mudança de etapa (EVENTO). Juntas formam a linha do tempo.
+model ProspectNote {
+  id               String         @id @default(cuid())
+  text             String
+  kind             String         @default("NOTA")
+  createdAt        DateTime       @default(now())
+  clientBusinessId String
+  clientBusiness   ClientBusiness @relation(fields: [clientBusinessId], references: [id], onDelete: Cascade)
+
+  @@index([clientBusinessId, createdAt])
 }
 
 enum ClientStatus {
+  PROSPECT
   ATIVO
   PAUSADO
   INATIVO
 }
 
-// ACE — CRONOGRAMA DE CONTEÚDO E PRODUÇÃO
+/// Etapas do pipeline de prospecção de um `ClientBusiness`. As quatro primeiras
+/// são as colunas do quadro; GANHO/PERDIDO são o desfecho — quando chegam lá o
+/// `status` já mudou para ATIVO/INATIVO e o cartão sai do quadro sozinho.
+enum ProspectStage {
+  NOVO_CONTATO
+  CONTATO_FEITO
+  PROPOSTA_ENVIADA
+  NEGOCIACAO
+  GANHO
+  PERDIDO
+}
+
+enum LeadSource {
+  INDICACAO
+  PROSPECCAO_ATIVA
+  INSTAGRAM
+  SITE
+  EVENTO
+  OUTRO
+}
+
+// CRONOGRAMA DE CONTEÚDO E PRODUÇÃO
+// Sempre de um negócio; `clientId` nulo = conteúdo interno do próprio negócio.
 model ContentPost {
   id          String        @id @default(cuid())
   title       String
@@ -634,22 +1244,76 @@ model ContentPost {
   status      ContentStatus @default(PLANEJADO)
   publishDate DateTime?
   completedAt DateTime?
+
+  // O post como tarefa no Dia, igual à produção: em que pé está (iniciei,
+  // pausei...), quando ela vai fazer (antes da publicação), prioridade e
+  // quanto tempo deve levar. `status` continua sendo o do cronograma.
+  progress        TaskProgress   @default(A_FAZER)
+  scheduledDate   DateTime?
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  estimateMinutes Int?
   caption     String?
   notes       String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  // Conteúdo mais rico que vem de fora (hoje, o gerador externo de
+  // cronograma de conteúdo) — nulo pra post criado à mão no biaVerso.
+  pilar        ContentPilar?
+  objective    String?
+  hook         String?
+  cta          String?
+  hashtags     String[]      @default([])
+  slides       Json?
+  script       Json?
+  visualBrief  Json?
+  storySupport String?
+
+  /// Fixado no topo do perfil. A data, e não um booleano, porque o Instagram
+  /// mostra os fixados na ordem em que foram fixados.
+  pinnedAt    DateTime?
+  /// Posts que formam uma imagem juntos no grid (o trio). Mesmo id = mesmo
+  /// conjunto; o Feed avisa quando o alinhamento vai quebrar.
+  gridGroupId String?
+  cover       ContentPostCover?
+  subtasks    Subtask[]
+
+  // Origem de um import externo. `externalSource` + `externalId` juntos
+  // identificam o post lá fora, pra reimportar atualizar em vez de duplicar.
+  externalSource String?
+  externalId     String?
+
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  clientId   String
-  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   projectId  String?
   project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
+  @@unique([businessId, externalSource, externalId])
   @@index([businessId, status])
   @@index([businessId, publishDate])
   @@index([clientId])
   @@index([projectId])
+  @@index([priorityLevelId])
+}
+
+/// Capa do post no Feed, em data URL JPEG 4:5 (1080x1350). Tabela à parte,
+/// como a capa do negócio: o calendário e o kanban listam posts sem `select`.
+model ContentPostCover {
+  postId    String      @id
+  post      ContentPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  image     String
+  updatedAt DateTime    @updatedAt
+}
+
+enum ContentPilar {
+  AUTORIDADE
+  PROVA
+  OFERTA
+  HUMANO
+  CONVERSA
 }
 
 enum PostType {
@@ -672,33 +1336,51 @@ enum SocialNetwork {
 enum ContentStatus {
   PLANEJADO
   EM_CRIACAO
+  /// Pronto, esperando a cliente aprovar. Aprovado = a cliente já aprovou.
+  AGUARDANDO_APROVACAO
   APROVADO
   PUBLICADO
   CANCELADO
+  // Gravado sozinho quando a data de publicação passa de uma semana sem o post
+  // sair (ver `syncMissedDeadlines`). Conta como aberto: ainda dá para publicar.
+  PRAZO_PERDIDO
 }
 
+// `clientId` nulo = tarefa interna do próprio negócio.
 model ProductionTask {
-  id          String           @id @default(cuid())
-  title       String
-  type        ProductionType
-  description String?
-  priority    Priority         @default(NORMAL)
-  status      ProductionStatus @default(A_FAZER)
-  dueDate     DateTime?
-  completedAt DateTime?
-  notes       String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id            String           @id @default(cuid())
+  title         String
+  type          ProductionType
+  description   String?
+  priority      Priority         @default(NORMAL)
+  status        ProductionStatus @default(A_FAZER)
+  progress      TaskProgress     @default(A_FAZER)
+  dueDate       DateTime?
+  scheduledDate DateTime?
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  clientId   String
-  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   projectId  String?
   project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
+  // Prioridade (lista editável em Configurações) e quanto tempo a tarefa deve
+  // levar — é o que permite ordenar o dia por "o que faço primeiro".
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  estimateMinutes Int?
+
+  subtasks    Subtask[]
+  timeEntries TimeEntry[]
+
   @@index([businessId, status])
   @@index([businessId, dueDate])
+  @@index([priorityLevelId])
   @@index([dueDate, status])
   @@index([clientId])
   @@index([projectId])
@@ -724,6 +1406,298 @@ enum ProductionStatus {
   AGUARDANDO_APROVACAO
   CONCLUIDO
   CANCELADO
+  // Gravado sozinho quando o prazo passa de uma semana sem a tarefa ser feita
+  // (ver `syncMissedTaskDeadlines`). Conta como aberta: ainda dá para fazer.
+  PRAZO_PERDIDO
+}
+
+// LOJA — PEDIDOS E COLEÇÕES (módulos PEDIDOS e COLECOES)
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String?
+  customerName    String
+  customerContact String?
+  // Derivados dos itens, gravados: o kanban e a visão geral do negócio leem
+  // dezenas de pedidos e não podem somar item por item a cada tela. Quem
+  // mantém os dois em dia é a API, sempre que os itens mudam.
+  totalAmount     Float       @default(0)
+  totalCost       Float       @default(0)
+  status          OrderStatus @default(PENDENTE)
+  orderDate       DateTime    @default(now())
+  dueDate         DateTime?
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  items OrderItem[]
+
+  @@index([businessId, status])
+  @@index([businessId, dueDate])
+  @@index([collectionId])
+}
+
+// Uma linha do pedido.
+//
+// Nome, preço e custo ficam CONGELADOS aqui, copiados no dia do pedido. Sem
+// isso, reajustar a caneca em janeiro reescreveria o lucro de um pedido de
+// dezembro que já foi pago — o histórico deixaria de ser histórico. As ligações
+// com produto e peça existem só para rastrear a origem, e podem sumir sem levar
+// a linha junto.
+model OrderItem {
+  id        String   @id @default(cuid())
+  name      String
+  quantity  Int      @default(1)
+  unitPrice Float
+  unitCost  Float    @default(0)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  collectionProductId String?
+  collectionProduct   CollectionProduct? @relation(fields: [collectionProductId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([collectionProductId])
+}
+
+enum OrderStatus {
+  PENDENTE
+  EM_PRODUCAO
+  PRONTO
+  ENVIADO
+  ENTREGUE
+  CANCELADO
+}
+
+model Collection {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  season      String?
+  status      CollectionStatus @default(IDEIA)
+  launchDate  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  products CollectionProduct[]
+  orders   Order[]
+  tasks    CollectionTask[]
+
+  @@index([businessId, status])
+}
+
+// Tarefas da coleção: costurar, fotografar, montar o lookbook.
+model CollectionTask {
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  done          Boolean      @default(false)
+  progress      TaskProgress @default(A_FAZER)
+  dueDate       DateTime?
+  scheduledDate DateTime?
+  order         Int          @default(0)
+  createdAt     DateTime     @default(now())
+  completedAt   DateTime?
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  estimateMinutes Int?
+
+  subtasks Subtask[]
+
+  @@index([collectionId, order])
+  @@index([priorityLevelId])
+  // As tarefas do dia varrem por prazo em aberto.
+  @@index([dueDate, done])
+}
+
+// Níveis de prioridade das tarefas (Alta, Média, Baixa...). Lista da própria
+// usuária, editável em Configurações — nada de enum fixo. Apagar um nível não
+// apaga tarefa: ela só volta a ficar sem prioridade (SetNull).
+model PriorityLevel {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#6366F1")
+  // Menor = mais urgente: é a chave de ordenação da tabela do dia.
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  productionTasks ProductionTask[]
+  collectionTasks CollectionTask[]
+  prospectTasks   ProspectTask[]
+  studyLessons    StudyLesson[]
+  conceptualGoals ConceptualGoal[]
+  contentPosts    ContentPost[]
+}
+
+enum CollectionStatus {
+  IDEIA
+  EM_DESENVOLVIMENTO
+  PRONTA
+  LANCADA
+  ENCERRADA
+}
+
+// CENTRAL DE PRODUTOS — o catálogo de produtos personalizados.
+//
+// Vale para todos os negócios de propósito: a mesma caneca é vendida pela
+// Creative, pela Alternative Space e pela EntreMundos. Antes cada coleção
+// recadastrava o produto do zero, então "Caneca Rick" e "Caneca Ostara" eram
+// dois cadastros sem relação e o custo se perdia — subiu o preço do blank,
+// nenhuma margem do app ficava certa.
+//
+// Aqui mora a BASE (o item físico e o que custa produzir uma unidade). A arte
+// aplicada e o preço daquela temporada ficam no CollectionProduct.
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  // Agrupador livre para filtrar a lista: "Canecas", "Vestuário", "Decoração".
+  category     String?
+  imageUrl     String?
+  // Preço de venda padrão. Cada coleção pode sobrescrever.
+  basePrice    Float?
+  // Margem desejada deste produto, em %. Sem valor, usa a das configurações.
+  targetMargin Float?
+  active       Boolean  @default(true)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Nulo = produto disponível para qualquer negócio (o caso normal).
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  costItems       ProductCostItem[]
+  collectionItems CollectionProduct[]
+  orderItems      OrderItem[]
+
+  @@index([active, name])
+  @@index([businessId])
+}
+
+// BIBLIOTECA DE INSUMOS
+//
+// O que você compra em pacote e gasta por peça: papel transfer, tinta, fita,
+// caixa. O preço fica guardado como você compra de verdade — R$120 o pacote de
+// 50 — e o app divide para achar o custo por unidade.
+//
+// Existe para o reajuste ser um lugar só: subiu o pacote de transfer, todo
+// produto que usa transfer recalcula a margem sozinho. Sem isso, o mesmo número
+// estaria copiado à mão em oito produtos e nenhum ficaria certo por muito tempo.
+model Material {
+  id           String   @id @default(cuid())
+  name         String
+  // A unidade que o produto consome: "folha", "metro", "ml", "un".
+  unit         String?
+  // Como você compra: preço do pacote e quantas unidades vêm nele.
+  packPrice    Float
+  packQuantity Float    @default(1)
+  supplier     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  // Quando o preço foi mexido pela última vez — insumo com preço velho é a
+  // causa mais comum de margem errada.
+  updatedAt    DateTime @updatedAt
+
+  costItems ProductCostItem[]
+
+  @@index([name])
+}
+
+// Cada linha do custo de um produto: o blank, a impressão, a embalagem, o seu
+// tempo, a taxa da maquininha. Lista aberta em vez de campos fixos porque cada
+// produto tem uma composição diferente — chinelo não tem sublimação de caneca.
+model ProductCostItem {
+  id        String          @id @default(cuid())
+  label     String
+  kind      ProductCostKind @default(MATERIAL)
+  mode      ProductCostMode @default(FIXO)
+  // O que `amount` significa depende do modo: reais (FIXO), porcentagem do
+  // preço de venda (PERCENTUAL), minutos de trabalho (TEMPO) ou quantas
+  // unidades do insumo a peça consome (INSUMO).
+  amount    Float
+  order     Int             @default(0)
+  createdAt DateTime        @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Só no modo INSUMO. Restrict: apagar um insumo em uso zeraria em silêncio o
+  // custo de todo produto que depende dele — a API avisa e manda desfazer antes.
+  materialId String?
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: Restrict)
+
+  @@index([productId, order])
+  @@index([materialId])
+}
+
+enum ProductCostKind {
+  MATERIAL // o blank: a caneca crua, a almofada, a camiseta
+  IMPRESSAO // sublimação, DTF, transfer, tinta
+  EMBALAGEM
+  MAO_DE_OBRA
+  FRETE
+  TAXA // maquininha, marketplace, imposto
+  OUTRO
+}
+
+enum ProductCostMode {
+  FIXO // R$ por unidade
+  PERCENTUAL // % do preço de venda — taxa de maquininha, comissão de marketplace
+  TEMPO // minutos × valor/hora das configurações
+  INSUMO // quantidade × custo unitário de um Material da biblioteca
+}
+
+// O produto dentro de uma coleção: a base do catálogo + a arte daquela peça.
+//
+// Sem unique em (collectionId, productId): a mesma caneca aparece várias vezes
+// na coleção, uma por arte ("Caneca Rick", "Caneca Morty").
+model CollectionProduct {
+  id          String   @id @default(cuid())
+  // Nome da peça nesta coleção ("Caneca Rick"). Vazio = usa o nome da base.
+  name        String?
+  description String?
+  imageUrl    String?
+  notes       String?
+  // Preço nesta coleção. Nulo = herda o basePrice do produto, então reajustar
+  // a base propaga para todas as coleções que não pediram preço próprio.
+  price       Float?
+  // Custo que só existe nesta peça: arte exclusiva, tag bordada, embalagem
+  // especial. Soma ao custo da base em vez de substituí-lo.
+  extraCost   Float?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  orderItems OrderItem[]
+
+  @@index([collectionId, order])
+  @@index([productId])
 }
 
 // BIBLIOTECA DE LIVROS
@@ -751,17 +1725,103 @@ enum BookStatus {
   ABANDONADO
 }
 
-// BIBLIOTECA DE CONHECIMENTO
+// BIBLIOTECA DE CONHECIMENTO — também o controle do que falta/está sendo estudado.
 model Knowledge {
-  id        String        @id @default(cuid())
-  title     String
-  source    String?
-  type      KnowledgeType
-  area      KnowledgeArea
-  summary   String?
-  link      String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id         String               @id @default(cuid())
+  title      String
+  source     String?
+  type       KnowledgeType
+  area       KnowledgeArea
+  status     KnowledgeStudyStatus @default(QUERO_ESTUDAR)
+  summary    String?
+  link       String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  /// Assunto a que o material pertence. Nulo = material solto, como sempre foi.
+  subjectId  String?
+  subject    StudySubject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@index([subjectId])
+}
+
+// ESTUDOS: Área → Assunto → Curso → Aula.
+// A área é criada por ela (não é enum) para a lista crescer sem mexer no código.
+// O enum KnowledgeArea acima continua só nos materiais soltos antigos.
+model StudyArea {
+  id        String         @id @default(cuid())
+  name      String
+  emoji     String?
+  color     String?
+  order     Int            @default(0)
+  subjects  StudySubject[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model StudySubject {
+  id          String               @id @default(cuid())
+  areaId      String
+  area        StudyArea            @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  status      KnowledgeStudyStatus @default(QUERO_ESTUDAR)
+  order       Int                  @default(0)
+  courses     StudyCourse[]
+  materials   Knowledge[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([areaId])
+}
+
+model StudyCourse {
+  id         String               @id @default(cuid())
+  subjectId  String
+  subject    StudySubject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title      String
+  /// Quem ensina.
+  instructor String?
+  /// Onde fazer: Udemy, YouTube, Alura...
+  platform   String?
+  link       String?
+  notes      String?
+  status     KnowledgeStudyStatus @default(QUERO_ESTUDAR)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  lessons    StudyLesson[]
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@index([subjectId])
+}
+
+model StudyLesson {
+  id              String         @id @default(cuid())
+  courseId        String
+  course          StudyCourse    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title           String
+  link            String?
+  /// O que aprendeu nessa aula.
+  notes           String?
+  order           Int            @default(0)
+  done            Boolean        @default(false)
+  completedAt     DateTime?
+  /// Dia em que ela quer fazer a aula.
+  scheduledDate   DateTime?
+  /// Prazo máximo para terminar.
+  dueDate         DateTime?
+  /// Mesmos dois campos das outras tarefas do Dia a dia: ordem e tempo.
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
+  estimateMinutes Int?
+  createdAt       DateTime       @default(now())
+
+  @@index([courseId])
+  @@index([priorityLevelId])
+  @@index([scheduledDate])
+  @@index([dueDate])
 }
 
 enum KnowledgeType {
@@ -773,12 +1833,81 @@ enum KnowledgeType {
   OUTRO
 }
 
+enum KnowledgeStudyStatus {
+  QUERO_ESTUDAR
+  ESTUDANDO
+  ESTUDADO
+  PAUSADO
+  ABANDONADO
+}
+
 enum KnowledgeArea {
   MARKETING
   PROGRAMACAO
   ESPIRITUALIDADE
   DESIGN
   NEGOCIOS
+  SAUDE
+  OUTRO
+}
+
+// LISTA DE DESEJOS
+//
+// "Para o que é" tem dois eixos, porque uma coisa só não responde: `businessId`
+// diz de quem é a vontade (nulo = pessoal/casa, o mesmo padrão do resto do app)
+// e `category` diz que tipo de coisa é. Um notebook da Ace e um notebook seu
+// são o mesmo tipo de item com destinos diferentes.
+model WishlistItem {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  /// Link da loja onde viu.
+  url         String?
+  imageUrl    String?
+  /// Quanto custa, para saber o tamanho da lista. Nem todo desejo tem preço.
+  price       Float?
+  priority    WishPriority @default(QUERO)
+  status      WishStatus   @default(DESEJADO)
+  category    WishCategory @default(OUTRO)
+  /// Quando quer ter (aniversário, viagem, prazo de um projeto).
+  targetDate  DateTime?
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  /// Preenchidos ao marcar como comprado — o preço pago pode não ser o previsto.
+  boughtAt    DateTime?
+  boughtPrice Float?
+
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([status, priority])
+  @@index([businessId])
+  @@index([category])
+}
+
+enum WishPriority {
+  ESSENCIAL
+  QUERO
+  ALGUM_DIA
+}
+
+enum WishStatus {
+  DESEJADO
+  COMPRADO
+  DESCARTADO
+}
+
+enum WishCategory {
+  EQUIPAMENTO
+  SOFTWARE
+  CASA
+  ROUPA
+  BELEZA
+  LIVRO_CURSO
+  PRESENTE
+  VIAGEM
   SAUDE
   OUTRO
 }
@@ -795,6 +1924,11 @@ model Idea {
   businessId  String?
   business    Business?  @relation(fields: [businessId], references: [id], onDelete: SetNull)
 
+  // O projeto que nasceu desta ideia ("Virou projeto"). Único: uma ideia vira
+  // um projeto só. Apagar o projeto não apaga a ideia, só desfaz o vínculo.
+  projectId String?  @unique
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
   @@index([businessId])
 }
 
@@ -805,18 +1939,22 @@ enum IdeaStatus {
   ARQUIVADA
 }
 
-// COFRE DE SENHAS (v1 sem criptografia)
-// TODO: encrypt in v2
+// COFRE DE SENHAS
 model PasswordEntry {
   id        String           @id @default(cuid())
   name      String
   login     String?
+  // Cifrada (AES-256-GCM, ver lib/crypto.ts): o valor aqui é "v1:iv:tag:cifra".
+  // Só passa por lib/passwords.ts para voltar a ser legível.
   password  String
   url       String?
   category  PasswordCategory @default(OUTRO)
   notes     String?
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+
+  projectLinks  ProjectCredential[]
+  businessLinks BusinessCredential[]
 }
 
 enum PasswordCategory {
@@ -832,18 +1970,25 @@ enum PasswordCategory {
 
 // PILARES — grandes áreas da vida
 model Pillar {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
   description String?
-  color       String   @default("#6366F1")
+  color       String       @default("#6366F1")
   icon        String?
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  order       Int          @default(0)
+  // Como no Notion: pilar ativo/pausado e se é da vida pessoal ou de um negócio.
+  status      PillarStatus @default(ATIVO)
+  kind        PillarKind   @default(PESSOAL)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   conceptualGoals ConceptualGoal[]
+  // Negócios que alimentam este pilar (ex.: Empreendedorismo → Ace, Creative).
+  // Muitos-para-muitos: o mesmo negócio pode estar em vários pilares.
+  businesses      Business[]
   moodboardItems  MoodboardItem[]
   desires         Desire[]
+  brainstormItems BrainstormItem[]
   principles      Principle[]
 }
 
@@ -863,29 +2008,59 @@ model Principle {
 
 // OBJETIVOS CONCEITUAIS — o que quer ser/ter/sentir
 model ConceptualGoal {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   title       String
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // Mesmo conjunto de estados do objetivo metrificado.
+  status      MeasuredGoalStatus @default(EM_ANDAMENTO)
+  // Texto livre: Negócios, Estudo, Saúde... (select do Notion).
+  category    String?
+  // O que atrapalha: "ter constância nas postagens".
+  challenge   String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // A lista de prioridades é a mesma das tarefas (Configurações).
+  priorityLevelId String?
+  priorityLevel   PriorityLevel? @relation(fields: [priorityLevelId], references: [id], onDelete: SetNull)
 
   pillarId      String
   pillar        Pillar         @relation(fields: [pillarId], references: [id], onDelete: Cascade)
   measuredGoals MeasuredGoal[]
+  // Rascunhos do despejo que viraram este objetivo.
+  brainstormItems BrainstormItem[]
 
   @@index([pillarId])
+  @@index([priorityLevelId])
 }
 
 // OBJETIVOS METRIFICADOS — versão mensurável com prazo
 model MeasuredGoal {
-  id        String             @id @default(cuid())
-  title     String
-  target    String?
-  deadline  DateTime?
-  status    MeasuredGoalStatus @default(EM_ANDAMENTO)
-  progress  Int                @default(0)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id           String             @id @default(cuid())
+  title        String
+  // `target` (texto) e `progress` (0–100 à mão) só valem para objetivo sem meta
+  // numérica; com `targetValue`, o progresso é currentValue ÷ targetValue.
+  target       String?
+  deadline     DateTime?
+  status       MeasuredGoalStatus @default(EM_ANDAMENTO)
+  progress     Int                @default(0)
+  term         GoalTerm?
+  targetValue  Float?
+  currentValue Float              @default(0)
+  // R$, seguidores, palavras...
+  unit         String?
+  // O que ficou de lição ao encerrar — principalmente quando não foi atingido.
+  lesson       String?
+  // Dia (fuso do app, meia-noite UTC) em que saiu do ciclo: Concluído, Não
+  // atingido ou Cancelado. É o que põe a meta na avaliação do mês/trimestre.
+  closedAt     DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  // Item do despejo do ano que virou esta meta, se houver.
+  brainstormItem BrainstormItem?
+
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
 
   conceptualGoalId String
   conceptualGoal   ConceptualGoal @relation(fields: [conceptualGoalId], references: [id], onDelete: Cascade)
@@ -893,11 +2068,33 @@ model MeasuredGoal {
 
   @@index([conceptualGoalId])
   @@index([status])
+  @@index([businessId])
+  @@index([closedAt])
+}
+
+enum PillarStatus {
+  ATIVO
+  PAUSADO
+}
+
+enum PillarKind {
+  PESSOAL
+  NEGOCIO
+}
+
+enum GoalTerm {
+  JA
+  CURTO_PRAZO
+  MEDIO_PRAZO
+  LONGO_PRAZO
 }
 
 enum MeasuredGoalStatus {
+  NAO_INICIADO
   EM_ANDAMENTO
   CONCLUIDO
+  // Prazo acabou sem bater a meta. Diferente de CANCELADO (desistiu no meio).
+  NAO_ATINGIDO
   PAUSADO
   CANCELADO
 }
@@ -912,6 +2109,8 @@ model Desire {
 
   pillarId String?
   pillar   Pillar? @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  // Item do despejo do ano que virou este desejo, se houver.
+  brainstormItem BrainstormItem?
 
   @@index([pillarId])
 }
@@ -935,4 +2134,650 @@ enum MoodboardType {
   IMAGEM
   PALAVRA
   FRASE
+}
+
+// PREFERÊNCIAS DO APP — registro único (id fixo USER_SETTINGS_ID).
+model UserSettings {
+  id           String   @id
+  // Quantas garrafas/copos por dia e quantos ml cada um tem.
+  waterGoal    Int      @default(8)
+  waterUnitMl  Int      @default(300)
+  // Quanto vale uma hora do seu trabalho — vira o custo dos itens em modo
+  // TEMPO. Nulo = você ainda não definiu, e o app avisa em vez de contar zero.
+  hourlyRate   Float?
+  // Margem de lucro desejada, em %. Base do preço sugerido no catálogo.
+  targetMargin Float    @default(60)
+  /// Cor de destaque do app, em hexadecimal. As variações (fundo do item
+  /// selecionado, hover do botão, cor do texto por cima) saem desta.
+  accentColor  String   @default("#6366f1")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// BELEZA E AUTOCUIDADO
+//
+// Três ritmos diferentes, por isso três modelos em vez de um só:
+// rotina = todo dia; cronograma = ciclo que gira (capilar); cuidado = a cada N dias.
+
+// ROTINAS DIÁRIAS (skincare manhã/noite, cuidados diários)
+model CareRoutine {
+  id        String      @id @default(cuid())
+  name      String
+  timeOfDay RoutineTime
+  active    Boolean     @default(true)
+  order     Int         @default(0)
+  // Passos marcáveis um a um, ou lista numerada só de leitura. É por rotina:
+  // a do banho quer checklist, a de maquiagem pode ser só uma ordem para ler.
+  checklist Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  steps CareRoutineStep[]
+  logs  CareRoutineLog[]
+
+  @@index([active, order])
+}
+
+enum RoutineTime {
+  MANHA
+  NOITE
+  QUALQUER
+}
+
+// PASSOS DE UMA ROTINA (ex: 1. limpar, 2. tônico, 3. sérum)
+model CareRoutineStep {
+  id    String  @id @default(cuid())
+  title String
+  notes String?
+  order Int     @default(0)
+
+  routineId String
+  routine   CareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   BeautyProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  logs CareRoutineStepLog[]
+
+  @@index([routineId, order])
+  @@index([productId])
+}
+
+// REGISTRO DIÁRIO DE PASSO CUMPRIDO
+// Separado do log da rotina porque "3 de 5" é o estado normal no meio da
+// manhã: a rotina só fica feita quando todos os passos estão marcados.
+model CareRoutineStepLog {
+  id   String   @id @default(cuid())
+  done Boolean  @default(false)
+  date DateTime
+
+  stepId String
+  step   CareRoutineStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@unique([stepId, date])
+  @@index([date])
+}
+
+// REGISTRO DIÁRIO DE ROTINA CUMPRIDA
+// `date` é meia-noite UTC do dia, como todo dia-calendário do app.
+model CareRoutineLog {
+  id   String   @id @default(cuid())
+  done Boolean  @default(false)
+  date DateTime
+
+  routineId String
+  routine   CareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@unique([routineId, date])
+  @@index([date])
+}
+
+// CRONOGRAMAS COM CICLO (capilar, etc)
+model CareSchedule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  // Índice do passo atual no ciclo — anda sozinho a cada etapa registrada e
+  // volta a zero no fim, então o ciclo gira sem precisar de data fixa.
+  currentStep Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  steps CareScheduleStep[]
+  logs  CareScheduleLog[]
+
+  @@index([active])
+}
+
+// PASSOS DO CICLO (ex: hidratação → nutrição → reconstrução)
+model CareScheduleStep {
+  id           String  @id @default(cuid())
+  title        String
+  description  String?
+  order        Int     @default(0)
+  intervalDays Int     @default(7)
+
+  scheduleId String
+  schedule   CareSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   BeautyProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  logs CareScheduleLog[]
+
+  @@index([scheduleId, order])
+  @@index([productId])
+}
+
+// REGISTRO DE ETAPA DO CICLO REALIZADA
+model CareScheduleLog {
+  id        String   @id @default(cuid())
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  scheduleId String
+  schedule   CareSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // Cascade também aqui: sem o passo, a linha do histórico não diz mais o que
+  // foi feito. Restrict (o padrão) só faria a exclusão do passo falhar com P2003.
+  stepId String
+  step   CareScheduleStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId, date])
+  @@index([stepId])
+}
+
+// CUIDADOS AGENDADOS (unhas, cabelo, depilação)
+model CareAppointment {
+  id           String    @id @default(cuid())
+  name         String
+  type         CareType
+  intervalDays Int
+  lastDoneAt   DateTime?
+  // Derivado de lastDoneAt + intervalDays. Fica gravado para a lista poder
+  // ordenar e filtrar por vencimento direto no banco.
+  nextDueAt    DateTime?
+  notes        String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  logs CareAppointmentLog[]
+
+  @@index([active, nextDueAt])
+}
+
+enum CareType {
+  UNHAS
+  CABELO
+  DEPILACAO
+  SOBRANCELHA
+  ESTETICA
+  MASSAGEM
+  OUTRO
+}
+
+// HISTÓRICO DE CUIDADOS REALIZADOS
+model CareAppointmentLog {
+  id        String   @id @default(cuid())
+  date      DateTime
+  cost      Float?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  appointmentId String
+  appointment   CareAppointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId, date])
+}
+
+// PRODUTOS DE BELEZA
+model BeautyProduct {
+  id        String          @id @default(cuid())
+  name      String
+  brand     String?
+  category  ProductCategory
+  openedAt  DateTime?
+  // Calculado a partir de openedAt + pao quando os dois existem; também pode
+  // ser preenchido na mão para produto com validade impressa.
+  expiresAt DateTime?
+  // Period After Opening em meses (o "12M" do potinho).
+  pao       Int?
+
+  finished   Boolean   @default(false)
+  finishedAt DateTime?
+  // Marcado na mão quando o produto está no fim — é o que alimenta o card
+  // "quase acabando", já que o app não tem como medir o que sobrou no pote.
+  runningLow Boolean   @default(false)
+  cost       Float?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  routineSteps  CareRoutineStep[]
+  scheduleSteps CareScheduleStep[]
+
+  @@index([finished, category])
+  @@index([expiresAt])
+  @@index([runningLow])
+}
+
+enum ProductCategory {
+  SKINCARE_LIMPEZA
+  SKINCARE_TRATAMENTO
+  SKINCARE_HIDRATACAO
+  SKINCARE_PROTECAO
+  CABELO_SHAMPOO
+  CABELO_CONDICIONADOR
+  CABELO_MASCARA
+  CABELO_FINALIZADOR
+  CORPO
+  MAQUIAGEM
+  UNHAS
+  OUTRO
+}
+
+// ESPIRITUAL — coven, estudo e prática
+//
+// A Roda do Ano e as fases da lua NÃO estão aqui: são conta, não dado. Ficam
+// em lib/astros.ts, calculadas na hora. Gravar a data de um sabbath numa
+// tabela seria guardar algo que o próprio app sabe deduzir, com o risco de
+// envelhecer errado.
+
+// ENCONTROS — do coven inteiro ou a sós com a mestre.
+model CovenMeeting {
+  id       String           @id @default(cuid())
+  title    String
+  kind     CovenMeetingKind @default(COVEN)
+  date     DateTime
+  time     String?
+  endTime  String?
+  place    String?
+  /// O que ela quer tratar, escrito antes: dúvidas, o que levar.
+  agenda   String?
+  /// O que ficou depois — o que foi dito, o que ela sentiu.
+  notes    String?
+  /// Nulo enquanto o encontro não chegou; depois, se foi ou não.
+  attended Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// O mesmo compromisso na Agenda. É por ele que o encontro chega ao Google
+  /// Calendar: o módulo não fala com o Google, só cria o Evento e deixa a
+  /// sincronização que já existe fazer o resto.
+  eventId String? @unique
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  studies SpiritualStudy[]
+
+  @@index([date])
+}
+
+enum CovenMeetingKind {
+  COVEN
+  MESTRE
+  RITUAL_COLETIVO
+  AULA
+  OUTRO
+}
+
+// TEXTOS E EXERCÍCIOS — o material de estudo e o que tem prazo de entrega.
+model SpiritualStudy {
+  id     String      @id @default(cuid())
+  title  String
+  kind   StudyKind   @default(TEXTO)
+  status StudyStatus @default(A_FAZER)
+
+  /// Quando o material foi passado.
+  receivedAt    DateTime?
+  /// O prazo da entrega final — é o que o painel vigia.
+  dueDate       DateTime?
+  scheduledDate DateTime?
+  deliveredAt   DateTime?
+
+  /// O material em si: o texto, ou o enunciado do exercício.
+  content String?
+  /// As anotações dela — a resposta do exercício, o que entendeu do texto.
+  notes   String?
+  link    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// O encontro em que isto foi passado, quando veio de um.
+  meetingId String?
+  meeting   CovenMeeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+
+  @@index([status, dueDate])
+  @@index([meetingId])
+}
+
+enum StudyKind {
+  TEXTO
+  EXERCICIO
+  LEITURA
+  PRATICA
+  PESQUISA
+  OUTRO
+}
+
+enum StudyStatus {
+  A_FAZER
+  EM_ANDAMENTO
+  FEITO
+  ENTREGUE
+}
+
+// DIÁRIO DE RITUAIS E FEITIÇOS
+//
+// A fase da lua não é gravada: sai da data em lib/astros.ts. Guardar a fase
+// junto abriria a chance de o registro dizer "lua cheia" numa data que não era.
+model RitualLog {
+  id    String     @id @default(cuid())
+  title String
+  date  DateTime
+  kind  RitualKind @default(RITUAL)
+
+  /// Para que foi feito.
+  intention String?
+  /// Ervas, velas, cristais, palavras — o que entrou.
+  elements  String?
+  /// Como foi na hora.
+  notes     String?
+  /// O que veio depois. Fica vazio no dia e é preenchido semanas mais tarde —
+  /// é justamente esse intervalo que dá sentido ao registro.
+  outcome   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+enum RitualKind {
+  RITUAL
+  FEITICO
+  MEDITACAO
+  OFERENDA
+  BANHO
+  SABBAT
+  ESBAT
+  OUTRO
+}
+
+// TIRAGENS — tarô, oráculos, runas.
+model Divination {
+  id     String           @id @default(cuid())
+  date   DateTime
+  method DivinationMethod @default(TAROT)
+  /// Qual baralho ou oráculo foi usado.
+  deck   String?
+
+  question String?
+  /// O nome da tiragem: três cartas, cruz celta, o que for.
+  spread   String?
+  /// As cartas que saíram, na ordem em que saíram.
+  cards    String[]
+  reading  String?
+  /// O que se confirmou depois — o mesmo intervalo do RitualLog.
+  outcome  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+enum DivinationMethod {
+  TAROT
+  ORACULO
+  RUNAS
+  PENDULO
+  BUZIOS
+  OUTRO
+}
+
+// ALTAR — ervas, cristais, velas e ferramentas que ela tem em casa.
+model AltarItem {
+  id         String        @id @default(cuid())
+  name       String
+  category   AltarCategory @default(ERVA)
+  /// Quanto tem, em texto: "meio pote", "3 velas brancas". Número não serviria
+  /// para erva a granel, e a régua aqui é o olho, não a balança.
+  quantity   String?
+  /// Marcado na mão quando está no fim — o app não tem como medir o pote.
+  runningLow Boolean       @default(false)
+  /// Para que serve: proteção, prosperidade, limpeza.
+  properties String?
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, name])
+  @@index([runningLow])
+}
+
+enum AltarCategory {
+  ERVA
+  CRISTAL
+  VELA
+  INCENSO
+  OLEO
+  FERRAMENTA
+  BARALHO
+  IMAGEM
+  OUTRO
+}
+
+// CICLO — registro menstrual, no espírito de um app tipo Flo.
+//
+// Só o fato do dia mora aqui: fluxo, sintomas, humor. Fase do ciclo, previsão
+// da próxima menstruação, ovulação e janela fértil são conta a partir do
+// histórico — o mesmo princípio de lib/astros.ts para a lua. Gravar a previsão
+// junto arriscaria mostrar uma data que não bate mais assim que um ciclo novo
+// muda a média; quem calcula é lib/ciclo-shared.ts, na hora.
+model CycleLog {
+  id        String         @id @default(cuid())
+  date      DateTime       @unique
+  /// Nulo = sem sangramento registrado no dia (só sintoma e/ou humor).
+  flow      CycleFlow?
+  symptoms  CycleSymptom[] @default([])
+  mood      CycleMood?
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([date])
+}
+
+enum CycleFlow {
+  BORRIFO
+  LEVE
+  MODERADO
+  INTENSO
+}
+
+enum CycleSymptom {
+  COLICA
+  DOR_CABECA
+  INCHACO
+  SENSIBILIDADE_MAMAS
+  ACNE
+  CANSACO
+  ENJOO
+  DOR_COSTAS
+  INSONIA
+  APETITE_AUMENTADO
+  LIBIDO_ALTA
+  OUTRO
+}
+
+enum CycleMood {
+  OTIMO
+  BEM
+  NORMAL
+  IRRITADA
+  SENSIVEL
+  ANSIOSA
+  TRISTE
+}
+
+/// Ordem de execução que ela montou arrastando as tarefas na tabela "Tarefas em
+/// andamento" do dia a dia. As tarefas moram em tabelas diferentes (produção,
+/// coleção, prospecção, aula, estudo), então o vínculo é por `kind` + `taskId`,
+/// sem chave estrangeira — igual ao `DayFocus`. Tarefa sem linha aqui fica na
+/// ordem automática (prioridade, depois prazo), depois das que ela posicionou.
+model WorkTaskOrder {
+  id       String @id @default(cuid())
+  kind     String
+  taskId   String
+  position Int
+
+  @@unique([kind, taskId])
+}
+
+/// Conversa do WhatsApp lida pelo robô (só leitura: o robô nunca envia nada).
+/// `jid` é o identificador do WhatsApp (número@s.whatsapp.net ou id@g.us).
+/// `awaitingSince` é o instante da primeira mensagem recebida que ainda não foi
+/// respondida; fica nulo assim que ela responde. É guardado aqui, e não derivado
+/// das mensagens, para o quadro "Esperando você" não precisar varrer o histórico.
+model WhatsappChat {
+  id             String            @id @default(cuid())
+  jid            String            @unique
+  name           String
+  isGroup        Boolean           @default(false)
+  /// Conversa silenciada no robô: continua guardada, mas não entra no quadro.
+  ignored        Boolean           @default(false)
+  awaitingSince  DateTime?
+  lastMessageAt  DateTime?
+  lastIncomingAt DateTime?
+  lastOutgoingAt DateTime?
+  /// Vínculo opcional com um cliente/prospect já cadastrado.
+  clientId       String?
+  client         Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  messages       WhatsappMessage[]
+
+  @@index([ignored, awaitingSince])
+  @@index([lastMessageAt])
+  @@index([clientId])
+}
+
+/// Mensagem de texto de uma conversa. `text` é guardado cifrado (lib/crypto.ts,
+/// a mesma chave do cofre) porque contém conversa de terceiros. Mídia não é
+/// baixada: vira só a legenda, ou fica vazia.
+model WhatsappMessage {
+  id         String       @id @default(cuid())
+  /// Id da mensagem no WhatsApp; com o chat evita gravar a mesma duas vezes.
+  waId       String
+  chatId     String
+  chat       WhatsappChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  fromMe     Boolean
+  /// Quem mandou, dentro de grupo (nome de exibição). Nulo em conversa 1 a 1.
+  senderName String?
+  text       String
+  sentAt     DateTime
+  /// Marcada pelas regras do robô: cita o nome dela, um cliente, prazo, valor…
+  important  Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+
+  @@unique([chatId, waId])
+  @@index([chatId, sentAt])
+  @@index([sentAt])
+  @@index([important, sentAt])
+}
+
+// PLANEJAMENTO DO ANO — uma linha por ano. As partes de texto livre (retro,
+// intenções por pilar, datas) ficam em JSON: são anotações dela, não algo que
+// outra tela precise consultar campo a campo.
+model YearPlan {
+  id            String   @id @default(cuid())
+  year          Int      @unique
+  word          String?
+  // { deuCerto, naoDeuCerto, aprendi }
+  retro         Json     @default("{}")
+  // { [pillarId]: "o que quero conquistar nesse pilar" }
+  pillarNotes   Json     @default("{}")
+  // [{ id, date: "2027-03-14", title }]
+  dates         Json     @default("[]")
+  incomeTarget  Float?
+  savingsTarget Float?
+  budgetNotes   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/// Despejo do planejamento do ano: tudo o que está na cabeça, um item por
+/// linha, separado depois em Foco (vira meta), Desejo, Depois ou Soltar.
+model BrainstormItem {
+  id        String              @id @default(cuid())
+  year      Int
+  text      String
+  // Nulo = ainda não separado.
+  decision  BrainstormDecision?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  pillarId String?
+  pillar   Pillar? @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+
+  // O que o item virou. Apagar a meta/desejo só desfaz o vínculo.
+  measuredGoalId String?       @unique
+  measuredGoal   MeasuredGoal? @relation(fields: [measuredGoalId], references: [id], onDelete: SetNull)
+  desireId       String?       @unique
+  desire         Desire?       @relation(fields: [desireId], references: [id], onDelete: SetNull)
+  // Virou só o objetivo conceitual (a meta com número fica para depois).
+  // Vários rascunhos podem alimentar o mesmo objetivo.
+  conceptualGoalId String?
+  conceptualGoal   ConceptualGoal? @relation(fields: [conceptualGoalId], references: [id], onDelete: SetNull)
+
+  // Quando o item foi colocado no lugar (virou meta, desejo, objetivo ou foi
+  // marcado à mão como "já organizei"). Organizado sai da lista de rascunhos.
+  organizedAt DateTime?
+
+  // Item "Depois" de um ano trazido para o despejo do ano seguinte.
+  carriedFromId String?         @unique
+  carriedFrom   BrainstormItem? @relation("BrainstormCarry", fields: [carriedFromId], references: [id], onDelete: SetNull)
+  carriedTo     BrainstormItem? @relation("BrainstormCarry")
+
+  @@index([year])
+  @@index([pillarId])
+  @@index([conceptualGoalId])
+}
+
+enum BrainstormDecision {
+  FOCO
+  DESEJO
+  DEPOIS
+  SOLTAR
+}
+
+/// Registro de uso do próprio biaVerso: que tela ela abriu e o que salvou.
+/// Serve para a página "Uso do app" (/uso) dizer o que está parado, o que dá
+/// cliques demais e o que merece atalho. Guarda só o *lugar* (caminho com os
+/// ids trocados por ":id") e nunca o conteúdo: nada de valor, texto ou senha.
+model UsageEvent {
+  id        String   @id @default(cuid())
+  /// "view" (abriu uma tela) ou "action" (salvou, editou ou apagou algo).
+  kind      String
+  /// Tela ("/financeiro/transacoes") ou rota da API ("/api/transactions/:id").
+  path      String
+  /// POST, PATCH, PUT ou DELETE nas ações; nulo nas visitas.
+  method    String?
+  /// "mobile" ou "desktop".
+  device    String
+  /// Como ela chegou na tela: "barra", "menu", "busca", "link" ou "direto".
+  source    String?
+  /// Sessão da aba do navegador: liga as visitas em sequência para medir o
+  /// caminho até cada tela. Nulo nas ações.
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
 }

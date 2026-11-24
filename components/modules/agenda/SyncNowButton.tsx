@@ -57,7 +57,7 @@ export function SyncNowButton({
         <span
           className={cn(
             "text-xs",
-            state === "error" ? "text-red-600" : "text-text-secondary",
+            state === "error" ? "text-danger" : "text-text-secondary",
           )}
         >
           {message}

@@ -2,11 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
-import { Button, ErrorNote } from "@/components/ui";
+
+import {
+  Button,
+  ErrorNote,
+  Modal,
+  notify,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { productionTypeLabels, priorityLabels, productionStatusLabels } from "@/lib/labels";
-import type { ClientOption, ProjectOption } from "./ContentPostModal";
+import {
+  INTERNAL_CLIENT,
+  projectsForClient,
+  type ClientOption,
+  type ProjectOption,
+} from "./ContentPostModal";
+import { ClientOptions } from "./ClientOptions";
+import { StagedSteps } from "./StagedSteps";
+import { parseMinutes } from "@/lib/task-plan";
+import { usePriorityLevels } from "@/components/modules/tarefas/usePriorityLevels";
+import type { SubtaskItem } from "@/components/modules/tarefas/Subtasks";
 
 const typeOptions = Object.keys(productionTypeLabels);
 const priorityOptions = Object.keys(priorityLabels);
@@ -22,10 +37,63 @@ export type TaskRecord = {
   dueDate: string | null;
   completedAt: string | null;
   notes: string | null;
-  clientId: string;
+  /** Null = tarefa interna do próprio negócio. */
+  clientId: string | null;
   projectId: string | null;
+  priorityLevelId: string | null;
+  estimateMinutes: number | null;
+  subtasks: SubtaskItem[];
 };
-type TaskInitial = TaskRecord;
+
+/**
+ * Tarefa nova: ainda não tem id, então os passos ficam só na tela e seguem
+ * junto com a tarefa quando ela é salva.
+ */
+type DraftStep = { id: string; title: string; stage: string | null };
+
+function DraftSteps({
+  steps,
+  type,
+  onChange,
+}: {
+  steps: DraftStep[];
+  type: string;
+  onChange: (steps: DraftStep[]) => void;
+}) {
+  return (
+    <StagedSteps
+      steps={steps.map((s) => ({ ...s, done: false }))}
+      checkable={false}
+      type={type}
+      onAdd={(title, stage) => {
+        const trimmed = title.trim();
+        if (!trimmed) return false;
+        onChange([...steps, { id: crypto.randomUUID(), title: trimmed, stage: stage ?? null }]);
+        return true;
+      }}
+      onToggle={() => {}}
+      onRename={async (id, title) =>
+        onChange(steps.map((s) => (s.id === id ? { ...s, title } : s)))
+      }
+      onRemove={(id) => onChange(steps.filter((s) => s.id !== id))}
+      onRenameStage={async (from, to) => {
+        const target = to.trim();
+        if (target) onChange(steps.map((s) => (s.stage === from ? { ...s, stage: target } : s)));
+      }}
+      onApplyTemplate={(items) =>
+        onChange([
+          ...steps,
+          ...items.map((i) => ({ id: crypto.randomUUID(), title: i.title, stage: i.stage })),
+        ])
+      }
+    />
+  );
+}
+
+/** Texto puro quando o passo não tem etapa: é o que a API já aceitava. */
+function stepsPayload(steps: { title: string; stage?: string | null }[]) {
+  return steps.map((s) => (s.stage ? { title: s.title, stage: s.stage } : s.title));
+}
 
 function dateInputValue(date: string | Date | null) {
   if (!date) return "";
@@ -41,9 +109,9 @@ function todayInputValue() {
 }
 
 function mostRecentProjectId(projects: ProjectOption[], clientId: string) {
-  const clientProjects = projects
-    .filter((p) => p.clientId === clientId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const clientProjects = projectsForClient(projects, clientId).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
   return clientProjects[0]?.id ?? "";
 }
 
@@ -52,61 +120,54 @@ function emptyForm(
   projects: ProjectOption[],
   defaultClientId?: string,
   defaultProjectId?: string,
+  defaultDate?: string,
 ) {
-  const clientId = defaultClientId ?? clients[0]?.id ?? "";
+  const clientId = defaultClientId ?? clients[0]?.id ?? INTERNAL_CLIENT;
   return {
     title: "",
     type: typeOptions[0],
     description: "",
     priority: "NORMAL",
     status: "A_FAZER",
-    dueDate: "",
+    dueDate: defaultDate ?? "",
     completedAt: "",
     notes: "",
     clientId,
     projectId: defaultProjectId ?? mostRecentProjectId(projects, clientId),
+    priorityLevelId: "",
+    estimate: "",
   };
 }
 
-function formFromTask(task: TaskInitial) {
-  return {
-    title: task.title,
-    type: task.type,
-    description: task.description ?? "",
-    priority: task.priority,
-    status: task.status,
-    dueDate: dateInputValue(task.dueDate),
-    completedAt: dateInputValue(task.completedAt),
-    notes: task.notes ?? "",
-    clientId: task.clientId,
-    projectId: task.projectId ?? "",
-  };
-}
-
+/**
+ * Criar tarefa de produção. Editar uma que já existe é no painel lateral
+ * (`ProductionTaskPanel`), o mesmo do Dia — este modal ficou só para criar.
+ */
 export function ProductionTaskModal({
   businessId,
   clients,
   projects,
-  task,
   defaultClientId,
   defaultProjectId,
+  defaultDate,
   onClose,
 }: {
   businessId: string;
   clients: ClientOption[];
   projects: ProjectOption[];
-  task?: TaskInitial;
   defaultClientId?: string;
   defaultProjectId?: string;
+  /** "YYYY-MM-DD" — preenche o prazo ao criar a partir de um dia do calendário. */
+  defaultDate?: string;
   onClose: () => void;
 }) {
   const router = useRouter();
-  const isEdit = !!task;
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState(
-    task ? formFromTask(task) : emptyForm(clients, projects, defaultClientId, defaultProjectId),
+  const levels = usePriorityLevels();
+  const [draftSteps, setDraftSteps] = useState<DraftStep[]>([]);
+  const [form, setForm] = useState(() =>
+    emptyForm(clients, projects, defaultClientId, defaultProjectId, defaultDate),
   );
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -122,25 +183,35 @@ export function ProductionTaskModal({
     });
   }
 
-  const clientProjects = projects.filter((p) => p.clientId === form.clientId);
+  const clientProjects = projectsForClient(projects, form.clientId);
 
   async function handleSubmit() {
-    if (!form.title.trim() || !form.clientId) return;
+    if (!form.title.trim()) return;
+
+    const estimateMinutes = parseMinutes(form.estimate);
+    if (estimateMinutes === undefined) {
+      setError("Tempo inválido. Use algo como 45, 1h30 ou 2h.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     const payload = {
       ...form,
+      priorityLevelId: form.priorityLevelId || null,
+      estimateMinutes,
       businessId,
+      clientId: form.clientId || null,
       projectId: form.projectId || null,
       dueDate: form.dueDate || null,
       completedAt: form.completedAt || null,
     };
 
     try {
-      if (isEdit) await api.patch(`/api/ace/tasks/${task!.id}`, payload);
-      else await api.post("/api/ace/tasks", payload);
+      await api.post("/api/ace/tasks", { ...payload, steps: stepsPayload(draftSteps) });
       router.refresh();
+      notify("Salvo.");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -149,171 +220,166 @@ export function ProductionTaskModal({
     }
   }
 
-  async function handleDelete() {
-    if (!isEdit) return;
-    if (!confirm("Excluir esta tarefa de produção?")) return;
-    setDeleting(true);
-    setError(null);
-
-    try {
-      await api.delete(`/api/ace/tasks/${task!.id}`);
-      router.refresh();
-      onClose();
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Modal
+      title="Nova tarefa de produção"
+      size="md"
+      onClose={onClose}
+      onSubmit={handleSubmit}
     >
-      <div
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-lg bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
+
+      <input
+        placeholder="Título"
+        value={form.title}
+        onChange={(e) => update("title", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+
+      <select
+        value={form.type}
+        onChange={(e) => update("type", e.target.value)}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {isEdit ? "Editar tarefa" : "Nova tarefa de produção"}
-          </h3>
-          <button type="button" onClick={onClose}>
-            <X size={18} className="text-text-secondary" />
-          </button>
+        {typeOptions.map((t) => (
+          <option key={t} value={t}>
+            {productionTypeLabels[t]}
+          </option>
+        ))}
+      </select>
+
+      <textarea
+        placeholder="Descrição / briefing"
+        value={form.description}
+        onChange={(e) => update("description", e.target.value)}
+        rows={2}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+
+      <div>
+        <p className="mb-1 text-xs text-text-secondary">Passos</p>
+        <DraftSteps steps={draftSteps} type={form.type} onChange={setDraftSteps} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Prioridade</p>
+          <select
+            value={form.priorityLevelId}
+            onChange={(e) => update("priorityLevelId", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          >
+            <option value="">Sem prioridade</option>
+            {levels.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
         </div>
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Tempo estimado</p>
+          <input
+            value={form.estimate}
+            onChange={(e) => update("estimate", e.target.value)}
+            placeholder="Ex.: 45, 1h30, 2h"
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+      </div>
 
-        <input
-          placeholder="Título"
-          value={form.title}
-          onChange={(e) => update("title", e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-
+      <div className="grid grid-cols-2 gap-2">
         <select
-          value={form.type}
-          onChange={(e) => update("type", e.target.value)}
+          value={form.priority}
+          onChange={(e) => update("priority", e.target.value)}
+          aria-label="Urgência"
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
         >
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>
-              {productionTypeLabels[t]}
+          {priorityOptions.map((p) => (
+            <option key={p} value={p}>
+              {priorityLabels[p]}
             </option>
           ))}
         </select>
-
-        <textarea
-          placeholder="Descrição / briefing"
-          value={form.description}
-          onChange={(e) => update("description", e.target.value)}
-          rows={2}
+        <select
+          value={form.status}
+          onChange={(e) => update("status", e.target.value)}
           className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+        >
+          {/* Prazo perdido é gravado pelo sistema; só aparece quando já é o status. */}
+          {statusOptions
+            .filter((s) => s !== "PRAZO_PERDIDO" || form.status === s)
+            .map((s) => (
+            <option key={s} value={s}>
+              {productionStatusLabels[s]}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={form.priority}
-            onChange={(e) => update("priority", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            {priorityOptions.map((p) => (
-              <option key={p} value={p}>
-                {priorityLabels[p]}
-              </option>
-            ))}
-          </select>
-          <select
-            value={form.status}
-            onChange={(e) => update("status", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            {statusOptions.map((s) => (
-              <option key={s} value={s}>
-                {productionStatusLabels[s]}
-              </option>
-            ))}
-          </select>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Prazo máximo</p>
+          <input
+            type="date"
+            value={form.dueDate}
+            onChange={(e) => update("dueDate", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
         </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Prazo máximo</p>
-            <input
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => update("dueDate", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs text-text-secondary">Finalização</p>
-            <input
-              type="date"
-              value={form.completedAt}
-              onChange={(e) => update("completedAt", e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={form.clientId}
-            onChange={(e) => update("clientId", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={form.projectId}
-            onChange={(e) => update("projectId", e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value="">Sem projeto</option>
-            {clientProjects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <textarea
-          placeholder="Notas"
-          value={form.notes}
-          onChange={(e) => update("notes", e.target.value)}
-          rows={2}
-          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
-
-        <ErrorNote message={error} />
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={saving}>
-              Salvar
-            </Button>
-            <Button variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-          </div>
-          {isEdit && (
-            <Button
-              variant="ghost"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-red-600 hover:bg-red-50"
-            >
-              Excluir
-            </Button>
-          )}
+        <div>
+          <p className="mb-1 text-xs text-text-secondary">Finalização</p>
+          <input
+            type="date"
+            value={form.completedAt}
+            onChange={(e) => update("completedAt", e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          value={form.clientId}
+          onChange={(e) => update("clientId", e.target.value)}
+          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value={INTERNAL_CLIENT}>Projeto interno</option>
+          <ClientOptions clients={clients} />
+        </select>
+        <select
+          value={form.projectId}
+          onChange={(e) => update("projectId", e.target.value)}
+          className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value="">Sem projeto</option>
+          {clientProjects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <textarea
+        placeholder="Notas"
+        value={form.notes}
+        onChange={(e) => update("notes", e.target.value)}
+        rows={2}
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      />
+
+      <ErrorNote message={error} />
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <Button type="submit" disabled={saving}>
+            Salvar
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

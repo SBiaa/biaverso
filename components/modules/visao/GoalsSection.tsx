@@ -1,28 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { ChevronDown, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardTitle,
+  ErrorNote,
+  IconButton,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { cn } from "@/lib/utils";
-import { measuredGoalStatusLabels } from "@/lib/labels";
+import { cn, hexToRgba } from "@/lib/utils";
+import {
+  closedMeasuredGoalStatuses,
+  goalTermLabels,
+  measuredGoalStatusLabels,
+} from "@/lib/labels";
 import { formatDateBR } from "@/lib/utils";
+import { formatGoalValue, goalProgress } from "@/lib/vision-shared";
+import type { PriorityLevelDTO } from "@/lib/task-plan";
 import { ConceptualGoalFormModal } from "./ConceptualGoalFormModal";
-import { MeasuredGoalFormModal } from "./MeasuredGoalFormModal";
+import { RenewGoalModal } from "./RenewGoalModal";
+import {
+  MeasuredGoalFormModal,
+  type BusinessOption,
+  type MeasuredGoalInitial,
+} from "./MeasuredGoalFormModal";
 
-type MeasuredGoal = {
-  id: string;
-  title: string;
-  target: string | null;
-  deadline: string | null;
-  status: string;
-  progress: number;
-};
+type MeasuredGoal = MeasuredGoalInitial;
 
 type ConceptualGoal = {
   id: string;
   title: string;
   description: string | null;
+  status: string;
+  priorityLevelId: string | null;
+  category: string | null;
+  challenge: string | null;
   measuredGoals: MeasuredGoal[];
 };
 
@@ -34,25 +48,53 @@ function MeasuredGoalRow({
   goal,
   onChanged,
   onEdit,
+  onRenew,
   onDelete,
 }: {
   goal: MeasuredGoal;
   onChanged: (patch: Partial<MeasuredGoal>) => void;
   onEdit: () => void;
+  onRenew: () => void;
   onDelete: () => void;
 }) {
+  const percent = goalProgress(goal);
+  const hasNumericTarget = goal.targetValue !== null && goal.targetValue > 0;
+  // Encerrada fica como histórico: apagada, sem botão de renovar.
+  const closed = closedMeasuredGoalStatuses.includes(goal.status);
+
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+    <div className={cn("flex flex-col gap-2 rounded-md border border-border p-3", closed && "opacity-70")}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-text-primary">{goal.title}</p>
-          {goal.target && <p className="text-xs text-text-secondary">{goal.target}</p>}
+          <p className="text-xs text-text-secondary">
+            {hasNumericTarget
+              ? `${formatGoalValue(goal.currentValue, goal.unit)} de ${formatGoalValue(goal.targetValue!, goal.unit)}`
+              : goal.target}
+            {goal.term && (
+              <span>
+                {hasNumericTarget || goal.target ? " · " : ""}
+                {goalTermLabels[goal.term]}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          {!closed && (
+            <button
+              type="button"
+              onClick={onRenew}
+              title="Encerrar e criar a próxima meta"
+              aria-label="Renovar meta"
+              className="text-text-secondary hover:text-text-primary"
+            >
+              <RefreshCw size={14} />
+            </button>
+          )}
           <button type="button" onClick={onEdit} className="text-text-secondary hover:text-text-primary">
             <Pencil size={14} />
           </button>
-          <button type="button" onClick={onDelete} className="text-text-secondary hover:text-red-600">
+          <button type="button" onClick={onDelete} className="text-text-secondary hover:text-danger">
             <Trash2 size={14} />
           </button>
         </div>
@@ -61,12 +103,12 @@ function MeasuredGoalRow({
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
         <div
           className="h-full rounded-full bg-accent transition-all"
-          style={{ width: `${Math.min(100, Math.max(0, goal.progress))}%` }}
+          style={{ width: `${percent}%` }}
         />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary">
-        <span>{goal.progress}%</span>
+        <span>{percent}%</span>
         <span>{goal.deadline ? formatDateBR(new Date(goal.deadline)) : "Sem prazo"}</span>
         <select
           value={goal.status}
@@ -84,6 +126,44 @@ function MeasuredGoalRow({
           ))}
         </select>
       </div>
+
+      {goal.lesson && (
+        <p className="whitespace-pre-line border-t border-border pt-2 text-xs text-text-secondary">
+          <span className="font-medium text-text-primary">Aprendizado: </span>
+          {goal.lesson}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Status, prioridade, categoria e desafio do objetivo conceitual, em linha. */
+function ConceptualGoalMeta({
+  goal,
+  levels,
+}: {
+  goal: ConceptualGoal;
+  levels: PriorityLevelDTO[];
+}) {
+  const level = levels.find((l) => l.id === goal.priorityLevelId);
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="rounded-full bg-border px-2 py-0.5 font-medium text-text-secondary">
+        {measuredGoalStatusLabels[goal.status] ?? goal.status}
+      </span>
+      {level && (
+        <span
+          className="rounded-full px-2 py-0.5 font-medium"
+          style={{ backgroundColor: hexToRgba(level.color, 0.14), color: level.color }}
+        >
+          {level.name}
+        </span>
+      )}
+      {goal.category && <span className="text-text-secondary">{goal.category}</span>}
+      {goal.challenge && (
+        <span className="text-text-secondary">· Desafio: {goal.challenge}</span>
+      )}
     </div>
   );
 }
@@ -91,9 +171,13 @@ function MeasuredGoalRow({
 export function GoalsSection({
   pillarId,
   initialGoals,
+  levels,
+  businesses,
 }: {
   pillarId: string;
   initialGoals: ConceptualGoal[];
+  levels: PriorityLevelDTO[];
+  businesses: BusinessOption[];
 }) {
   const [goals, setGoals] = useState(initialGoals);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -105,6 +189,7 @@ export function GoalsSection({
     conceptualGoalId: string;
     goal: MeasuredGoal;
   } | null>(null);
+  const [renewing, setRenewing] = useState<MeasuredGoal | null>(null);
 
   async function refresh() {
     try {
@@ -164,7 +249,7 @@ export function GoalsSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Objetivos</h2>
+        <CardTitle>Objetivos</CardTitle>
         <Button variant="secondary" onClick={() => setCreatingConceptual(true)}>
           <Plus size={14} />
           Novo objetivo conceitual
@@ -192,33 +277,31 @@ export function GoalsSection({
                   }}
                   className="flex cursor-pointer items-center justify-between gap-2 text-left"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-text-primary">{goal.title}</p>
                     {goal.description && (
                       <p className="text-xs text-text-secondary">{goal.description}</p>
                     )}
+                    <ConceptualGoalMeta goal={goal} levels={levels} />
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
+                    <IconButton
                       onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingConceptual(goal);
+                      e.stopPropagation();
+                      setEditingConceptual(goal);
                       }}
-                      className="text-text-secondary hover:text-text-primary"
                     >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      type="button"
+                      <Pencil size={15} />
+                    </IconButton>
+                    <IconButton
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteConceptual(goal.id);
+                      e.stopPropagation();
+                      handleDeleteConceptual(goal.id);
                       }}
-                      className="text-text-secondary hover:text-red-600"
+                      tone="danger"
                     >
-                      <Trash2 size={14} />
-                    </button>
+                      <Trash2 size={15} />
+                    </IconButton>
                     <ChevronDown
                       size={16}
                       className={cn(
@@ -237,6 +320,7 @@ export function GoalsSection({
                         goal={measured}
                         onChanged={(patch) => patchMeasuredLocal(goal.id, measured.id, patch)}
                         onEdit={() => setEditingMeasured({ conceptualGoalId: goal.id, goal: measured })}
+                        onRenew={() => setRenewing(measured)}
                         onDelete={() => handleDeleteMeasured(goal.id, measured.id)}
                       />
                     ))}
@@ -276,6 +360,7 @@ export function GoalsSection({
       {creatingMeasuredFor && (
         <MeasuredGoalFormModal
           conceptualGoalId={creatingMeasuredFor}
+          businesses={businesses}
           mode="create"
           onClose={() => setCreatingMeasuredFor(null)}
           onSaved={refresh}
@@ -284,11 +369,15 @@ export function GoalsSection({
       {editingMeasured && (
         <MeasuredGoalFormModal
           conceptualGoalId={editingMeasured.conceptualGoalId}
+          businesses={businesses}
           mode="edit"
           initial={editingMeasured.goal}
           onClose={() => setEditingMeasured(null)}
           onSaved={refresh}
         />
+      )}
+      {renewing && (
+        <RenewGoalModal goal={renewing} onClose={() => setRenewing(null)} onRenewed={refresh} />
       )}
     </div>
   );

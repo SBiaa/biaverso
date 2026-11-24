@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
+import { useOptimisticValue } from "@/hooks/useOptimistic";
+import { api } from "@/lib/client-api";
 import { clientStatusLabels } from "@/lib/labels";
 
 const statusOptions = Object.keys(clientStatusLabels);
@@ -16,20 +16,10 @@ export function ClientStatusToggle({
   linkId,
   initialStatus,
 }: ClientStatusToggleProps) {
-  const [status, setStatus] = useState(initialStatus);
-  const [error, setError] = useState<string | null>(null);
+  const { value: status, error, update } = useOptimisticValue(initialStatus);
 
-  async function handleChange(value: string) {
-    const previous = status;
-    setError(null);
-    setStatus(value);
-
-    try {
-      await api.patch(`/api/client-business/${linkId}`, { status: value });
-    } catch (e) {
-      setStatus(previous);
-      setError(errorMessage(e));
-    }
+  function handleChange(next: string) {
+    update(next, () => api.patch(`/api/client-business/${linkId}`, { status: next }));
   }
 
   return (

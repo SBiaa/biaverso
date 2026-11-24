@@ -1,0 +1,81 @@
+import { Users } from "lucide-react";
+import { Badge, Card, CardTitle } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { formatWaiting, waitingTier, type WaitingTier } from "@/lib/whatsapp-shared";
+import type { WaitingChat } from "@/lib/whatsapp";
+
+const tierStyles: Record<WaitingTier, string> = {
+  ok: "text-text-secondary",
+  warn: "text-warning",
+  late: "text-danger",
+};
+
+function Row({ chat, now }: { chat: WaitingChat; now: number }) {
+  const waitingMs = now - chat.awaitingSince.getTime();
+  const tier = waitingTier(waitingMs);
+
+  return (
+    <li className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="truncate text-sm font-medium text-text-primary">
+            {chat.name}
+          </span>
+          {chat.clientName && chat.clientName !== chat.name ? (
+            <Badge>{chat.clientName}</Badge>
+          ) : null}
+          {chat.unansweredCount > 1 ? (
+            <span className="text-xs text-text-secondary">
+              {chat.unansweredCount} mensagens
+            </span>
+          ) : null}
+        </div>
+        {chat.lastText ? (
+          <p className="mt-0.5 line-clamp-2 text-sm text-text-secondary">
+            {chat.lastSenderName ? `${chat.lastSenderName}: ` : ""}
+            {chat.lastText}
+          </p>
+        ) : null}
+      </div>
+      <span
+        className={cn("shrink-0 text-sm font-medium tabular-nums", tierStyles[tier])}
+        title={`Sem resposta desde ${chat.awaitingSince.toLocaleString("pt-BR")}`}
+      >
+        {formatWaiting(waitingMs)}
+      </span>
+    </li>
+  );
+}
+
+export function WaitingList({
+  title,
+  chats,
+  now,
+  group,
+}: {
+  title: string;
+  chats: WaitingChat[];
+  now: number;
+  group?: boolean;
+}) {
+  return (
+    <Card>
+      <CardTitle className="mb-3 flex items-center gap-2">
+        {group ? <Users size={16} className="text-text-secondary" /> : null}
+        {title}
+        <span className="text-xs font-normal text-text-secondary">
+          {chats.length}
+        </span>
+      </CardTitle>
+      {chats.length === 0 ? (
+        <p className="text-sm text-text-secondary">Nada esperando aqui.</p>
+      ) : (
+        <ul className="divide-y divide-border/60">
+          {chats.map((chat) => (
+            <Row key={chat.id} chat={chat} now={now} />
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}

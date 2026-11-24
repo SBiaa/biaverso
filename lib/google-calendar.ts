@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import type { OAuth2Client } from "google-auth-library";
 import { prisma } from "@/lib/prisma";
+import { decrypt, encrypt } from "@/lib/crypto";
 import { APP_TIME_ZONE, parseDateOnly, toDateInputValue } from "@/lib/utils";
 
 /**
@@ -79,10 +80,16 @@ export async function getAuthClient(): Promise<OAuth2Client> {
   const auth = await prisma.googleAuth.findFirst();
   if (!auth) throw new GoogleNotConnectedError();
 
+  // Decriptados uma vez só, aqui em cima. O que veio do banco continua cifrado
+  // nas variáveis do `auth` — usar aquele valor como fallback lá embaixo
+  // cifraria de novo o que já estava cifrado, e o token viraria lixo.
+  const accessToken = decrypt(auth.accessToken);
+  const refreshToken = decrypt(auth.refreshToken);
+
   const oauth2Client = createOAuthClient();
   oauth2Client.setCredentials({
-    access_token: auth.accessToken,
-    refresh_token: auth.refreshToken,
+    access_token: accessToken,
+    refresh_token: refreshToken,
     expiry_date: auth.expiresAt.getTime(),
   });
 
@@ -95,9 +102,9 @@ export async function getAuthClient(): Promise<OAuth2Client> {
     await prisma.googleAuth.update({
       where: { id: auth.id },
       data: {
-        accessToken: credentials.access_token ?? auth.accessToken,
+        accessToken: encrypt(credentials.access_token ?? accessToken),
         // O Google só reenvia o refresh token de vez em quando; mantém o antigo quando não vem.
-        refreshToken: credentials.refresh_token ?? auth.refreshToken,
+        refreshToken: encrypt(credentials.refresh_token ?? refreshToken),
         expiresAt: credentials.expiry_date
           ? new Date(credentials.expiry_date)
           : new Date(Date.now() + 3_600_000),

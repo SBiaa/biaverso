@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseBody, route } from "@/lib/api";
 import { projectPatchSchema } from "@/lib/schemas";
+import { linkClientToBusiness } from "@/lib/ace";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,8 +20,17 @@ export const PATCH = route(async (request: Request, { params }: Params) => {
       status: patch.status,
       startDate: patch.startDate,
       endDate: patch.endDate,
+      content: patch.content,
+      clientId: patch.clientId,
+      isInternal: patch.isInternal,
     },
   });
+
+  // Trocar o cliente do projeto também o vincula a este negócio, pela mesma
+  // razão das tarefas: o cliente pode vir de outro negócio.
+  if (patch.clientId) {
+    await linkClientToBusiness(patch.clientId, project.businessId);
+  }
 
   return NextResponse.json(project);
 });

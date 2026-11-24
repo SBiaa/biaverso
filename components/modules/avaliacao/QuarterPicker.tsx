@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { IconButton } from "@/components/ui";
 
 type QuarterPickerProps = {
   quarter: number;
@@ -27,23 +28,21 @@ export function QuarterPicker({ quarter, year }: QuarterPickerProps) {
 
   return (
     <div className="flex items-center gap-3">
-      <button
-        type="button"
+      <IconButton
         onClick={() => go(-1)}
-        className="rounded-md border border-border p-1.5 hover:bg-black/[0.03]"
+        className="border border-border"
       >
         <ChevronLeft size={16} />
-      </button>
+      </IconButton>
       <span className="text-sm font-medium text-text-primary">
         {quarter}º trimestre de {year}
       </span>
-      <button
-        type="button"
+      <IconButton
         onClick={() => go(1)}
-        className="rounded-md border border-border p-1.5 hover:bg-black/[0.03]"
+        className="border border-border"
       >
         <ChevronRight size={16} />
-      </button>
+      </IconButton>
     </div>
   );
 }

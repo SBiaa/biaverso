@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  Card,
+  CardTitle,
+  confirmAction,
+  ErrorNote,
+  IconButton,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { PrincipleFormModal } from "./PrincipleFormModal";
@@ -32,6 +39,15 @@ export function PrinciplesSection({
   }
 
   async function handleDelete(id: string) {
+    const title = principles.find((p) => p.id === id)?.title;
+    const confirmed = await confirmAction({
+      title: "Apagar este princípio?",
+      description: title ? `"${title}" sai do pilar.` : undefined,
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const previous = principles;
     setError(null);
     setPrinciples((prev) => prev.filter((p) => p.id !== id));
@@ -47,9 +63,9 @@ export function PrinciplesSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">
+        <CardTitle>
           Centro de Alinhamento — Princípios
-        </h2>
+        </CardTitle>
         <Button variant="secondary" onClick={() => setCreating(true)}>
           <Plus size={14} />
           Novo princípio
@@ -81,26 +97,27 @@ export function PrinciplesSection({
                     {principle.title}
                   </span>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
+                    <IconButton
+                      aria-label={`Editar princípio ${principle.title}`}
+                      title="Editar"
                       onClick={(e) => {
                         e.stopPropagation();
                         setEditing(principle);
                       }}
-                      className="text-text-secondary hover:text-text-primary"
                     >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      type="button"
+                      <Pencil size={15} />
+                    </IconButton>
+                    <IconButton
+                      aria-label={`Apagar princípio ${principle.title}`}
+                      title="Apagar"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(principle.id);
                       }}
-                      className="text-text-secondary hover:text-red-600"
+                      tone="danger"
                     >
-                      <Trash2 size={14} />
-                    </button>
+                      <Trash2 size={15} />
+                    </IconButton>
                     <ChevronDown
                       size={16}
                       className={cn(

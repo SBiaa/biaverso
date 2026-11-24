@@ -1,0 +1,1054 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  AlertTriangle,
+  BookOpen,
+  Briefcase,
+  CheckCircle2,
+  ChevronsRight,
+  Circle,
+  Clock,
+  FolderOpen,
+  GripVertical,
+  Plus,
+} from "lucide-react";
+import { TaskPeek } from "@/components/modules/dia/TaskPeek";
+import { DateInput, EstimateInput, PrioritySelect } from "@/components/modules/dia/WorkTaskFields";
+import { AttentionBadge, Button, Card, CardTitle, ErrorNote } from "@/components/ui";
+import { NewWorkTaskForm, type BusinessOption } from "@/components/modules/dia/NewWorkTaskForm";
+import { api, errorMessage } from "@/lib/client-api";
+import {
+  cn,
+  formatDateBR,
+  hexToRgba,
+  parseDateOnly,
+  toDateInputValue,
+  todayUtc,
+} from "@/lib/utils";
+import { MISSED_DEADLINE_AFTER_DAYS } from "@/lib/ace-shared";
+import { projectHref } from "@/lib/projects-shared";
+import { focusKey } from "@/lib/day-focus";
+import { FocusStar } from "@/components/modules/dia/FocusStar";
+import { formatMinutes, type PriorityLevelDTO } from "@/lib/task-plan";
+import {
+  SubtaskList,
+  SubtaskToggle,
+  useSubtasks,
+  useSubtasksOpen,
+  type SubtaskItem,
+} from "@/components/modules/tarefas/Subtasks";
+import { TaskStatusPicker } from "@/components/modules/tarefas/TaskStatusPicker";
+import type { TaskProgress, TaskStatus } from "@/app/generated/prisma/enums";
+
+export type WorkTask = {
+  /** Decide para qual rota o PATCH vai. `post` é post do cronograma de conteúdo. */
+  kind: "production" | "collection" | "prospect" | "lesson" | "study" | "task" | "post";
+  id: string;
+  title: string;
+  done: boolean;
+  /** Em que pé está (iniciei, pausei, aguardando...); `null` = aula e estudo, que não têm. */
+  progress: TaskProgress | null;
+  /** Já veio concluída do servidor (aba "Feitas"), e não marcada agora na tela. */
+  doneOnLoad: boolean;
+  /** Chip de origem: o negócio (produção) ou a coleção. */
+  originLabel: string;
+  originColor: string;
+  originHref: string | null;
+  /** Linha cinza sob o título: tipo e cliente, quando houver. */
+  detail: string | null;
+  urgent: boolean;
+  priorityLevelId: string | null;
+  estimateMinutes: number | null;
+  /** Posição que ela deu arrastando; `null` = ordem automática. */
+  position: number | null;
+  /** Prazo máximo: a data-limite. */
+  dueDate: string | null;
+  /** Data de realização: o dia em que ela vai fazer. Decide a aba (Hoje, Amanhã...). */
+  scheduledDate: string | null;
+  /** Quando foi concluída; só existe para tarefa feita. */
+  completedAt: string | null;
+  overdue: boolean;
+  /** Passou de uma semana de atraso (status PRAZO_PERDIDO); só tarefa de produção. */
+  missed?: boolean;
+  /** Só tarefa de coleção precisa do id da coleção na rota. */
+  collectionId: string | null;
+  subtasks: SubtaskItem[];
+  /** Projeto a que a tarefa pertence (produção e avulsa podem ter). */
+  project: TaskProject | null;
+  /** Negócio dono da tarefa de produção: filtra os projetos que dá para escolher. */
+  businessId: string | null;
+  /** Texto livre da tarefa; só produção e coleção têm. `undefined` = o tipo não tem o campo. */
+  description?: string | null;
+  /** Anotações; só produção tem. */
+  notes?: string | null;
+  /** Só post do cronograma: o que dá para trocar no painel. */
+  post?: PostFields;
+};
+
+/** Tipo, rede e status do post (o status do cronograma, não o andamento). */
+export type PostFields = { type: string; network: string; status: string; clientName: string | null };
+
+export type TaskProject = { id: string; name: string; href: string };
+
+/** Projeto em andamento que dá para ligar a uma tarefa de produção. */
+export type ProjectOption = { id: string; name: string; businessId: string };
+
+/** O que o painel da tarefa grava além das colunas da tabela. */
+export type TaskEdit = {
+  title?: string;
+  description?: string | null;
+  notes?: string | null;
+  projectId?: string | null;
+};
+
+/** Em "Feitas": por quando foi concluída, ou pelo dia em que estava marcada. */
+type DoneBy = "completed" | "due";
+
+type Range = "today" | "tomorrow" | "week" | "all" | "paused" | "missed" | "done";
+
+const RANGES: { id: Range; label: string }[] = [
+  { id: "today", label: "Hoje" },
+  { id: "tomorrow", label: "Amanhã" },
+  { id: "week", label: "7 dias" },
+  { id: "all", label: "Tudo" },
+  { id: "paused", label: "Pausadas" },
+  { id: "missed", label: "Prazo perdido" },
+  { id: "done", label: "Feitas" },
+];
+
+/** Pausada e ainda aberta: sai das abas do dia e fica na aba "Pausadas". */
+const isPaused = (t: WorkTask) => !t.done && t.progress === "PAUSADA";
+
+/**
+ * Tarefa de prazo perdido que ela retomou: está em andamento (iniciei,
+ * aguardando...) ou tem realização marcada a partir do dia aberto (`dayStart`).
+ */
+const isResumed = (t: WorkTask, dayStart: number) =>
+  (t.progress !== null && t.progress !== "A_FAZER" && t.progress !== "PAUSADA") ||
+  (t.scheduledDate !== null && new Date(t.scheduledDate).getTime() >= dayStart);
+
+/** Estudo e trabalho ficam em blocos separados: aula e estudo espiritual não são tarefa de trabalho. */
+type Group = "work" | "study";
+const groupOf = (t: WorkTask): Group =>
+  t.kind === "lesson" || t.kind === "study" ? "study" : "work";
+const taskKey = (t: WorkTask) => t.kind + t.id;
+/** O dia da tarefa: o da realização; sem ele, o do prazo. */
+const dayOf = (t: WorkTask) => t.scheduledDate ?? t.dueDate;
+export type DateField = "scheduledDate" | "dueDate";
+
+const GROUPS: { id: Group; label: string; color: string; icon: typeof Briefcase }[] = [
+  { id: "work", label: "Trabalho", color: "#0F766E", icon: Briefcase },
+  { id: "study", label: "Estudos", color: "#6366F1", icon: BookOpen },
+];
+
+export type Patch = { priorityLevelId?: string | null; estimateMinutes?: number | null };
+
+/** Corpo do PATCH que conclui ou reabre; cada tipo guarda "feita" de um jeito. */
+function doneBody(task: WorkTask, done: boolean): object {
+  // Produção guarda status; coleção e prospecção guardam um booleano.
+  if (task.kind === "production") return { status: done ? "CONCLUIDO" : "A_FAZER" };
+  if (task.kind === "study") return { status: done ? "FEITO" : "A_FAZER" };
+  // Post feito é post publicado; reaberto volta a planejado.
+  if (task.kind === "post") return { status: done ? "PUBLICADO" : "PLANEJADO" };
+  return { done };
+}
+
+function patchUrl(task: WorkTask) {
+  if (task.kind === "task") return `/api/tasks/${task.id}`;
+  if (task.kind === "prospect") return `/api/prospect-tasks/${task.id}`;
+  if (task.kind === "lesson") return `/api/study/lessons/${task.id}`;
+  if (task.kind === "study") return `/api/spiritual-studies/${task.id}`;
+  if (task.kind === "post") return `/api/ace/posts/${task.id}`;
+  return task.kind === "production"
+    ? `/api/ace/tasks/${task.id}`
+    : `/api/collections/${task.collectionId}/tasks/${task.id}`;
+}
+
+
+/**
+ * No celular a tabela vira um cartão por tarefa: o título ocupa a linha toda e
+ * as colunas viram etiquetas embaixo dele, cada uma com o próprio rótulo
+ * (vindo do `data-label`). Antes a tabela tinha 54rem e rolava de lado.
+ */
+const mobileCell =
+  "max-md:inline-flex max-md:items-center max-md:gap-1.5 max-md:py-0 max-md:pr-0 " +
+  "max-md:before:text-xs max-md:before:text-text-secondary max-md:before:content-[attr(data-label)]";
+
+function TaskRow({
+  task,
+  dayId,
+  focused,
+  levels,
+  showCompleted,
+  canDrag,
+  onToggle,
+  onPatch,
+  onStatus,
+  onDate,
+  projects,
+  covers,
+  onEdit,
+  onSave,
+  onRemoved,
+}: {
+  task: WorkTask;
+  dayId: string;
+  focused: boolean;
+  levels: PriorityLevelDTO[];
+  projects: ProjectOption[];
+  onEdit: (task: WorkTask, edit: TaskEdit) => Promise<unknown>;
+  covers: Record<string, number>;
+  /** Mostra a data de conclusão no lugar do prazo. */
+  showCompleted: boolean;
+  /** Pode ser arrastada: só tarefa aberta, e só nas abas que mostram a ordem de execução. */
+  canDrag: boolean;
+  onToggle: (task: WorkTask) => void;
+  onPatch: (task: WorkTask, patch: Patch) => void;
+  onStatus: (task: WorkTask, status: TaskStatus) => void;
+  onDate: (task: WorkTask, field: DateField, value: string | null) => void;
+  onSave: (task: WorkTask, local: Partial<WorkTask>, body: object) => Promise<void>;
+  onRemoved: (task: WorkTask) => void;
+}) {
+  // Passo de prospecção não tem subtarefas: o próprio checklist já é a quebra.
+  const subtasks = useSubtasks(
+    {
+      kind: task.kind === "prospect" || task.kind === "lesson" || task.kind === "study" ? "task" : task.kind,
+      id: task.id,
+    },
+    task.subtasks,
+  );
+  // Passos nascem recolhidos e a tela lembra quais ela abriu.
+  const [open, toggleOpen] = useSubtasksOpen(`${task.kind}:${task.id}`);
+  // Painel lateral da tarefa, como o "peek" do Notion. Fica aqui na linha para
+  // dividir os passos (useSubtasks) com ela: marcar um passo no painel já
+  // atualiza o 1/3 da tabela.
+  const [peek, setPeek] = useState(false);
+  const late = task.overdue && !task.done;
+  const today = todayUtc().getTime();
+  const passed = (d: string | null) => late && d !== null && new Date(d).getTime() < today;
+  // Aula e estudo espiritual não têm foco, subtarefas, prioridade nem tempo.
+  const plain = task.kind === "lesson" || task.kind === "study";
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: taskKey(task), disabled: !canDrag });
+
+  return (
+    // Um <tbody> por tarefa: a linha e a dos passos dela se movem juntas.
+    <tbody
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        position: "relative",
+        zIndex: isDragging ? 1 : undefined,
+      }}
+      className="border-t border-border bg-surface first-of-type:border-t-0 max-md:block max-md:py-2"
+    >
+      <tr className="max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-1.5">
+        <td className="py-2 pr-3 align-top max-md:block max-md:w-full max-md:py-0 max-md:pr-0">
+          <div className="flex items-start gap-1.5">
+            {canDrag ? (
+              <button
+                type="button"
+                {...attributes}
+                {...listeners}
+                aria-label={`Reordenar ${task.title}`}
+                title="Arraste para mudar a ordem"
+                className="-ml-1 mt-0.5 shrink-0 cursor-grab touch-none rounded text-text-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <GripVertical size={16} />
+              </button>
+            ) : (
+              <span className="-ml-1 w-4 shrink-0" aria-hidden />
+            )}
+            <button
+              type="button"
+              onClick={() => onToggle(task)}
+              className="-mx-3.5 -mb-3.5 -mt-3 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              aria-label={task.done ? `Reabrir ${task.title}` : `Concluir ${task.title}`}
+            >
+              {task.done ? (
+                <CheckCircle2 size={16} className="text-accent-ink" />
+              ) : (
+                <Circle size={16} className="text-text-secondary" />
+              )}
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                {task.urgent && !task.done && (
+                  <AlertTriangle size={14} className="shrink-0 text-danger" />
+                )}
+                {/* O título abre o painel com tudo da tarefa. */}
+                <button
+                  type="button"
+                  onClick={() => setPeek(true)}
+                  title="Abrir detalhes"
+                  className={cn(
+                    "rounded text-left text-text-primary decoration-text-secondary/50 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-accent",
+                    task.done && "text-text-secondary line-through",
+                  )}
+                >
+                  {task.title}
+                  {task.urgent && <span className="sr-only"> (urgente)</span>}
+                </button>
+                {!plain && (
+                  <FocusStar
+                    dayId={dayId}
+                    kind={task.kind as "task" | "production" | "collection" | "prospect" | "post"}
+                    taskId={task.id}
+                    focused={focused}
+                    title={task.title}
+                  />
+                )}
+                {task.kind !== "prospect" && !plain && (
+                  <SubtaskToggle
+                    open={open}
+                    onClick={toggleOpen}
+                    doneCount={subtasks.doneCount}
+                    total={subtasks.subtasks.length}
+                  />
+                )}
+              </div>
+              {/* De onde é a tarefa: o projeto vem primeiro e leva até ele. */}
+              {(task.project || task.detail) && (
+                <p className="flex flex-wrap items-center gap-x-1 text-xs text-text-secondary">
+                  {task.project && (
+                    <>
+                      <Link
+                        href={task.project.href}
+                        title="Ir para o projeto"
+                        className="inline-flex items-center gap-1 font-medium text-text-primary/80 hover:text-accent-ink hover:underline"
+                      >
+                        <FolderOpen size={12} className="shrink-0" aria-hidden />
+                        {task.project.name}
+                      </Link>
+                      {task.detail && <span aria-hidden>·</span>}
+                    </>
+                  )}
+                  {task.detail && <span>{task.detail}</span>}
+                </p>
+              )}
+            </div>
+          </div>
+          {peek && (
+            <TaskPeek
+              task={task}
+              levels={levels}
+              projects={projects}
+              coverVersion={task.businessId ? (covers[task.businessId] ?? null) : null}
+              subtasks={subtasks}
+              onClose={() => setPeek(false)}
+              onToggle={onToggle}
+              onPatch={onPatch}
+              onStatus={onStatus}
+              onDate={onDate}
+              onEdit={onEdit}
+              onSave={onSave}
+              onRemoved={onRemoved}
+            />
+          )}
+        </td>
+        <td
+          data-label="Status"
+          className={cn("py-2 pr-3 align-top", mobileCell, task.progress === null && "max-md:hidden")}
+        >
+          {task.progress === null ? (
+            <span className="text-text-secondary/60">—</span>
+          ) : (
+            <TaskStatusPicker
+              status={task.done ? "CONCLUIDA" : task.progress}
+              title={task.title}
+              onChange={(status) => onStatus(task, status)}
+            />
+          )}
+        </td>
+        <td
+          data-label="Prioridade"
+          className={cn(
+            "py-2 pr-3 align-top",
+            mobileCell,
+            (task.kind === "study" || task.kind === "task") && "max-md:hidden",
+          )}
+        >
+          {task.kind === "study" || task.kind === "task" ? (
+            <span className="text-text-secondary/60">—</span>
+          ) : (
+            <PrioritySelect
+              task={task}
+              levels={levels}
+              onChange={(priorityLevelId) => onPatch(task, { priorityLevelId })}
+            />
+          )}
+        </td>
+        <td
+          data-label="Tempo"
+          className={cn(
+            "py-2 pr-3 align-top",
+            mobileCell,
+            (task.kind === "study" || task.kind === "task") && "max-md:hidden",
+          )}
+        >
+          {task.kind === "study" || task.kind === "task" ? (
+            <span className="text-text-secondary/60">—</span>
+          ) : (
+            <EstimateInput
+              // Remonta se o valor voltar do servidor diferente (erro de gravação).
+              key={task.estimateMinutes ?? "none"}
+              minutes={task.estimateMinutes}
+              disabled={task.done}
+              onCommit={(estimateMinutes) => onPatch(task, { estimateMinutes })}
+            />
+          )}
+        </td>
+        <td className="py-2 pr-3 align-top max-md:py-0 max-md:pr-0">
+          {task.originHref ? (
+            <Link
+              href={task.originHref}
+              className="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium hover:underline"
+              style={{
+                backgroundColor: hexToRgba(task.originColor, 0.12),
+                color: task.originColor,
+              }}
+            >
+              {task.originLabel}
+            </Link>
+          ) : (
+            <span
+              className="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
+              style={{
+                backgroundColor: hexToRgba(task.originColor, 0.12),
+                color: task.originColor,
+              }}
+            >
+              {task.originLabel}
+            </span>
+          )}
+        </td>
+        <td
+          data-label="Fazer em"
+          className={cn("whitespace-nowrap py-2 pr-3 align-top", mobileCell)}
+        >
+          {task.done ? (
+            task.scheduledDate ? (
+              <span className="text-text-secondary">
+                {formatDateBR(new Date(task.scheduledDate))}
+              </span>
+            ) : (
+              <span className="text-text-secondary/60">—</span>
+            )
+          ) : (
+            <DateInput
+              value={task.scheduledDate}
+              label={`Realização de ${task.title}`}
+              late={passed(task.scheduledDate)}
+              onCommit={(value) => onDate(task, "scheduledDate", value)}
+            />
+          )}
+        </td>
+        <td
+          data-label={showCompleted ? "Concluída em" : "Prazo"}
+          className={cn("whitespace-nowrap py-2 align-top", mobileCell)}
+        >
+          {!showCompleted && !task.done ? (
+            <span className="inline-flex items-center">
+              {/* Atalho: prazo = dia da realização. Só aparece quando há o que copiar. */}
+              {task.scheduledDate &&
+              toDateInputValue(task.scheduledDate) !==
+                (task.dueDate ? toDateInputValue(task.dueDate) : "") ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onDate(task, "dueDate", toDateInputValue(task.scheduledDate!))
+                  }
+                  aria-label={`Usar a data de realização como prazo de ${task.title}`}
+                  title="Usar a data de realização como prazo"
+                  className="mr-0.5 shrink-0 rounded p-0.5 text-text-secondary hover:bg-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <ChevronsRight size={14} />
+                </button>
+              ) : (
+                <span className="mr-0.5 w-[18px] shrink-0" aria-hidden />
+              )}
+              <DateInput
+                value={task.dueDate}
+                label={`Prazo de ${task.title}`}
+                late={passed(task.dueDate)}
+                onCommit={(value) => onDate(task, "dueDate", value)}
+              />
+            </span>
+          ) : (showCompleted ? task.completedAt : task.dueDate) ? (
+            <span className="text-text-secondary">
+              {formatDateBR(new Date((showCompleted ? task.completedAt : task.dueDate)!))}
+            </span>
+          ) : (
+            <span className="text-text-secondary/60">Sem prazo</span>
+          )}
+          {late && (
+            <AttentionBadge level="atrasado" className="ml-1.5">
+              Atrasado
+            </AttentionBadge>
+          )}
+          {/* Retomada mas com o prazo vencido há mais de uma semana: o selo
+              lembra disso nas abas do dia (na aba própria ele é redundante). */}
+          {task.missed && !task.done && (
+            <AttentionBadge level="atrasado" className="ml-1.5">
+              Prazo perdido
+            </AttentionBadge>
+          )}
+        </td>
+      </tr>
+      {open && task.kind !== "prospect" && !plain && (
+        <tr className="max-md:block">
+          <td colSpan={7} className="pb-3 pl-6 max-md:block max-md:pb-0 max-md:pt-2">
+            <SubtaskList {...subtasks} />
+          </td>
+        </tr>
+      )}
+    </tbody>
+  );
+}
+
+/**
+ * Ordem da tabela: primeiro o que ela posicionou arrastando; o resto vai na
+ * ordem automática — prioridade (a mais urgente primeiro), depois prazo.
+ */
+function sortTasks(tasks: WorkTask[], levels: PriorityLevelDTO[]) {
+  const rank = new Map(levels.map((l) => [l.id, l.order]));
+  const none = Number.MAX_SAFE_INTEGER;
+  const time = (t: WorkTask) => {
+    const day = dayOf(t);
+    return day ? new Date(day).getTime() : none;
+  };
+
+  return [...tasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    if (a.position !== b.position) {
+      if (a.position === null) return 1;
+      if (b.position === null) return -1;
+      return a.position - b.position;
+    }
+    const byPriority =
+      (a.priorityLevelId ? (rank.get(a.priorityLevelId) ?? none) : none) -
+      (b.priorityLevelId ? (rank.get(b.priorityLevelId) ?? none) : none);
+    if (byPriority !== 0) return byPriority;
+    // Urgente antigo (campo da produção) só desempata quando o nível é igual.
+    if (a.urgent !== b.urgent) return a.urgent ? -1 : 1;
+    const byDue = time(a) - time(b);
+    if (byDue !== 0) return byDue;
+    return a.title.localeCompare(b.title, "pt-BR");
+  });
+}
+
+/**
+ * Tudo o que está em andamento nos negócios, nas coleções e na prospecção, numa tabela só:
+ * prioridade, tempo estimado, origem e prazo. É a tabela do Notion antigo —
+ * dá para olhar e decidir o que fazer primeiro, e quanto tempo o dia pede.
+ */
+export function WorkTasksToday({
+  dayId,
+  focusKeys,
+  tasks,
+  levels,
+  dayEnd,
+  weekEnd,
+  dayDate,
+  dayInPast,
+  businesses,
+  projects,
+  covers,
+}: {
+  /** Projetos em andamento, para ligar uma tarefa de produção a um deles. */
+  projects: ProjectOption[];
+  /** Quando a capa de cada negócio mudou (ms); negócio sem capa fica de fora. */
+  covers: Record<string, number>;
+  dayId: string;
+  /** `kind:id` das tarefas que estão no foco do dia. */
+  focusKeys: string[];
+  tasks: WorkTask[];
+  levels: PriorityLevelDTO[];
+  /** Fim (exclusivo) do dia em foco e da semana dele, em ISO. */
+  dayEnd: string;
+  weekEnd: string;
+  /** Dia aberto (YYYY-MM-DD): o prazo que a tarefa nova já traz. */
+  dayDate: string;
+  dayInPast: boolean;
+  businesses: BusinessOption[];
+}) {
+  const router = useRouter();
+  const [items, setItems] = useState(tasks);
+  const [adding, setAdding] = useState(false);
+  const [range, setRange] = useState<Range>("all");
+  const [doneBy, setDoneBy] = useState<DoneBy>("completed");
+  const [error, setError] = useState<string | null>(null);
+
+  // Atrasada entra em Hoje e em Semana: o que venceu antes continua à vista.
+  // Sem prazo só aparece em "Tudo" — não dá para dizer que é da semana.
+  const limits = { day: new Date(dayEnd).getTime(), week: new Date(weekEnd).getTime() };
+  // Amanhã é só o que vence no dia seguinte: o atrasado continua em Hoje.
+  const tomorrowEnd = limits.day + 24 * 60 * 60 * 1000;
+  const inRange = (t: WorkTask, r: Range) => {
+    // "Feitas" é tudo que está concluído; as outras abas escondem o que já
+    // chegou concluído, mas mantêm o que ela acabou de marcar (riscado, no fim).
+    if (r === "done") {
+      if (!t.done) return false;
+      const when = doneBy === "completed" ? t.completedAt : dayOf(t);
+      if (!when) return false;
+      const time = new Date(when).getTime();
+      return time >= limits.day - 24 * 60 * 60 * 1000 && time < limits.day;
+    }
+    if (t.done && t.doneOnLoad) return false;
+    if (r === "all") return true;
+    // Prazo perdido tem aba própria: não volta a poluir Hoje, Amanhã e Semana.
+    // A exceção é a que ela retomou — iniciou, está aguardando algo... ou
+    // remarcou a realização para hoje em diante. Essa é trabalho de agora.
+    if (r === "missed") return !!t.missed;
+    // Pausada não é tarefa de agora: some de Hoje, Amanhã e Semana e fica
+    // reunida na aba própria (e em "Tudo").
+    if (r === "paused") return isPaused(t);
+    if (isPaused(t)) return false;
+    if (t.missed && !isResumed(t, limits.day - 24 * 60 * 60 * 1000)) return false;
+    const day = dayOf(t);
+    if (day === null) return false;
+    const due = new Date(day).getTime();
+    if (r === "tomorrow") return due >= limits.day && due < tomorrowEnd;
+    return due < limits[r === "today" ? "day" : "week"];
+  };
+
+  const visible = useMemo(
+    () => sortTasks(items.filter((t) => inRange(t, range)), levels),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, levels, range, doneBy, dayEnd, weekEnd],
+  );
+  const sensors = useSensors(
+    // Distância mínima: sem ela, tocar na alça já conta como arrastar.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  // A ordem de execução só faz sentido no que ainda está aberto.
+  const canReorder = range !== "done";
+  const open = visible.filter((t) => !t.done);
+  const lateCount = open.filter((t) => t.overdue).length;
+  const estimated = open.reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0);
+  const withoutEstimate = open.filter((t) => t.estimateMinutes === null).length;
+  // Em "Feitas" o que conta é o concluído; nas outras, o que ainda está aberto.
+  const openIn = (r: Range) =>
+    items.filter((t) => (r === "done" ? t.done : !t.done) && inRange(t, r));
+  const countOpen = (r: Range) => openIn(r).length;
+  const doneCount = countOpen("done");
+
+  function update(key: string, change: Partial<WorkTask>) {
+    setItems((prev) =>
+      prev.map((t) => (t.kind + t.id === key ? { ...t, ...change } : t)),
+    );
+  }
+
+  async function save(task: WorkTask, change: Partial<WorkTask>, body: object) {
+    const previous = items;
+    const key = task.kind + task.id;
+
+    setError(null);
+    update(key, change);
+
+    try {
+      await api.patch(patchUrl(task), body);
+      // O foco do dia, no topo, vem do servidor.
+      router.refresh();
+    } catch (e) {
+      setItems(previous);
+      setError(errorMessage(e));
+    }
+  }
+
+  /**
+   * Como o `save`, mas o erro sobe: o painel da tarefa desfaz a própria troca
+   * (tipo, cliente...) em vez de ficar mostrando um valor que não gravou.
+   */
+  async function saveStrict(task: WorkTask, change: Partial<WorkTask>, body: object) {
+    const previous = items;
+    setError(null);
+    update(taskKey(task), change);
+    try {
+      await api.patch(patchUrl(task), body);
+      router.refresh();
+    } catch (e) {
+      setItems(previous);
+      throw e;
+    }
+  }
+
+  function toggle(task: WorkTask) {
+    const done = !task.done;
+    return save(
+      task,
+      { done, completedAt: done ? new Date().toISOString() : null },
+      doneBody(task, done),
+    );
+  }
+
+  /**
+   * Trocar o andamento. "Concluí" é o mesmo gesto do círculo; qualquer outro
+   * valor grava o andamento e, se a tarefa estava feita, reabre junto.
+   */
+  function changeStatus(task: WorkTask, status: TaskStatus) {
+    if (status === "CONCLUIDA") return task.done ? undefined : toggle(task);
+    if (task.progress === null) return undefined;
+
+    // A avulsa guarda o andamento no próprio status; a rota acerta o `done`.
+    if (task.kind === "task") {
+      return save(task, { progress: status, done: false, completedAt: null }, { status });
+    }
+    if (!task.done) return save(task, { progress: status }, { progress: status });
+    return save(
+      task,
+      { progress: status, done: false, completedAt: null },
+      { ...doneBody(task, false), progress: status },
+    );
+  }
+
+  /**
+   * Grava a ordem nova de um bloco. A tela pode estar mostrando só uma parte
+   * (Hoje, Amanhã…), então o que foi arrastado ocupa os mesmos lugares que as
+   * visíveis tinham na lista inteira do bloco; as escondidas não se mexem.
+   */
+  async function reorder(group: Group, event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const shown = visible.filter((t) => groupOf(t) === group && !t.done);
+    const from = shown.findIndex((t) => taskKey(t) === active.id);
+    const to = shown.findIndex((t) => taskKey(t) === over.id);
+    if (from < 0 || to < 0) return;
+    const moved = arrayMove(shown, from, to);
+
+    const all = sortTasks(
+      items.filter((t) => groupOf(t) === group && !t.done),
+      levels,
+    );
+    const shownKeys = new Set(shown.map(taskKey));
+    let next = 0;
+    const ordered = all.map((t) => (shownKeys.has(taskKey(t)) ? moved[next++] : t));
+    const positions = new Map(ordered.map((t, i) => [taskKey(t), i]));
+
+    const previous = items;
+    setError(null);
+    setItems((prev) =>
+      prev.map((t) => (positions.has(taskKey(t)) ? { ...t, position: positions.get(taskKey(t))! } : t)),
+    );
+
+    try {
+      await api.put("/api/work-task-order", {
+        items: ordered.map((t) => ({ kind: t.kind, taskId: t.id })),
+      });
+    } catch (e) {
+      setItems(previous);
+      setError(errorMessage(e));
+    }
+  }
+
+  function patch(task: WorkTask, change: Patch) {
+    return save(task, change, change);
+  }
+
+  /**
+   * Edição feita no painel da tarefa (título, descrição, projeto). Diferente do
+   * `save`, o erro sobe: quem chamou é um campo, que fica aberto com o texto
+   * digitado em vez de perder o que foi escrito.
+   */
+  async function edit(task: WorkTask, change: TaskEdit) {
+    const { projectId, ...fields } = change;
+    const local: Partial<WorkTask> = { ...fields };
+    if (projectId !== undefined) {
+      const option = projects.find((p) => p.id === projectId);
+      local.project = option
+        ? { id: option.id, name: option.name, href: projectHref(option.businessId, option.id) }
+        : null;
+    }
+
+    await api.patch(patchUrl(task), change);
+    update(taskKey(task), local);
+    router.refresh();
+  }
+
+  /**
+   * Muda a realização ou o prazo ali mesmo. Atraso e "prazo perdido" são
+   * recalculados na hora, para a tarefa já pular para a aba certa.
+   */
+  function changeDate(task: WorkTask, field: DateField, value: string | null) {
+    const date = value ? parseDateOnly(value) : null;
+    if (value && !date) return undefined;
+    const next = { ...task, [field]: date ? date.toISOString() : null };
+    const today = todayUtc().getTime();
+    const missedLimit = today - MISSED_DEADLINE_AFTER_DAYS * 24 * 60 * 60 * 1000;
+    const time = (d: string | null) => (d ? new Date(d).getTime() : null);
+    const due = time(next.dueDate);
+    // "Prazo perdido" (produção e post) olha o prazo máximo, como o servidor.
+    const missed =
+      task.kind === "production" || task.kind === "post"
+        ? due !== null && due < missedLimit
+        : task.missed;
+    const overdue =
+      !missed &&
+      [time(next.scheduledDate), due].some((t) => t !== null && t < today);
+
+    // No post, o prazo é a data de publicação.
+    const column = task.kind === "post" && field === "dueDate" ? "publishDate" : field;
+    return save(
+      task,
+      { [field]: next[field], overdue, missed },
+      { [column]: value },
+    );
+  }
+
+  const addButton = businesses.length > 0 && !adding && (
+    <Button variant="secondary" onClick={() => setAdding(true)}>
+      <Plus size={16} />
+      Nova tarefa
+    </Button>
+  );
+  const addForm = adding && (
+    <NewWorkTaskForm
+      businesses={businesses}
+      projects={projects}
+      levels={levels}
+      dayDate={dayDate}
+      dayInPast={dayInPast}
+      onCancel={() => setAdding(false)}
+      onCreated={(task) => {
+        setItems((prev) => [...prev, task]);
+        setAdding(false);
+        // Os totais do topo (foco, resumo) vêm do servidor.
+        router.refresh();
+      }}
+    />
+  );
+
+  if (items.length === 0) {
+    return (
+      <Card>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <CardTitle>Tarefas em andamento</CardTitle>
+          {addButton}
+        </div>
+        {addForm}
+        <p className="text-sm text-text-secondary">
+          Nenhuma tarefa em aberto nos negócios, nas coleções ou na prospecção.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <CardTitle>Tarefas em andamento</CardTitle>
+        {addButton}
+      </div>
+      {addForm}
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="flex flex-wrap items-center gap-x-3 text-xs text-text-secondary">
+          {range === "done" ? (
+            <span>
+              {doneCount} {doneCount === 1 ? "feita" : "feitas"} no dia
+            </span>
+          ) : (
+            <span>
+              {open.length} {open.length === 1 ? "aberta" : "abertas"}
+            </span>
+          )}
+          {range !== "done" && (
+            <>
+              {lateCount > 0 && (
+                <span className="font-medium text-danger">
+                  {lateCount} {lateCount === 1 ? "atrasada" : "atrasadas"}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1">
+                <Clock size={12} />
+                {estimated > 0 ? `~${formatMinutes(estimated)}` : "sem estimativa"}
+                {estimated > 0 && withoutEstimate > 0 && (
+                  <span> · {withoutEstimate} sem tempo</span>
+                )}
+              </span>
+            </>
+          )}
+        </p>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Período">
+        {RANGES.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            onClick={() => setRange(r.id)}
+            aria-pressed={range === r.id}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              range === r.id
+                ? "border-accent bg-accent text-accent-contrast"
+                : "border-border text-text-secondary hover:text-text-primary",
+            )}
+          >
+            {r.label} · {countOpen(r.id)}
+          </button>
+        ))}
+      </div>
+
+      {range === "done" && (
+        <div className="mb-3 flex items-center gap-2 text-xs text-text-secondary">
+          <span>Data:</span>
+          <select
+            value={doneBy}
+            onChange={(e) => setDoneBy(e.target.value as DoneBy)}
+            aria-label="Data usada em Feitas"
+            className="cursor-pointer rounded-md border border-border bg-transparent px-2 py-1 text-xs text-text-primary outline-none focus:ring-2 focus:ring-accent"
+          >
+            <option value="completed">Finalização (quando concluí)</option>
+            <option value="due">Execução (dia marcado)</option>
+          </select>
+        </div>
+      )}
+
+      {visible.length === 0 && (
+        <p className="py-2 text-sm text-text-secondary">
+          {range === "done"
+            ? "Nada concluído neste dia."
+            : range === "paused"
+              ? "Nenhuma tarefa pausada."
+              : range === "tomorrow"
+              ? "Nada com prazo para amanhã."
+              : `Nada com prazo ${range === "today" ? "até hoje" : "nos próximos 7 dias"}.`}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-4">
+        {GROUPS.map((g) => {
+          const rows = visible.filter((t) => groupOf(t) === g.id);
+          if (rows.length === 0) return null;
+          const groupOpen = rows.filter((t) => !t.done);
+          const minutes = groupOpen.reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0);
+          const Icon = g.icon;
+
+          return (
+            <section
+              key={g.id}
+              aria-label={g.label}
+              className="overflow-hidden rounded-lg border"
+              style={{ borderColor: hexToRgba(g.color, 0.35) }}
+            >
+              <header
+                className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2"
+                style={{ backgroundColor: hexToRgba(g.color, 0.1) }}
+              >
+                <Icon size={15} style={{ color: g.color }} aria-hidden />
+                <h3 className="text-sm font-semibold" style={{ color: g.color }}>
+                  {g.label}
+                </h3>
+                <span className="text-xs text-text-secondary">
+                  {range === "done"
+                    ? `${rows.length} ${rows.length === 1 ? "feita" : "feitas"}`
+                    : `${groupOpen.length} ${groupOpen.length === 1 ? "aberta" : "abertas"}`}
+                  {range !== "done" && minutes > 0 && ` · ~${formatMinutes(minutes)}`}
+                </span>
+              </header>
+
+              {/* Colunas não cabem numa tela de celular: a tabela rola na
+                  horizontal em vez de espremer o título até virar duas letras
+                  por linha. */}
+              <div className="overflow-x-auto px-3 pb-1">
+                <DndContext
+                  // Id fixo: sem ele o dnd-kit numera as tabelas por ordem de
+                  // montagem, e o servidor e o navegador chegavam a números
+                  // diferentes (aviso de hydration no console).
+                  id={`work-tasks-${g.id}`}
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => reorder(g.id, event)}
+                >
+                  <table className="w-full border-collapse text-sm max-md:block md:min-w-[54rem]">
+                    <thead className="max-md:hidden">
+                      <tr className="text-left text-xs font-medium text-text-secondary">
+                        <th scope="col" className="py-2 pr-3 font-medium">
+                          Tarefa
+                        </th>
+                        <th scope="col" className="py-2 pr-3 font-medium">
+                          Status
+                        </th>
+                        <th scope="col" className="py-2 pr-3 font-medium">
+                          Prioridade
+                        </th>
+                        <th scope="col" className="py-2 pr-3 font-medium">
+                          Tempo
+                        </th>
+                        <th scope="col" className="py-2 pr-3 font-medium">
+                          Origem
+                        </th>
+                        <th scope="col" className="py-2 pr-3 font-medium">
+                          Realização
+                        </th>
+                        <th scope="col" className="py-2 font-medium">
+                          {range === "done" && doneBy === "completed" ? "Concluída em" : "Prazo"}
+                        </th>
+                      </tr>
+                    </thead>
+                    <SortableContext
+                      items={rows.map(taskKey)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {rows.map((task) => (
+                        <TaskRow
+                          key={taskKey(task)}
+                          task={task}
+                          dayId={dayId}
+                          focused={
+                            task.kind !== "lesson" &&
+                            task.kind !== "study" &&
+                            focusKeys.includes(focusKey(task.kind, task.id))
+                          }
+                          levels={levels}
+                          showCompleted={range === "done" && doneBy === "completed"}
+                          canDrag={canReorder && !task.done}
+                          onToggle={toggle}
+                          onPatch={patch}
+                          onStatus={changeStatus}
+                          onDate={changeDate}
+                          projects={projects}
+                          covers={covers}
+                          onEdit={edit}
+                          onSave={saveStrict}
+                          onRemoved={(t) =>
+                            setItems((prev) => prev.filter((i) => taskKey(i) !== taskKey(t)))
+                          }
+                        />
+                      ))}
+                    </SortableContext>
+                  </table>
+                </DndContext>
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      <ErrorNote message={error} />
+    </Card>
+  );
+}

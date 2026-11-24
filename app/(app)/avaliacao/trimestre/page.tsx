@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getOrCreateQuarterReview } from "@/lib/avaliacao";
+import { getClosedMeasuredGoals, getOrCreateQuarterReview } from "@/lib/avaliacao";
 import { prisma } from "@/lib/prisma";
 import { formatMonthYearBR, parseIntParam, todayUtc } from "@/lib/utils";
 import { Topbar } from "@/components/layout/Topbar";
@@ -7,6 +7,7 @@ import { Card } from "@/components/ui";
 import { AvaliacaoSubNav } from "@/components/modules/avaliacao/AvaliacaoSubNav";
 import { QuarterPicker } from "@/components/modules/avaliacao/QuarterPicker";
 import { QuarterReviewForm } from "@/components/modules/avaliacao/QuarterReviewForm";
+import { ClosedGoalsCard } from "@/components/modules/avaliacao/ClosedGoalsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +25,21 @@ export default async function AvaliacaoTrimestrePage({
   const year = parseIntParam(params.year, 1970, 2999) ?? today.getUTCFullYear();
 
   const review = await getOrCreateQuarterReview(quarter, year);
-  const months = await prisma.monthReview.findMany({
-    where: { quarterReviewId: review.id },
-    orderBy: { month: "asc" },
-  });
+  const [months, closedGoals] = await Promise.all([
+    prisma.monthReview.findMany({
+      where: { quarterReviewId: review.id },
+      orderBy: { month: "asc" },
+    }),
+    getClosedMeasuredGoals(
+      new Date(Date.UTC(year, (quarter - 1) * 3, 1)),
+      new Date(Date.UTC(year, quarter * 3, 1)),
+    ),
+  ]);
 
   return (
     <>
-      <Topbar title="Avaliação" />
-      <main className="flex-1 space-y-4 p-4 md:mx-auto md:max-w-[800px] md:p-6">
+      <Topbar width="narrow" title="Avaliação" />
+      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-5 md:px-8 md:py-8 md:space-y-6">
         <AvaliacaoSubNav />
 
         <QuarterPicker quarter={quarter} year={year} />
@@ -51,7 +58,7 @@ export default async function AvaliacaoTrimestrePage({
                 <li key={m.id}>
                   <Link
                     href={`/avaliacao/mes?month=${m.month}&year=${m.year}`}
-                    className="text-sm text-accent hover:underline"
+                    className="text-sm text-accent-ink hover:underline"
                   >
                     {formatMonthYearBR(m.month, m.year)}
                   </Link>
@@ -61,7 +68,9 @@ export default async function AvaliacaoTrimestrePage({
           )}
         </Card>
 
-        <QuarterReviewForm review={review} />
+        <ClosedGoalsCard goals={closedGoals} period="no trimestre" />
+
+        <QuarterReviewForm key={review.id} review={review} />
       </main>
     </>
   );

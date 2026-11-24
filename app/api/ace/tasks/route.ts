@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseBody, parseQuery, route } from "@/lib/api";
-import { aceListQuerySchema, productionTaskCreateSchema } from "@/lib/schemas";
-import { resolveTaskCompletedAt } from "@/lib/ace";
+import { aceListQuerySchema, productionTaskCreateWithStepsSchema } from "@/lib/schemas";
+import { linkClientToBusiness, resolveTaskCompletedAt, scopeClientFilter } from "@/lib/ace";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 export const GET = route(async (request: Request) => {
@@ -11,7 +11,8 @@ export const GET = route(async (request: Request) => {
   const tasks = await prisma.productionTask.findMany({
     where: {
       businessId: q.businessId,
-      clientId: q.clientId,
+      // Um cliente específico já é mais restrito que qualquer escopo.
+      clientId: q.clientId ?? scopeClientFilter(q.scope),
       projectId: q.projectId,
       status: q.status as Prisma.ProductionTaskWhereInput["status"],
       type: q.type as Prisma.ProductionTaskWhereInput["type"],
@@ -26,7 +27,10 @@ export const GET = route(async (request: Request) => {
 });
 
 export const POST = route(async (request: Request) => {
-  const { completedAt, ...data } = await parseBody(request, productionTaskCreateSchema);
+  const { completedAt, steps, ...data } = await parseBody(
+    request,
+    productionTaskCreateWithStepsSchema,
+  );
 
   const task = await prisma.productionTask.create({
     data: {
@@ -34,8 +38,21 @@ export const POST = route(async (request: Request) => {
       dueDate: data.dueDate ?? null,
       projectId: data.projectId ?? null,
       completedAt: resolveTaskCompletedAt(data.status, completedAt, null),
+      subtasks: {
+        create: steps.map((step, order) =>
+          typeof step === "string"
+            ? { title: step, order }
+            : { title: step.title, stage: step.stage ?? null, order },
+        ),
+      },
     },
   });
+
+  // O select de cliente lista todo mundo, não só quem já era do negócio: quem
+  // veio de fora ganha o vínculo agora.
+  if (task.clientId) {
+    await linkClientToBusiness(task.clientId, task.businessId);
+  }
 
   return NextResponse.json(task);
 });

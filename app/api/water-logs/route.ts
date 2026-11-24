@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseBody, route } from "@/lib/api";
 import { waterLogSchema } from "@/lib/schemas";
+import { getUserSettings } from "@/lib/settings";
 
 export const PUT = route(async (request: Request) => {
   const { dayId, count } = await parseBody(request, waterLogSchema);
+  // O volume de cada marcação é o configurado nas preferências, não os 300ml
+  // fixos do default da coluna.
+  const { waterUnitMl } = await getUserSettings();
 
   // Roda numa transacao: dois cliques rapidos nao podem ler a mesma contagem e
   // gravar em cima um do outro. `count` e validado >= 0, entao o slice abaixo
@@ -18,7 +22,10 @@ export const PUT = route(async (request: Request) => {
 
     if (count > current.length) {
       await tx.waterLog.createMany({
-        data: Array.from({ length: count - current.length }, () => ({ dayId })),
+        data: Array.from({ length: count - current.length }, () => ({
+          dayId,
+          amount: waterUnitMl,
+        })),
       });
     } else if (count < current.length) {
       await tx.waterLog.deleteMany({

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@/app/generated/prisma/client";
+import { recordAction } from "@/lib/usage";
 
 /**
  * Casca comum das rotas de API.
@@ -54,7 +55,10 @@ type Handler<Ctx> = (request: Request, context: Ctx) => Promise<Response>;
 export function route<Ctx>(handler: Handler<Ctx>): Handler<Ctx> {
   return async (request, context) => {
     try {
-      return await handler(request, context);
+      const response = await handler(request, context);
+      // Toda ação salva com sucesso entra no registro de uso (ver lib/usage.ts).
+      recordAction(request, response.status);
+      return response;
     } catch (error) {
       const { status, message } = messageFor(error);
       if (status === 500) console.error(`[${request.method} ${request.url}]`, error);

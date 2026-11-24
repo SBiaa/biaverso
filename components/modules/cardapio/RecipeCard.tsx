@@ -1,102 +1,50 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
-import { Card, ErrorNote } from "@/components/ui";
-import { api, errorMessage } from "@/lib/client-api";
-import { AddRecipeForm } from "./AddRecipeForm";
+import { ClickableCard } from "@/components/ui";
 import { recipeCategoryLabels } from "@/lib/labels";
+import type { RecipeView } from "@/lib/pratos";
+import type { PantryOption } from "./RecipeForm";
+import { RecipeModal, StatusPill } from "./RecipeModal";
 
-type Recipe = {
-  id: string;
-  title: string;
-  category: string;
-  description: string | null;
-  ingredients: string;
-  steps: string;
-  prepTime: number | null;
-  mealPlansCount: number;
-};
-
-export function RecipeCard({ recipe }: { recipe: Recipe }) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleDelete() {
-    const message =
-      recipe.mealPlansCount > 0
-        ? `Esta receita está planejada em ${recipe.mealPlansCount} dia(s) do cardápio. Ao deletar, esses slots ficarão vazios. Tem certeza que quer deletar esta receita? Esta ação não pode ser desfeita.`
-        : "Tem certeza que quer deletar esta receita? Esta ação não pode ser desfeita.";
-    if (!confirm(message)) return;
-
-    setDeleting(true);
-    setError(null);
-
-    try {
-      await api.delete(`/api/recipes/${recipe.id}`);
-      router.refresh();
-    } catch (e) {
-      setError(errorMessage(e));
-      // Sem isso o botão ficava desabilitado para sempre depois de uma falha.
-      setDeleting(false);
-    }
-  }
-
-  if (editing) {
-    return <AddRecipeForm recipe={recipe} onClose={() => setEditing(false)} />;
-  }
+/**
+ * Um card por prato, todos do mesmo tamanho (como em Ideias): nome, o que
+ * falta e para que refeição serve. Ingredientes, preparo e edição moram na
+ * janela do prato.
+ */
+export function RecipeCard({ recipe, pantry }: { recipe: RecipeView; pantry: PantryOption[] }) {
+  const [open, setOpen] = useState(false);
+  const options = recipe.items.filter((item) => item.role === "OPCAO");
 
   return (
-    <Card className="flex flex-col gap-2">
-      <ErrorNote message={error} />
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-text-primary">
-          {recipe.title}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-text-secondary">
-            {recipeCategoryLabels[recipe.category]}
-          </span>
-          <button
-            type="button"
-            title="Editar"
-            onClick={() => setEditing(true)}
-            className="text-text-secondary hover:text-text-primary"
-          >
-            <Pencil size={14} />
-          </button>
-          <button
-            type="button"
-            title="Deletar"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-text-secondary hover:text-red-600 disabled:opacity-50"
-          >
-            <Trash2 size={14} />
-          </button>
+    <>
+      <ClickableCard
+        onActivate={() => setOpen(true)}
+        label={`Abrir o prato ${recipe.title}`}
+        className="flex h-full flex-col gap-2"
+      >
+        <p className="line-clamp-2 text-sm font-semibold text-text-primary">{recipe.title}</p>
+        {options.length > 0 && (
+          <p className="line-clamp-1 text-xs text-text-secondary">
+            com {options.map((o) => o.name.toLocaleLowerCase("pt-BR")).join(" / ")}
+          </p>
+        )}
+        <div>
+          {recipe.status.state === "sem-itens" ? (
+            <span className="text-xs text-text-secondary">Sem ingredientes cadastrados</span>
+          ) : (
+            <StatusPill recipe={recipe} />
+          )}
         </div>
-      </div>
-      {recipe.description && (
-        <p className="text-xs text-text-secondary">{recipe.description}</p>
-      )}
-      {recipe.prepTime && (
-        <p className="text-xs text-text-secondary">
-          {recipe.prepTime} min de preparo
-        </p>
-      )}
-      <div>
-        <p className="text-xs font-medium text-text-primary">Ingredientes</p>
-        <p className="text-xs text-text-secondary">{recipe.ingredients}</p>
-      </div>
-      <div>
-        <p className="text-xs font-medium text-text-primary">
-          Modo de preparo
-        </p>
-        <p className="text-xs text-text-secondary">{recipe.steps}</p>
-      </div>
-    </Card>
+        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-xs text-text-secondary">
+          <span className="truncate">
+            {recipe.categories.map((c) => recipeCategoryLabels[c] ?? c).join(" · ")}
+          </span>
+          {recipe.prepTime && <span className="ml-auto shrink-0">{recipe.prepTime} min</span>}
+        </div>
+      </ClickableCard>
+
+      {open && <RecipeModal recipe={recipe} pantry={pantry} onClose={() => setOpen(false)} />}
+    </>
   );
 }

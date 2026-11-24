@@ -6,7 +6,10 @@ import { unpaidStatus, utcDate } from "@/lib/finance-calc";
 import { todayUtc } from "@/lib/utils";
 
 export const POST = route(async (request: Request) => {
-  const { name, amount, dueDay, type, notes } = await parseBody(request, fixedBillSchema);
+  const { name, amount, dueDay, type, paymentMethod, notes } = await parseBody(
+    request,
+    fixedBillSchema,
+  );
 
   const today = todayUtc();
   const month = today.getUTCMonth() + 1;
@@ -20,6 +23,7 @@ export const POST = route(async (request: Request) => {
       amount,
       dueDay,
       type,
+      paymentMethod,
       notes,
       monthlyLogs: {
         create: { month, year, dueDate, status: unpaidStatus(dueDate) },

@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, ErrorNote } from "@/components/ui";
+import { Button, Card, ErrorNote, notify } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
-import { knowledgeAreaLabels, knowledgeTypeLabels } from "@/lib/labels";
+import { knowledgeAreaLabels, knowledgeTypeLabels, knowledgeStatusLabels } from "@/lib/labels";
 
 const typeOptions = Object.keys(knowledgeTypeLabels);
 const areaOptions = Object.keys(knowledgeAreaLabels);
+const statusOptions = Object.keys(knowledgeStatusLabels);
 
-export function AddKnowledgeForm() {
+export function AddKnowledgeForm({ subjects }: { subjects: { id: string; label: string }[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -19,8 +20,10 @@ export function AddKnowledgeForm() {
     source: "",
     type: typeOptions[0],
     area: areaOptions[0],
+    status: "QUERO_ESTUDAR",
     summary: "",
     link: "",
+    subjectId: "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -33,17 +36,20 @@ export function AddKnowledgeForm() {
     setError(null);
 
     try {
-      await api.post("/api/knowledge", form);
+      await api.post("/api/knowledge", { ...form, subjectId: form.subjectId || null });
       setOpen(false);
       setForm({
         title: "",
         source: "",
         type: typeOptions[0],
         area: areaOptions[0],
+        status: "QUERO_ESTUDAR",
         summary: "",
         link: "",
+        subjectId: "",
       });
       router.refresh();
+      notify("Salvo.");
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -87,7 +93,31 @@ export function AddKnowledgeForm() {
             </option>
           ))}
         </select>
+        <select
+          value={form.status}
+          onChange={(e) => update("status", e.target.value)}
+          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+        >
+          {statusOptions.map((s) => (
+            <option key={s} value={s}>
+              {knowledgeStatusLabels[s]}
+            </option>
+          ))}
+        </select>
       </div>
+      <select
+        value={form.subjectId}
+        onChange={(e) => update("subjectId", e.target.value)}
+        aria-label="Assunto"
+        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+      >
+        <option value="">Sem assunto (material solto)</option>
+        {subjects.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
+          </option>
+        ))}
+      </select>
       <input
         placeholder="Fonte/link (opcional)"
         value={form.source}

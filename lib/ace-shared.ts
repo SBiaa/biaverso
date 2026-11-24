@@ -7,11 +7,29 @@ import type { ContentStatus, ProductionStatus } from "@/app/generated/prisma/cli
 
 export type AceItemKind = "post" | "task";
 
+/** Escopo do cronograma: conteúdo de cliente, interno do negócio, ou os dois. */
+export const SCOPE_OPTIONS = [
+  { key: "", label: "Todos" },
+  { key: "clientes", label: "Clientes" },
+  { key: "interno", label: "Interno" },
+] as const;
+
+/**
+ * Filtro de `clientId` para um escopo. `undefined` = sem filtro, `null` = só o
+ * que não tem cliente (interno).
+ */
+export function scopeClientFilter(scope?: string) {
+  if (scope === "interno") return null;
+  if (scope === "clientes") return { not: null };
+  return undefined;
+}
+
 export const KANBAN_COLUMNS = [
   { key: "A_FAZER", label: "A fazer" },
   { key: "EM_ANDAMENTO", label: "Em andamento" },
   { key: "AGUARDANDO_APROVACAO", label: "Aguardando aprovação" },
   { key: "CONCLUIDO", label: "Concluído" },
+  { key: "PRAZO_PERDIDO", label: "Prazo perdido" },
 ] as const;
 
 export type KanbanColumnKey = (typeof KANBAN_COLUMNS)[number]["key"];
@@ -19,8 +37,11 @@ export type KanbanColumnKey = (typeof KANBAN_COLUMNS)[number]["key"];
 const contentStatusToColumn: Record<string, KanbanColumnKey | null> = {
   PLANEJADO: "A_FAZER",
   EM_CRIACAO: "EM_ANDAMENTO",
-  APROVADO: "AGUARDANDO_APROVACAO",
+  AGUARDANDO_APROVACAO: "AGUARDANDO_APROVACAO",
+  // A cliente aprovou: a produção acabou, falta só a data de publicar.
+  APROVADO: "CONCLUIDO",
   PUBLICADO: "CONCLUIDO",
+  PRAZO_PERDIDO: "PRAZO_PERDIDO",
   CANCELADO: null,
 };
 
@@ -29,6 +50,7 @@ const productionStatusToColumn: Record<string, KanbanColumnKey | null> = {
   EM_ANDAMENTO: "EM_ANDAMENTO",
   AGUARDANDO_APROVACAO: "AGUARDANDO_APROVACAO",
   CONCLUIDO: "CONCLUIDO",
+  PRAZO_PERDIDO: "PRAZO_PERDIDO",
   CANCELADO: null,
 };
 
@@ -39,9 +61,11 @@ export function getKanbanColumn(kind: AceItemKind, status: string): KanbanColumn
 export const contentStatusColors: Record<string, string> = {
   PLANEJADO: "bg-slate-100 text-slate-700",
   EM_CRIACAO: "bg-amber-100 text-amber-800",
+  AGUARDANDO_APROVACAO: "bg-violet-100 text-violet-700",
   APROVADO: "bg-blue-100 text-blue-700",
   PUBLICADO: "bg-emerald-100 text-emerald-700",
   CANCELADO: "bg-red-100 text-red-700",
+  PRAZO_PERDIDO: "bg-red-100 text-red-700",
 };
 
 export const productionStatusColors: Record<string, string> = {
@@ -50,7 +74,11 @@ export const productionStatusColors: Record<string, string> = {
   AGUARDANDO_APROVACAO: "bg-blue-100 text-blue-700",
   CONCLUIDO: "bg-emerald-100 text-emerald-700",
   CANCELADO: "bg-red-100 text-red-700",
+  PRAZO_PERDIDO: "bg-red-100 text-red-700",
 };
+
+/** Dias de atraso a partir dos quais a tarefa vira "prazo perdido". */
+export const MISSED_DEADLINE_AFTER_DAYS = 7;
 
 export const donePostStatuses: ContentStatus[] = ["PUBLICADO", "CANCELADO"];
 export const doneTaskStatuses: ProductionStatus[] = ["CONCLUIDO", "CANCELADO"];
@@ -63,7 +91,8 @@ export function getUtcDayRange(date: Date) {
 }
 
 export function isOverdue(dueDate: Date | null, status: string, doneStatuses: string[]) {
-  if (!dueDate || doneStatuses.includes(status)) return false;
+  // Prazo perdido é um estado à parte: já está contado lá, não como atrasado.
+  if (!dueDate || status === "PRAZO_PERDIDO" || doneStatuses.includes(status)) return false;
   return dueDate.getTime() < todayUtc().getTime();
 }
 
@@ -97,11 +126,123 @@ export function resolveTaskCompletedAt(
   return previousCompletedAt;
 }
 
+/**
+ * Linha do banco → o formato que os modais editam (datas em ISO). As telas
+ * montavam esse objeto à mão em cada lugar; um campo novo ficava faltando em
+ * uma delas.
+ */
+export function toPostRecord(post: {
+  id: string;
+  title: string;
+  type: string;
+  network: string;
+  status: string;
+  publishDate: Date | null;
+  completedAt: Date | null;
+  caption: string | null;
+  notes: string | null;
+  clientId: string | null;
+  projectId: string | null;
+  pilar?: string | null;
+  objective?: string | null;
+  hook?: string | null;
+  cta?: string | null;
+  hashtags?: string[];
+  slides?: unknown;
+  script?: unknown;
+  visualBrief?: unknown;
+  storySupport?: string | null;
+}) {
+  return {
+    id: post.id,
+    title: post.title,
+    type: post.type,
+    network: post.network,
+    status: post.status,
+    publishDate: post.publishDate ? post.publishDate.toISOString() : null,
+    completedAt: post.completedAt ? post.completedAt.toISOString() : null,
+    caption: post.caption,
+    notes: post.notes,
+    clientId: post.clientId,
+    projectId: post.projectId,
+    pilar: post.pilar ?? null,
+    objective: post.objective ?? null,
+    hook: post.hook ?? null,
+    cta: post.cta ?? null,
+    hashtags: post.hashtags ?? [],
+    slides: post.slides ?? null,
+    script: post.script ?? null,
+    visualBrief: post.visualBrief ?? null,
+    storySupport: post.storySupport ?? null,
+  };
+}
+
+export function toTaskRecord(task: {
+  id: string;
+  title: string;
+  type: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  dueDate: Date | null;
+  completedAt: Date | null;
+  notes: string | null;
+  clientId: string | null;
+  projectId: string | null;
+  priorityLevelId: string | null;
+  estimateMinutes: number | null;
+  subtasks: { id: string; title: string; done: boolean; stage?: string | null }[];
+}) {
+  return {
+    id: task.id,
+    title: task.title,
+    type: task.type,
+    description: task.description,
+    priority: task.priority,
+    status: task.status,
+    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+    completedAt: task.completedAt ? task.completedAt.toISOString() : null,
+    notes: task.notes,
+    clientId: task.clientId,
+    projectId: task.projectId,
+    priorityLevelId: task.priorityLevelId,
+    estimateMinutes: task.estimateMinutes,
+    subtasks: task.subtasks.map(({ id, title, done, stage }) => ({
+      id,
+      title,
+      done,
+      stage: stage ?? null,
+    })),
+  };
+}
+
 export type ClientOverview = {
   id: string;
   name: string;
+  color: string | null;
+  photo: string | null;
   activeProjectCount: number;
   nextDelivery: { date: string; title: string; kind: AceItemKind } | null;
+};
+
+/** Um cartão do quadro de prospecção — o `ClientBusiness` com status PROSPECT. */
+export type ProspectOverview = {
+  linkId: string;
+  clientId: string;
+  name: string;
+  color: string | null;
+  photo: string | null;
+  email: string | null;
+  phone: string | null;
+  instagram: string | null;
+  stage: string;
+  source: string | null;
+  nextFollowUpAt: string | null;
+  lastContactAt: string | null;
+  proposalValue: number | null;
+  notes: string | null;
+  /** Desde quando é prospect deste negócio. */
+  joinedAt: string;
 };
 
 export type PendingItem = {

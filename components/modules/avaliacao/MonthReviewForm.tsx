@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { Card, Button, ErrorNote, SaveStatus, useSaveStatus } from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { StarRating } from "./StarRating";
 import { starsValues } from "@/lib/labels";
@@ -16,31 +16,32 @@ type MonthReviewData = {
 };
 
 export function MonthReviewForm({ review }: { review: MonthReviewData }) {
+  const router = useRouter();
   const [form, setForm] = useState(review);
-  const [saved, setSaved] = useState(false);
+  const { state: saveState, track } = useSaveStatus();
   const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function persist(patch: Partial<MonthReviewData>) {
     try {
-      await api.patch(`/api/month-reviews/${review.id}`, patch);
+      await track(api.patch(`/api/month-reviews/${review.id}`, patch));
       setError(null);
+      router.refresh();
+      return true;
     } catch (e) {
       // O texto digitado continua na tela — só o aviso muda.
       setError(errorMessage(e));
+      return false;
     }
   }
 
   function save(patch: Partial<MonthReviewData>) {
     setForm((prev) => ({ ...prev, ...patch }));
-    setSaved(false);
     void persist(patch);
   }
 
   function saveDebounced(patch: Partial<MonthReviewData>) {
     setForm((prev) => ({ ...prev, ...patch }));
-    setSaved(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       void persist(patch);
@@ -50,10 +51,6 @@ export function MonthReviewForm({ review }: { review: MonthReviewData }) {
   async function handleSaveAll() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     await persist(form);
-    if (error) return;
-    setSaved(true);
-    if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
-    savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
   }
 
   return (
@@ -65,6 +62,7 @@ export function MonthReviewForm({ review }: { review: MonthReviewData }) {
         <StarRating
           value={form.effectiveness ? starsValues.indexOf(form.effectiveness) + 1 : 0}
           onChange={(n) => save({ effectiveness: starsValues[n - 1] })}
+          label="Efetividade do mês"
         />
       </Card>
 
@@ -99,11 +97,7 @@ export function MonthReviewForm({ review }: { review: MonthReviewData }) {
 
       <div className="flex items-center justify-end gap-2">
         <ErrorNote message={error} />
-        {saved && (
-          <span className="flex items-center gap-1 text-xs text-accent">
-            <Check size={14} /> Salvo
-          </span>
-        )}
+        <SaveStatus state={saveState} />
         <Button type="button" onClick={handleSaveAll}>
           Salvar
         </Button>

@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { Card, Button, ErrorNote } from "@/components/ui";
+import {
+  Button,
+  Card,
+  confirmAction,
+  ErrorNote,
+  Field,
+  fieldClass,
+  IconButton,
+  Modal,
+  ModalActions,
+} from "@/components/ui";
 import { api, errorMessage } from "@/lib/client-api";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { financialStatusLabels } from "@/lib/labels";
@@ -29,26 +39,27 @@ const statusStyles: Record<string, string> = {
   QUITADO: "bg-badge-creative-bg text-badge-creative-text",
 };
 
-function EditRecordForm({
+/** Criar ou editar uma dívida/investimento, no mesmo modal do resto do app. */
+function RecordFormModal({
   record,
   type,
   onSaved,
   onClose,
 }: {
-  record: FinancialRecordItem;
+  record?: FinancialRecordItem;
   type: "DIVIDA" | "INVESTIMENTO";
-  onSaved: (record: FinancialRecordItem) => void;
+  onSaved: (record: FinancialRecordItem, isNew: boolean) => void;
   onClose: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: record.name,
-    totalAmount: String(record.totalAmount),
-    paidAmount: String(record.paidAmount),
-    installments: record.installments ? String(record.installments) : "",
-    dueDay: record.dueDay ? String(record.dueDay) : "",
-    notes: record.notes ?? "",
+    name: record?.name ?? "",
+    totalAmount: record ? String(record.totalAmount) : "",
+    paidAmount: record ? String(record.paidAmount) : "",
+    installments: record?.installments ? String(record.installments) : "",
+    dueDay: record?.dueDay ? String(record.dueDay) : "",
+    notes: record?.notes ?? "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -60,19 +71,22 @@ function EditRecordForm({
     setSaving(true);
     setError(null);
 
+    const base = {
+      name: form.name,
+      totalAmount: Number(form.totalAmount),
+      installments: form.installments ? Number(form.installments) : null,
+      dueDay: form.dueDay ? Number(form.dueDay) : null,
+      notes: form.notes || null,
+    };
+
     try {
-      const updated = await api.patch<FinancialRecordItem>(
-        `/api/financial-records/${record.id}`,
-        {
-          name: form.name,
-          totalAmount: Number(form.totalAmount),
-          paidAmount: form.paidAmount ? Number(form.paidAmount) : 0,
-          installments: form.installments ? Number(form.installments) : null,
-          dueDay: form.dueDay ? Number(form.dueDay) : null,
-          notes: form.notes || null,
-        },
-      );
-      onSaved(updated);
+      const saved = record
+        ? await api.patch<FinancialRecordItem>(`/api/financial-records/${record.id}`, {
+            ...base,
+            paidAmount: form.paidAmount ? Number(form.paidAmount) : 0,
+          })
+        : await api.post<FinancialRecordItem>("/api/financial-records", { ...base, type });
+      onSaved(saved, !record);
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -81,68 +95,86 @@ function EditRecordForm({
     }
   }
 
+  const noun = type === "DIVIDA" ? "dívida" : "investimento";
+  const title = record
+    ? `Editar ${noun}`
+    : type === "DIVIDA"
+      ? "Nova dívida"
+      : "Novo investimento";
+
   return (
-    <Card className="flex flex-col gap-2">
-      <ErrorNote message={error} />
-      <input
-        placeholder="Nome"
-        value={form.name}
-        onChange={(e) => update("name", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div className="flex gap-2">
+    <Modal title={title} onClose={onClose} onSubmit={handleSubmit} size="md">
+      <Field label="Nome">
         <input
-          type="number"
-          step="0.01"
-          placeholder="Valor total"
-          value={form.totalAmount}
-          onChange={(e) => update("totalAmount", e.target.value)}
-          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          value={form.name}
+          onChange={(e) => update("name", e.target.value)}
+          className={fieldClass}
         />
-        <input
-          type="number"
-          step="0.01"
-          placeholder={type === "DIVIDA" ? "Valor já pago" : "Valor já aportado"}
-          value={form.paidAmount}
-          onChange={(e) => update("paidAmount", e.target.value)}
-          className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-        />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Valor total (R$)">
+          <input
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={form.totalAmount}
+            onChange={(e) => update("totalAmount", e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        {record && (
+          <Field label={type === "DIVIDA" ? "Já pago (R$)" : "Já aportado (R$)"}>
+            <input
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              value={form.paidAmount}
+              onChange={(e) => update("paidAmount", e.target.value)}
+              className={fieldClass}
+            />
+          </Field>
+        )}
+        {type === "DIVIDA" && (
+          <>
+            <Field label="Parcelas">
+              <input
+                type="number"
+                min={1}
+                value={form.installments}
+                onChange={(e) => update("installments", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Dia de vencimento">
+              <input
+                type="number"
+                min={1}
+                max={31}
+                value={form.dueDay}
+                onChange={(e) => update("dueDay", e.target.value)}
+                className={fieldClass}
+              />
+            </Field>
+          </>
+        )}
       </div>
-      {type === "DIVIDA" && (
-        <div className="flex gap-2">
-          <input
-            type="number"
-            placeholder="Parcelas"
-            value={form.installments}
-            onChange={(e) => update("installments", e.target.value)}
-            className="w-1/2 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-          <input
-            type="number"
-            min={1}
-            max={31}
-            placeholder="Dia de vencimento"
-            value={form.dueDay}
-            onChange={(e) => update("dueDay", e.target.value)}
-            className="w-1/2 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-        </div>
-      )}
-      <input
-        placeholder="Notas (opcional)"
-        value={form.notes}
-        onChange={(e) => update("notes", e.target.value)}
-        className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div className="flex gap-2">
-        <Button onClick={handleSubmit} disabled={saving}>
-          Salvar
+      <Field label="Notas (opcional)">
+        <input
+          value={form.notes}
+          onChange={(e) => update("notes", e.target.value)}
+          className={fieldClass}
+        />
+      </Field>
+      <ErrorNote message={error} />
+      <ModalActions>
+        <Button type="submit" disabled={saving || !form.name.trim() || !form.totalAmount}>
+          {saving ? "Salvando..." : "Salvar"}
         </Button>
         <Button variant="ghost" onClick={onClose}>
           Cancelar
         </Button>
-      </div>
-    </Card>
+      </ModalActions>
+    </Modal>
   );
 }
 
@@ -155,14 +187,6 @@ export function FinancialRecordsSection({
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [newRecord, setNewRecord] = useState({
-    name: "",
-    totalAmount: "",
-    installments: "",
-    dueDay: "",
-    notes: "",
-  });
-  const [saving, setSaving] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
 
   const paymentLabel = type === "DIVIDA" ? "Registrar pagamento" : "Registrar aporte";
@@ -186,12 +210,12 @@ export function FinancialRecordsSection({
 
   async function handleDelete(id: string) {
     const label = type === "DIVIDA" ? "esta dívida" : "este investimento";
-    if (
-      !confirm(
-        `Tem certeza que quer deletar ${label}? Esta ação não pode ser desfeita.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: `Tem certeza que quer deletar ${label}?`,
+      description: `Esta ação não pode ser desfeita.`,
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeletingId(id);
     setListError(null);
 
@@ -205,29 +229,13 @@ export function FinancialRecordsSection({
     }
   }
 
-  async function submitNewRecord() {
-    if (!newRecord.name.trim() || !newRecord.totalAmount) return;
-    setSaving(true);
-    setListError(null);
-
-    try {
-      const created = await api.post<FinancialRecordItem>("/api/financial-records", {
-        name: newRecord.name,
-        type,
-        totalAmount: Number(newRecord.totalAmount),
-        installments: newRecord.installments ? Number(newRecord.installments) : null,
-        dueDay: newRecord.dueDay ? Number(newRecord.dueDay) : null,
-        notes: newRecord.notes || null,
-      });
-      setRecords((prev) => [...prev, created]);
-      setNewRecord({ name: "", totalAmount: "", installments: "", dueDay: "", notes: "" });
-      setShowForm(false);
-    } catch (e) {
-      setListError(errorMessage(e));
-    } finally {
-      setSaving(false);
-    }
+  function handleSaved(saved: FinancialRecordItem, isNew: boolean) {
+    setRecords((prev) =>
+      isNew ? [...prev, saved] : prev.map((r) => (r.id === saved.id ? saved : r)),
+    );
   }
+
+  const editingRecord = records.find((r) => r.id === editingId) ?? null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -242,22 +250,6 @@ export function FinancialRecordsSection({
           record.totalAmount === 0
             ? 0
             : Math.min(100, Math.round((record.paidAmount / record.totalAmount) * 100));
-
-        if (editingId === record.id) {
-          return (
-            <EditRecordForm
-              key={record.id}
-              record={record}
-              type={type}
-              onSaved={(updated) =>
-                setRecords((prev) =>
-                  prev.map((r) => (r.id === updated.id ? updated : r)),
-                )
-              }
-              onClose={() => setEditingId(null)}
-            />
-          );
-        }
 
         return (
           <Card key={record.id} className="flex flex-col gap-3">
@@ -280,23 +272,20 @@ export function FinancialRecordsSection({
                   {financialStatusLabels[record.status]}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
+                  <IconButton
                     title="Editar"
                     onClick={() => setEditingId(record.id)}
-                    className="text-text-secondary hover:text-text-primary"
                   >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    type="button"
+                    <Pencil size={15} />
+                  </IconButton>
+                  <IconButton
                     title="Deletar"
                     onClick={() => handleDelete(record.id)}
                     disabled={deletingId === record.id}
-                    className="text-text-secondary hover:text-red-600 disabled:opacity-50"
+                    tone="danger"
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    <Trash2 size={15} />
+                  </IconButton>
                 </div>
               </div>
             </div>
@@ -339,65 +328,19 @@ export function FinancialRecordsSection({
         );
       })}
 
-      {showForm ? (
-        <Card className="flex flex-col gap-2">
-          <input
-            placeholder="Nome"
-            value={newRecord.name}
-            onChange={(e) => setNewRecord((prev) => ({ ...prev, name: e.target.value }))}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Valor total"
-            value={newRecord.totalAmount}
-            onChange={(e) =>
-              setNewRecord((prev) => ({ ...prev, totalAmount: e.target.value }))
-            }
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-          {type === "DIVIDA" && (
-            <div className="flex gap-2">
-              <input
-                type="number"
-                placeholder="Parcelas"
-                value={newRecord.installments}
-                onChange={(e) =>
-                  setNewRecord((prev) => ({ ...prev, installments: e.target.value }))
-                }
-                className="w-1/2 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-              />
-              <input
-                type="number"
-                placeholder="Dia de vencimento"
-                value={newRecord.dueDay}
-                onChange={(e) =>
-                  setNewRecord((prev) => ({ ...prev, dueDay: e.target.value }))
-                }
-                className="w-1/2 rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-              />
-            </div>
-          )}
-          <input
-            placeholder="Notas (opcional)"
-            value={newRecord.notes}
-            onChange={(e) => setNewRecord((prev) => ({ ...prev, notes: e.target.value }))}
-            className="rounded-md border border-border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
-          />
-          <div className="flex gap-2">
-            <Button onClick={submitNewRecord} disabled={saving}>
-              Salvar
-            </Button>
-            <Button variant="ghost" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </Card>
-      ) : (
-        <Button variant="secondary" onClick={() => setShowForm(true)}>
-          + {type === "DIVIDA" ? "Nova dívida" : "Novo investimento"}
-        </Button>
+      <Button variant="secondary" className="self-start" onClick={() => setShowForm(true)}>
+        + {type === "DIVIDA" ? "Nova dívida" : "Novo investimento"}
+      </Button>
+      {showForm && (
+        <RecordFormModal type={type} onSaved={handleSaved} onClose={() => setShowForm(false)} />
+      )}
+      {editingRecord && (
+        <RecordFormModal
+          record={editingRecord}
+          type={type}
+          onSaved={handleSaved}
+          onClose={() => setEditingId(null)}
+        />
       )}
     </div>
   );
